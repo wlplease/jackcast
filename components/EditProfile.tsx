@@ -1,0 +1,118 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { uploadImage } from "@/lib/upload-client";
+import { updateProfile } from "@/app/(main)/me/actions";
+import { prepareAvatar, randomName } from "@/lib/image";
+
+const bytes = (s: string) => new TextEncoder().encode(s).length;
+
+export function EditProfile({ initial }: { initial: { displayName: string; bio: string; pfpUrl: string } }) {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [displayName, setDisplayName] = useState(initial.displayName);
+  const [bio, setBio] = useState(initial.bio);
+  const [pfp, setPfp] = useState(initial.pfpUrl);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const bioBytes = bytes(bio);
+  const nameBytes = bytes(displayName);
+  const changed = displayName !== initial.displayName || bio !== initial.bio || pfp !== initial.pfpUrl;
+
+  async function pickPhoto(file: File) {
+    setError(null);
+    setUploading(true);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    try {
+      const prepared = await prepareAvatar(file);
+      const blobUrl = await uploadImage(randomName("pfp", prepared.ext), prepared.blob, prepared.type);
+      setPfp(blobUrl);
+    } catch (e) {
+      setPreview(null);
+      const msg = (e as Error)?.message ?? "";
+      setError(
+        /Blob|501/.test(msg)
+          ? "Photo uploads need Vercel Blob turned on. See the README."
+          : (e as Error)?.name === "TimeoutError" || /abort|timed? ?out/i.test(msg)
+            ? "Upload timed out. Check your connection and try again."
+            : msg || "Upload failed"
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function save() {
+    setError(null);
+    start(async () => {
+      const res = await updateProfile({
+        displayName: displayName !== initial.displayName ? displayName : undefined,
+        bio: bio !== initial.bio ? bio : undefined,
+        pfpUrl: pfp !== initial.pfpUrl ? pfp : undefined,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      router.push("/me?saved=1");
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="edit-profile">
+      <div className="pfp-edit">
+        <img className="avatar xl" src={preview ?? pfp ?? ""} alt="" />
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) pickPhoto(f);
+              e.target.value = "";
+            }}
+          />
+          <button type="button" className="btn ghost sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? "Uploading…" : "Change photo"}
+          </button>
+          <p className="field-hint">Cropped to a square from the center.</p>
+        </div>
+      </div>
+
+      <label className="field">
+        <span className="field-label">
+          Display name <span className={`count${nameBytes > 32 ? " over" : ""}`}>{32 - nameBytes}</span>
+        </span>
+        <input className="text-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="off" />
+      </label>
+
+      <label className="field">
+        <span className="field-label">
+          Bio <span className={`count${bioBytes > 256 ? " over" : ""}`}>{256 - bioBytes}</span>
+        </span>
+        <textarea className="text-input" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
+      </label>
+
+      {error && <div className="form-error">{error}</div>}
+
+      <div className="edit-actions">
+        <Link href="/me" className="btn ghost">
+          Cancel
+        </Link>
+        <button className="btn" onClick={save} disabled={!changed || pending || uploading || bioBytes > 256 || nameBytes > 32 || !displayName.trim()}>
+          {pending ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </div>
+  );
+}

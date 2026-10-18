@@ -1,0 +1,75 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { neynar } from "@/lib/neynar";
+import { getViewer } from "@/lib/viewer";
+import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
+import { CHANNEL_ID, type Prefs } from "@/lib/prefs-shared";
+
+/** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
+export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; prefs: Prefs } | { ok: false; error: string }> {
+  const current = await getPrefs();
+  // Re-parse so only clean, bounded values ever reach the cookie.
+  const prefs = parsePrefs(JSON.stringify({ ...current, ...patch }));
+  const jar = await cookies();
+  jar.set(PREFS_COOKIE, JSON.stringify(prefs), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365 * 2,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true, prefs };
+}
+
+const bytes = (s: string) => new TextEncoder().encode(s).length;
+
+export async function updateProfile(input: {
+  displayName?: string;
+  bio?: string;
+  pfpUrl?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const v = await getViewer();
+  if (!v?.signerUuid) return { ok: false, error: "Connect your account at /setup first." };
+
+  const patch: { displayName?: string; bio?: string; pfpUrl?: string } = {};
+  if (input.displayName !== undefined) {
+    const d = input.displayName.trim();
+    if (!d) return { ok: false, error: "Display name can't be empty." };
+    if (bytes(d) > 32) return { ok: false, error: "Display name is too long (32 bytes max)." };
+    patch.displayName = d;
+  }
+  if (input.bio !== undefined) {
+    const b = input.bio.trim();
+    if (bytes(b) > 256) return { ok: false, error: "Bio is too long (256 bytes max)." };
+    patch.bio = b;
+  }
+  if (input.pfpUrl !== undefined) {
+    if (!/^https:\/\//.test(input.pfpUrl) || input.pfpUrl.length > 256) return { ok: false, error: "That photo URL won't work." };
+    patch.pfpUrl = input.pfpUrl;
+  }
+  if (!Object.keys(patch).length) return { ok: true };
+
+  try {
+    await neynar().updateUser({ signerUuid: v.signerUuid, ...patch });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (e) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string };
+    return { ok: false, error: err?.response?.data?.message ?? err?.message ?? "Couldn't update your profile." };
+  }
+}
+
+/** Confirms a channel exists before it becomes a tab. Returns its canonical id. */
+export async function checkChannel(raw: string): Promise<{ ok: true; id: string; name?: string } | { ok: false; error: string }> {
+  const id = raw.trim().toLowerCase().replace(/^\//, "");
+  if (!CHANNEL_ID.test(id)) return { ok: false, error: "Channel ids are letters, numbers and dashes." };
+  try {
+    const { channel } = await neynar().lookupChannel({ id });
+    return { ok: true, id: channel.id, name: channel.name };
+  } catch {
+    return { ok: false, error: `Couldn't find /${id}.` };
+  }
+}
