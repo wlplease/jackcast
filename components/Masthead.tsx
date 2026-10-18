@@ -33,6 +33,12 @@ const I = {
       <path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" />
     </svg>
   ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+      <path d="M19.4 15.2a1.7 1.7 0 0 0 .3 1.9l.1.1-1.9 1.9-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.7v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.9-1.9.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6v-2.7h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.9-1.9.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V6h2.7v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.9 1.9-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v2.7h-.2a1.7 1.7 0 0 0-1.5 1Z" />
+    </svg>
+  ),
 };
 
 export function Masthead({ channels, customName }: { channels: string[]; customName: string; aiEnabled?: boolean }) {
@@ -59,7 +65,8 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
           {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           {icon("/search", "Search", I.search)}
           <NotificationLink icon={I.bell} />
-          {icon("/me", "You", I.you)}
+          {icon("/profile", "Profile and analytics", I.you)}
+          {icon("/me", "Settings", I.settings)}
           <form action={logout}>
             <button type="submit" className="icon-btn" aria-label="Lock" title="Lock">
               {I.lock}
@@ -71,7 +78,9 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
         {tab("/", "Following")}
         {tab("/friends", "Friends")}
         {tab("/recasts", "Recasts")}
+        {tab("/mini-apps", "Mini Apps")}
         {tab("/circle", customName)}
+        {tab("/dev", "Dev")}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
     </header>

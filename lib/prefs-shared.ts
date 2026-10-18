@@ -26,13 +26,15 @@ export type Prefs = {
   customName: string;
   /** Optional app-local pinned cast on this deployment's profile page. */
   pinnedCastHash: string | null;
+  /** Mini apps saved to this device. */
+  savedMiniApps: { url: string; title: string }[];
   /** Color theme (see lib/themes.ts). */
   theme: ThemeId;
   /** auto follows the system; light and dark pin it. */
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 20;

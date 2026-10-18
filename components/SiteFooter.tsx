@@ -1,15 +1,13 @@
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p>Jackcaster is an open-source personal fork based on Selfcaster.</p>
+      <p><a href="https://github.com/wlplease/jackcast" target="_blank" rel="noopener noreferrer"><strong>Jackcaster</strong></a> is an open-source personal fork of <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noopener noreferrer">Selfcaster</a>.</p>
       <nav aria-label="Project credits">
-        <a href="https://selfcaster.xyz/" target="_blank" rel="noopener noreferrer">Original app</a>
+        <a href="https://github.com/wlplease/jackcast" target="_blank" rel="noopener noreferrer">Jackcaster source</a>
         <span aria-hidden="true">·</span>
-        <a href="https://github.com/GenuineJack" target="_blank" rel="noopener noreferrer">Creator: GenuineJack</a>
+        <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noopener noreferrer">Original Selfcaster project</a>
         <span aria-hidden="true">·</span>
-        <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noopener noreferrer">Original repository</a>
-        <span aria-hidden="true">·</span>
-        <a href="https://github.com/wlplease/jackcast" target="_blank" rel="noopener noreferrer">Jackcast source</a>
+        <a href="https://selfcaster.xyz/" target="_blank" rel="noopener noreferrer">Selfcaster app by GenuineJack</a>
       </nav>
     </footer>
   );

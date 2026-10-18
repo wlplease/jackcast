@@ -1,6 +1,6 @@
 # Security
 
-Selfcaster runs on your own Vercel account, for one person: you. Here's what it does with the sensitive stuff, and where to check.
+Jackcaster runs on your own Vercel account, for one person: you. It is a personal fork of Selfcaster. Here's what it does with the sensitive stuff, and where to check.
 
 ## Your recovery phrase
 

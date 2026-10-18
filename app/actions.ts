@@ -146,6 +146,7 @@ export async function login(_prev: string | null, form: FormData): Promise<strin
   const now = Date.now();
   const requestHeaders = await headers();
   const address = requestHeaders.get("x-real-ip") ?? "unknown";
+  // Keep the password out of the map key; use a per-deployment keyed digest of the client address.
   const source = new TextEncoder().encode(`${process.env.APP_PASSWORD}:${address}`);
   const keyBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", source.buffer as ArrayBuffer));
   const key = Array.from(keyBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");

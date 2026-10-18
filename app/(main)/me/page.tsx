@@ -1,197 +1,38 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { requireViewer } from "@/lib/viewer";
+import { followedChannels, getMe, tabChannels } from "@/lib/data";
+import { getPrefs } from "@/lib/prefs";
+import { ThemeForm } from "@/components/ThemeForm";
 import { ChannelTabsForm } from "@/components/ChannelTabsForm";
 import { CustomFeedForm, CustomFeedNameForm, FriendsFeedForm } from "@/components/FriendsFeedForm";
-import { PinnedCastForm } from "@/components/PinnedCastForm";
 import { FiltersForm } from "@/components/FiltersForm";
-import { ThemeForm } from "@/components/ThemeForm";
-import { RichText } from "@/components/RichText";
-import { SetupBanner } from "@/components/SetupBanner";
-import { StatsChart } from "@/components/StatsChart";
-import { followedChannels, ownProfileAnalytics, tabChannels } from "@/lib/data";
-import { compact, timeAgo } from "@/lib/format";
-import { getPrefs } from "@/lib/prefs";
-import { computeStats, type StatsWindow } from "@/lib/stats";
-import { requireViewer } from "@/lib/viewer";
 
-export default async function MePage({ searchParams }: { searchParams: Promise<{ saved?: string; window?: string }> }) {
-  const { saved, window: requestedWindow } = await searchParams;
-  const window: StatsWindow = requestedWindow === "7d" || requestedWindow === "90d" || requestedWindow === "loaded" ? requestedWindow : "30d";
+const SETTINGS = [
+  { href: "#appearance", icon: "◐", title: "Appearance", detail: "Themes and light or dark mode" },
+  { href: "#feeds", icon: "☷", title: "Channel tabs", detail: "Choose feeds and composer channels" },
+  { href: "#friends", icon: "♡", title: "Friends and custom", detail: "Choose people for each feed" },
+  { href: "#filters", icon: "⌕", title: "Feed controls", detail: "Muted topics, replies, mini apps, and density" },
+  { href: "#account", icon: "◉", title: "Account and connection", detail: "Posting access and setup details" },
+];
+
+export default async function SettingsPage() {
   const viewer = await requireViewer();
+  const [me, prefs, followed, currentTabs] = await Promise.all([getMe().catch(() => null), getPrefs(), followedChannels().catch(() => []), tabChannels().catch(() => [])]);
   const envDefault = Number(process.env.MIN_USER_SCORE ?? "0") || 0;
-
-  try {
-    const [profileData, prefs, followed, currentTabs] = await Promise.all([
-      ownProfileAnalytics(viewer.fid),
-      getPrefs(),
-      followedChannels(),
-      tabChannels(),
-    ]);
-    const { user: me, casts } = profileData;
-    const stats = computeStats(casts, window, me.follower_count ?? 0);
-
-    return (
-      <>
-        <section className="profile me-head">
-          {me.profile?.banner?.url
-            ? <img className="profile-cover-image" src={me.profile.banner.url} alt="" />
-            : <div className="profile-cover" aria-hidden="true" />}
-          <div className="me-top">
-            <Avatar user={me} />
-            {viewer.canWrite && (
-              <Link href="/me/edit" className="btn ghost sm">
-                Edit profile
-              </Link>
-            )}
-          </div>
-          <h1>{me.display_name || me.username}</h1>
-          <div className="handle">
-            <Link href={`/u/${me.username}`}>@{me.username}</Link> · fid {me.fid}
-          </div>
-          {me.profile?.bio?.text && (
-            <p className="bio">
-              <RichText text={me.profile.bio.text} />
-            </p>
-          )}
-          <div className="stats profile-stats">
-            <span><b>{compact(me.following_count)}</b> following</span>
-            <span><b>{compact(me.follower_count)}</b> followers</span>
-          </div>
-          {saved && <div className="form-ok">Profile updated. It can take a minute to show up everywhere.</div>}
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Your casts</h2>
-            <span className="meta">{stats.windowLabel} · up to 100 most recent casts</span>
-          </div>
-          <nav className="stats-range" aria-label="Analytics date range">
-            {([ ["7d", "7 days"], ["30d", "30 days"], ["90d", "90 days"], ["loaded", "Loaded casts"] ] as const).map(([value, label]) => (
-              <Link key={value} href={`/me?window=${value}`} className={`stats-range-link${window === value ? " active" : ""}`} aria-current={window === value ? "page" : undefined}>{label}</Link>
-            ))}
-          </nav>
-          {stats.casts === 0 ? (
-            <p className="field-hint">No casts yet. Post something and come back.</p>
-          ) : (
-            <>
-              <div className="tiles">
-                <div className="tile">
-                  <b>{compact(stats.casts)}</b>
-                  <span>casts</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.likes)}</b>
-                  <span>likes</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.recasts)}</b>
-                  <span>recasts</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.replies)}</b>
-                  <span>replies</span>
-                </div>
-                <div className="tile">
-                  <b>{stats.avg.toFixed(1)}</b>
-                  <span>engagement per cast</span>
-                </div>
-                <div className="tile">
-                  <b>{stats.engagementRate.toFixed(1)}%</b>
-                  <span>engagement / followers</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.mediaCasts)}</b>
-                  <span>casts with media</span>
-                </div>
-                {stats.bestCast && <div className="tile"><b>{compact(stats.bestCast.e)}</b><span>best cast engagement</span></div>}
-              </div>
-              <p className="field-hint">Top-level casts only. Engagement rate is reactions and replies divided by follower count; it is an estimate, not unique reach.</p>
-              <StatsChart points={stats.points} />
-              {stats.top.length > 0 && (
-                <>
-                  <h3 className="sub-head">What landed</h3>
-                  <ol className="top-casts">
-                    {stats.top.map((c) => (
-                      <li key={c.hash}>
-                        <Link href={`/cast/${c.hash}`}>
-                          <span className="tc-text">{c.text || (c.hasMedia ? "(photo or link)" : "(no text)")}</span>
-                          <span className="tc-meta">
-                            ♥ {compact(c.likes)} · ↻ {compact(c.recasts)} · ↳ {compact(c.replies)} · {timeAgo(c.ts)}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head"><h2>Profile</h2><span className="meta">this Selfcaster</span></div>
-          <PinnedCastForm casts={casts.slice(0, 30)} initial={prefs.pinnedCastHash} />
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Look</h2>
-            <span className="meta">this device</span>
-          </div>
-          <ThemeForm initialTheme={prefs.theme} initialMode={prefs.mode} />
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Your feed</h2>
-            <span className="meta">this device</span>
-          </div>
-          <ChannelTabsForm followed={followed} current={currentTabs} />
-        </section>
-
-        <section className="me-section" id="friends">
-          <div className="me-section-head">
-            <h2>Friends feed</h2>
-            <span className="meta">this device</span>
-          </div>
-          <FriendsFeedForm initial={prefs.friends} />
-        </section>
-
-        <section className="me-section" id="custom-feed">
-          <div className="me-section-head">
-            <h2>Your custom feed</h2>
-            <span className="meta">this device</span>
-          </div>
-          <CustomFeedNameForm initial={prefs.customName} />
-          <CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} />
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Filters</h2>
-            <span className="meta">this device</span>
-          </div>
-          <FiltersForm initial={prefs} envDefault={envDefault} />
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Account</h2>
-          </div>
-          <p className="field-hint">
-            {viewer.canWrite
-              ? viewer.source === "env"
-                ? "Connected on every device through your environment variables."
-                : "Connected on this device."
-              : "Read-only. Connect to post, like and reply."}{" "}
-            <Link href="/setup" className="linkish">
-              {viewer.canWrite ? "Connection details" : "Connect"}
-            </Link>
-          </p>
-        </section>
-      </>
-    );
-  } catch (e) {
-    return <SetupBanner error={e} />;
-  }
+  return <>
+    <div className="section-head settings-page-title"><div><h1>Settings</h1><p>Make Jackcaster work the way you do.</p></div></div>
+    <section className="settings-identity">
+      {me && <Avatar user={me} />}
+      <div><strong>{me?.display_name || me?.username || `FID ${viewer.fid}`}</strong><span>{viewer.canWrite ? "Connected account" : "Read-only connection"} · FID {viewer.fid}</span></div>
+      <Link href="/profile" className="btn ghost sm">Profile & analytics</Link>
+    </section>
+    <nav className="settings-shortcuts" aria-label="Settings sections">{SETTINGS.map((section) => <a key={section.href} href={section.href} className="settings-shortcut"><span className="settings-shortcut-icon" aria-hidden="true">{section.icon}</span><span><strong>{section.title}</strong><small>{section.detail}</small></span><span aria-hidden="true">›</span></a>)}</nav>
+    <section className="me-section" id="appearance"><div className="me-section-head"><h2>Appearance</h2><span className="meta">this device</span></div><ThemeForm initialTheme={prefs.theme} initialMode={prefs.mode} /></section>
+    <section className="me-section" id="feeds"><div className="me-section-head"><h2>Channel tabs</h2><span className="meta">this device</span></div><ChannelTabsForm followed={followed} current={currentTabs} /></section>
+    <section className="me-section" id="friends"><div className="me-section-head"><h2>Friends</h2><span className="meta">this device</span></div><FriendsFeedForm initial={prefs.friends} /></section>
+    <section className="me-section" id="custom-feed"><div className="me-section-head"><h2>Custom feed</h2><span className="meta">this device</span></div><CustomFeedNameForm initial={prefs.customName} /><CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} /></section>
+    <section className="me-section" id="filters"><div className="me-section-head"><h2>Feed controls</h2><span className="meta">this device</span></div><FiltersForm initial={prefs} envDefault={envDefault} /></section>
+    <section className="me-section" id="account"><div className="me-section-head"><h2>Account and connection</h2></div><p className="field-hint">{viewer.canWrite ? viewer.source === "env" ? "Connected on every device through your environment variables." : "Connected on this device." : "Read-only. Connect to post, like, and reply."} <Link href="/setup" className="linkish">{viewer.canWrite ? "Connection details" : "Connect account"}</Link></p></section>
+  </>;
 }

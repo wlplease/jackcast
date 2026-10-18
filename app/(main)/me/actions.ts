@@ -5,7 +5,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
-import { followedPeople as getFollowedPeople, recentFriendSuggestions } from "@/lib/data";
+import { followedPeople as getFollowedPeople, recentFriendSuggestions, savedFriendsActivity, ownMiniApps } from "@/lib/data";
 import { CHANNEL_ID, type Prefs } from "@/lib/prefs-shared";
 
 /** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
@@ -117,6 +117,28 @@ export async function suggestRecentFriends(refresh = false): Promise<{ ok: true;
     return { ok: true, ...await recentFriendSuggestions(viewer.fid) };
   } catch (error) {
     return { ok: false, error: neynarFailure(error, "Couldn't scan your recent feed. Check your Neynar connection and try again.") };
+  }
+}
+
+export async function checkSavedFriendsActivity(refresh = false): Promise<{ ok: true; people: { fid: number; username: string; posts: number; followers: number }[]; scanned: number; complete: boolean; generatedAt: number } | { ok: false; error: string }> {
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
+  try {
+    const prefs = await getPrefs();
+    if (refresh) revalidateTag("saved-friends-activity");
+    return { ok: true, ...await savedFriendsActivity(viewer.fid, prefs.friends) };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, "Couldn't check your saved Friends accounts. Try again shortly.") };
+  }
+}
+
+export async function loadOwnMiniApps(): Promise<{ ok: true; apps: Awaited<ReturnType<typeof ownMiniApps>> } | { ok: false; error: string }> {
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
+  try {
+    return { ok: true, apps: await ownMiniApps(viewer.fid) };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, "Couldn't find mini apps in your recent casts. Try again shortly.") };
   }
 }
 

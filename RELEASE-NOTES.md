@@ -4,13 +4,15 @@ Jackcast is a personal fork of [Selfcaster by GenuineJack](https://github.com/Ge
 
 ## What changed
 
-- **Separate feeds:** Added private Friends and named custom feeds, each with up to 20 selected accounts, plus a Recasts tab that separates recast-added posts from the Following feed. Friends recommendations rank followed accounts by activity in a 180-day window, with a 1,000-post scan cap and a 24-hour cache. Followed-account search and channel directories are cached for an hour.
+- **Separate feeds:** Added private Friends and named custom feeds, each with up to 20 selected accounts, plus a Recasts tab. Friends suggestions use a 90-day activity window, a 1,000-post scan cap, and a 24-hour cache. Saved Friends can be checked together for activity, with a weekly cache.
 - **Feed controls:** Added reply and mini-app filters, repeated-link grouping, per-feed scroll restoration, new-cast and caught-up markers, and an expandable image viewer. Cast menus can mute prolific accounts through the reversible `@handle` filter. Feed images, video, and link cards are constrained to the cast column.
 - **Friend and custom feeds:** Followed accounts can be searched in either feed picker; selected counts, alphabetical lists, and direct removal make device-local lists easier to review.
 - **Service status:** Feed errors and failed new-cast checks explain whether Neynar needs configuration, is rate-limiting, or is temporarily unavailable. Gemini and ElevenLabs errors identify key/access, quota, timeout, and provider availability issues.
 - **Profiles:** Added Posts and Media tabs, an app-local pinned cast, profile header improvements, and optional cover editing through Neynar.
+- **Mini Apps and navigation:** Added 7-day trending and network-relevant discovery, catalog search, category filters, device-saved apps, creator-attributed apps in Dev, a consolidated Settings page, and separate profile analytics.
+- **Reading flow:** Following and Friends append pages while scrolling and keep a manual Load more fallback. The AI digest opens separately from the cast list.
 - **Composer:** Added browser-local drafts, quote and media improvements, and a text thread composer for up to five casts with recovery guidance after a partial send.
-- **Optional AI:** Added an on-demand Gemini digest for up to 20 loaded Following posts, opened from the header AI icon and hidden from the ordinary feed until requested. Digests are capped at three short highlights and offer redo/clear controls. A separate optional ElevenLabs action can read the digest aloud. Both API keys stay server-side; speech receives only the digest and is not stored by Jackcast.
+- **Optional AI:** Added an on-demand Gemini digest for up to 20 loaded Following posts, opened from the header AI icon and hidden from the ordinary feed until requested. It now starts with a concise storyline and breaks the update into 2–4 short topic sections, with redo/clear controls. A separate optional ElevenLabs action can read the digest aloud. Both API keys stay server-side; speech receives only the digest and is not stored by Jackcast.
 - **Security and maintenance:** Added baseline response headers, safer server error handling, bounded upload and AI requests, signer input validation, and best-effort login throttling. `SECURITY-PLAN.md` records decisions, verification, and remaining limits.
 
 ## Scope and privacy

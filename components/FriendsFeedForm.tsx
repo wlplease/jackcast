@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { checkFriend, loadFollowedPeople, savePrefs, suggestRecentFriends } from "@/app/(main)/me/actions";
+import { checkFriend, checkSavedFriendsActivity, loadFollowedPeople, savePrefs, suggestRecentFriends } from "@/app/(main)/me/actions";
 import { MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
 
 type Person = Prefs["friends"][number];
@@ -26,6 +26,9 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
   const [checking, setChecking] = useState(false);
   const [finding, setFinding] = useState(false);
   const [featuredChecking, setFeaturedChecking] = useState<string | null>(null);
+  const [checkingSaved, setCheckingSaved] = useState(false);
+  const [savedActivity, setSavedActivity] = useState<{ people: (Person & { posts: number; followers: number })[]; scanned: number; complete: boolean; generatedAt: number } | null>(null);
+  const [savedActivityError, setSavedActivityError] = useState("");
   const [suggestions, setSuggestions] = useState<(Person & { posts: number; followers: number })[] | null>(null);
   const [suggestionError, setSuggestionError] = useState("");
   const [suggestionScan, setSuggestionScan] = useState<{ scanned: number; complete: boolean; generatedAt: number } | null>(null);
@@ -140,6 +143,21 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
     save([...people, { fid: result.fid, username: result.username }]);
   }
 
+  async function checkSavedFriends(refresh = false) {
+    if (checkingSaved || !people.length) return;
+    setCheckingSaved(true);
+    setSavedActivityError("");
+    try {
+      const result = await checkSavedFriendsActivity(refresh);
+      if (!result.ok) { setSavedActivityError(result.error); return; }
+      setSavedActivity(result);
+    } catch {
+      setSavedActivityError("Couldn't check your saved Friends accounts. Try again shortly.");
+    } finally {
+      setCheckingSaved(false);
+    }
+  }
+
   return (
     <div className="filters">
       <div className="field">
@@ -194,6 +212,24 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
                   </div>
                 </>
               )}
+            </div>
+            <div className="saved-friends-check">
+              <div className="field-head"><h4>Saved Friends · weekly activity check</h4><span className="meta">all {people.length} together</span></div>
+              <p className="field-hint">Check how active everyone already in Friends has been over the last 90 days. One batch is cached for your account for a week, then refreshed the next time you check. This only updates this list.</p>
+              <button type="button" className="btn ghost sm" onClick={() => void checkSavedFriends(Boolean(savedActivity))} disabled={checkingSaved || status === "saving" || people.length === 0}>
+                {checkingSaved ? "Checking saved accounts…" : savedActivity ? "Check all again" : "Check all saved people"}
+              </button>
+              {savedActivityError && <p className="form-error" role="status">{savedActivityError}</p>}
+              {savedActivity && <>
+                <p className="field-hint" role="status">Checked {savedActivity.scanned.toLocaleString()} casts · {savedActivity.complete ? "90-day window checked" : "Stopped at the 1,000-cast scan cap"} · {new Date(savedActivity.generatedAt).toLocaleString()}</p>
+                <div className="best-friend-list" aria-label="Saved Friends activity over the last 90 days">
+                  {savedActivity.people.map((person, index) => <div className="best-friend-row" key={person.fid}>
+                    <span className="best-friend-rank">{index + 1}</span><span>@{person.username}</span>
+                    <small>{person.posts} posts · {person.followers.toLocaleString()} followers</small>
+                    <span className="saved-activity-status">{person.posts ? "Active" : "Quiet"}</span>
+                  </div>)}
+                </div>
+              </>}
             </div>
           </div>
         )}

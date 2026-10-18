@@ -8,6 +8,26 @@ import { getPrefs, effectiveMinScore } from "./prefs";
 import { applyFilters } from "./filters";
 import { MAX_FRIENDS } from "./prefs-shared";
 
+export type MiniAppSummary = { title: string; url: string; image?: string; author?: string; description?: string; category?: string };
+export type MiniAppsOverview = { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number };
+
+function miniAppSummary(frame: { title?: string; frames_url: string; image?: string; author?: { username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string } }; metadata?: { html?: { ogDescription?: string; ogSiteName?: string } } }): MiniAppSummary {
+  let url = "";
+  try {
+    const candidate = new URL(frame.frames_url);
+    if (candidate.protocol === "https:" && candidate.hostname && !candidate.username && !candidate.password) url = candidate.toString();
+  } catch { /* Ignore malformed third-party URLs. */ }
+  const manifest = frame.manifest?.miniapp ?? frame.manifest?.frame;
+  return {
+    title: (frame.title || manifest?.name || frame.metadata?.html?.ogSiteName || new URL(url || "https://invalid.local").hostname).slice(0, 100),
+    url,
+    image: frame.image || manifest?.icon_url || manifest?.screenshot_urls?.[0],
+    author: frame.author?.display_name || frame.author?.username,
+    description: (manifest?.description || frame.metadata?.html?.ogDescription || "").slice(0, 240),
+    category: manifest?.primary_category?.slice(0, 48),
+  };
+}
+
 export const getMe = cache(async (): Promise<Author & { bio?: string }> => {
   const { fid } = await viewerOrThrow();
   const { users } = await neynar().fetchBulkUsers({ fids: [fid] });
@@ -231,6 +251,109 @@ const recentFriendSuggestionsCached = unstable_cache(
 
 export async function recentFriendSuggestions(fid: number): Promise<RecentFriendSuggestions> {
   return recentFriendSuggestionsCached(fid);
+}
+
+export type SavedFriendActivity = { fid: number; username: string; posts: number; followers: number };
+export type SavedFriendsActivity = { people: SavedFriendActivity[]; scanned: number; complete: boolean; generatedAt: number };
+
+/** Check every saved Friends account together, with a weekly cache and bounded scan. */
+const savedFriendsActivityCached = unstable_cache(
+  async (viewerFid: number, people: { fid: number; username: string }[]): Promise<SavedFriendsActivity> => {
+    if (!people.length) return { people: [], scanned: 0, complete: true, generatedAt: Date.now() };
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const activity = new Map<number, { posts: number; followers: number }>();
+    const fids = people.map((person) => person.fid);
+    let cursor: string | undefined;
+    let scanned = 0;
+    let complete = false;
+    for (let page = 0; page < 10; page++) {
+      const result = await neynar().fetchFeed({ feedType: "filter", filterType: "fids", fids, viewerFid, withRecasts: false, limit: 100, cursor });
+      let reachedCutoff = false;
+      for (const raw of result.casts) {
+        const cast = asCast(raw);
+        const timestamp = Date.parse(cast.timestamp);
+        if (!Number.isFinite(timestamp)) continue;
+        if (timestamp < cutoff) { reachedCutoff = true; continue; }
+        scanned++;
+        const author = cast.author as typeof cast.author & { follower_count?: number };
+        const previous = activity.get(author.fid);
+        const followers = Number(author.follower_count ?? 0);
+        activity.set(author.fid, {
+          posts: (previous?.posts ?? 0) + 1,
+          followers: Math.max(previous?.followers ?? 0, Number.isFinite(followers) ? followers : 0),
+        });
+      }
+      cursor = result.next?.cursor ?? undefined;
+      if (reachedCutoff || !cursor || !result.casts.length) { complete = true; break; }
+    }
+    return {
+      people: people.map((person) => ({ ...person, posts: activity.get(person.fid)?.posts ?? 0, followers: activity.get(person.fid)?.followers ?? 0 }))
+        .sort((a, b) => b.posts - a.posts || b.followers - a.followers || a.username.localeCompare(b.username)),
+      scanned,
+      complete,
+      generatedAt: Date.now(),
+    };
+  },
+  ["saved-friends-activity-90d-v1"],
+  { revalidate: 604800, tags: ["saved-friends-activity"] }
+);
+
+export async function savedFriendsActivity(fid: number, people: { fid: number; username: string }[]): Promise<SavedFriendsActivity> {
+  return savedFriendsActivityCached(fid, people);
+}
+
+const weeklyMiniAppsCached = unstable_cache(
+  async (): Promise<{ apps: MiniAppSummary[]; generatedAt: number }> => {
+    const result = await neynar().fetchFrameCatalog({ limit: 30, timeWindow: "7d" });
+    return { apps: result.frames.map((frame) => miniAppSummary(frame)).filter((app) => app.url), generatedAt: Date.now() };
+  },
+  ["weekly-mini-apps-7d-v1"],
+  { revalidate: 604800, tags: ["mini-apps-overview"] }
+);
+
+const relevantMiniAppsCached = unstable_cache(
+  async (fid: number): Promise<MiniAppSummary[]> => {
+    const result = await neynar().fetchRelevantFrames({ viewerFid: fid, timeWindow: "7d" });
+    return result.relevant_frames.map(({ frame }) => miniAppSummary(frame)).filter((app) => app.url);
+  },
+  ["relevant-mini-apps-7d-v1"],
+  { revalidate: 604800, tags: ["mini-apps-overview"] }
+);
+
+export async function miniAppsOverview(fid: number): Promise<MiniAppsOverview> {
+  const [weekly, relevant] = await Promise.all([weeklyMiniAppsCached(), relevantMiniAppsCached(fid)]);
+  return { weekly: weekly.apps, relevant, generatedAt: weekly.generatedAt };
+}
+
+export async function searchMiniApps(query: string): Promise<MiniAppSummary[]> {
+  const q = query.trim().slice(0, 80);
+  if (q.length < 2) return [];
+  const result = await neynar().searchFrames({ q, limit: 20 });
+  return result.frames.map((frame) => miniAppSummary(frame)).filter((app) => app.url);
+}
+
+/** Finds mini-app links published by this account in its latest 100 top-level casts. */
+const ownMiniAppsCached = unstable_cache(
+  async (fid: number): Promise<MiniAppSummary[]> => {
+  const result = await neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100 });
+  const found = new Map<string, MiniAppSummary>();
+  for (const raw of result.casts) {
+    const cast = asCast(raw);
+    for (const embed of cast.embeds ?? []) {
+      const frame = embed.metadata?.frame as { frames_url?: string; title?: string; image?: string; author?: { fid?: number; username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; primary_category?: string } }; metadata?: { html?: { ogDescription?: string } } } | undefined;
+      if (!frame?.frames_url || frame.author?.fid !== fid) continue;
+      const app = miniAppSummary({ ...frame, frames_url: frame.frames_url });
+      if (app.url && !found.has(app.url)) found.set(app.url, app);
+    }
+  }
+  return [...found.values()].slice(0, 20);
+  },
+  ["own-mini-apps-in-casts-v1"],
+  { revalidate: 3600, tags: ["own-mini-apps"] }
+);
+
+export async function ownMiniApps(fid: number): Promise<MiniAppSummary[]> {
+  return ownMiniAppsCached(fid);
 }
 
 const followedPeopleCached = unstable_cache(

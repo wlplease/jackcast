@@ -41,7 +41,17 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const pinnedCastHash = typeof p.pinnedCastHash === "string" && /^0x[0-9a-f]{40}$/i.test(p.pinnedCastHash)
       ? p.pinnedCastHash.toLowerCase()
       : null;
-    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
+    const savedMiniApps = Array.isArray(p.savedMiniApps)
+      ? Array.from(new Map(p.savedMiniApps.slice(0, 6).flatMap((entry) => {
+          const url = typeof entry?.url === "string" ? entry.url.trim() : "";
+          const title = typeof entry?.title === "string" ? entry.title.trim().slice(0, 64) : "";
+          try {
+            const parsed = new URL(url);
+            return parsed.protocol === "https:" && parsed.href.length <= 192 && !parsed.username && !parsed.password && title ? [[parsed.toString(), { url: parsed.toString(), title }] as const] : [];
+          } catch { return []; }
+        })).values())
+      : [];
+    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

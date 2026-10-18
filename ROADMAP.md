@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas for Selfcaster, grouped by what they do for you. PRs welcome; open an issue first for anything big. Nothing here is committed until it moves to **Next up**.
+Ideas for Jackcaster, a personal fork of Selfcaster, grouped by what they do for you. PRs welcome; open an issue first for anything big. Nothing here is committed until it moves to **Next up**.
 
 Effort: **S** an evening, **M** a weekend, **L** a few sessions.
 Storage: **none** (just Farcaster/Neynar), **browser** (this device only), **blob** (Vercel Blob for files), **db** (a small database so it syncs across devices).
@@ -9,7 +9,7 @@ Out of scope on purpose: DMs.
 
 ## Shipped
 
-Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, separate recasts feed, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, cast stats, edit profile, Gemini catch-up with optional ElevenLabs speech, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
+Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, separate recasts feed, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation and weekly activity checks, refreshed profile headers, profile Posts/Media tabs and analytics, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, Gemini storyline digest with topical sections and optional ElevenLabs speech, trending and personalized Mini Apps with saved apps and developer discovery, user settings, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
 
 ## Next up
 
@@ -62,5 +62,5 @@ Recommended sequence: start with the single Friends feed from selected accounts,
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
 | Keyboard shortcuts | `j`/`k` to move, `l` like, `r` reply, `c` compose. | S | none |
-| Gemini catch-up | Shipped as an on-demand summary of up to 20 loaded Following posts. Sends only selected post text and author handles to Gemini; no autonomous actions. | S | none |
+| Gemini catch-up | Shipped as an on-demand storyline plus topic breakdown of up to 20 loaded Following posts. Sends only selected post text and author handles to Gemini; no autonomous actions. | S | none |
 | Scheduled casts | Write now, post later. | M | db |

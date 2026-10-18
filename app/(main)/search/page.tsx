@@ -51,6 +51,7 @@ export default async function SearchPage({
           </Link>
         ))}
       </nav>
+      <p className="field-hint search-miniapps-link"><Link href="/mini-apps">Looking for Mini Apps? Browse weekly trends and search the catalog →</Link></p>
       {q ? <Results q={q} kind={kind} cursor={sp.cursor} fid={viewer.fid} canWrite={viewer.canWrite} /> : <Hints />}
     </>
   );
