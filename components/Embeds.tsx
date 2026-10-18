@@ -9,6 +9,7 @@ import { ImageEmbed } from "./ImageEmbed";
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|heic)(\?|$)/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m3u8)(\?|$)/i;
+const AUDIO_EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?|$)/i;
 
 // Where Farcaster images actually live. Many of these URLs have no file extension
 // (Farcaster's own uploads look like imagedelivery.net/<account>/<id>/original),
@@ -42,7 +43,10 @@ function isImage(e: EmbedView) {
   return IMAGE_HOSTS.some((re) => re.test(h)) && !VIDEO_EXT.test(e.url);
 }
 function isVideo(e: EmbedView) {
-  return e.metadata?.content_type?.startsWith("video/") || (e.url && VIDEO_EXT.test(e.url)) || !!e.metadata?.video;
+  return e.metadata?.content_type?.startsWith("video/") || (e.url && VIDEO_EXT.test(e.url)) || Boolean(e.metadata?.video);
+}
+function isAudio(e: EmbedView) {
+  return e.metadata?.content_type?.startsWith("audio/") || (e.url && AUDIO_EXT.test(e.url));
 }
 /**
  * Photos from a private Vercel Blob store can't be opened directly, so the app serves them
@@ -58,8 +62,7 @@ function viaProxy(url: string): string {
 
 /** Width over height, when Neynar knows it. */
 function videoRatio(e: EmbedView): number | undefined {
-  const v = e.metadata?.video as { stream?: { width_px?: number; height_px?: number }[] } | undefined;
-  const s = v?.stream?.find((x) => x.width_px && x.height_px);
+  const s = e.metadata?.video?.stream?.find((x) => x.width_px && x.height_px);
   return s ? s.width_px! / s.height_px! : undefined;
 }
 
@@ -84,8 +87,9 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         }
         if (!e.url) return null;
         const player = playerFor(e);
+        if (isAudio(e)) return <AudioEmbed key={i} url={e.url} title={e.metadata?.html?.ogTitle} />;
         if (player) return <Player key={i} spec={player} />;
-        if (isVideo(e)) return <VideoEmbed key={i} url={e.url} ratio={videoRatio(e)} />;
+        if (isVideo(e)) return <VideoEmbed key={i} url={e.url} ratio={videoRatio(e)} duration={e.metadata?.video?.duration_s} />;
         if (isImage(e)) {
           const src = viaProxy(e.url);
           return (
@@ -110,4 +114,10 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
       })}
     </div>
   );
+}
+
+function AudioEmbed({ url, title }: { url: string; title?: string }) {
+  let host = "Audio";
+  try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+  return <div className="audio-embed"><div className="audio-embed-heading"><span className="audio-embed-icon" aria-hidden="true">♫</span><span><strong>{title || "Audio post"}</strong><small>{host}</small></span><a href={url} target="_blank" rel="noreferrer" aria-label="Open audio source in a new tab">↗</a></div><audio controls preload="none" src={url}>Audio playback is not supported in this browser. <a href={url}>Open audio</a>.</audio></div>;
 }

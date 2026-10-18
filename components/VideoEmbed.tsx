@@ -20,14 +20,14 @@ export function thumbFor(url: string): string | null {
  * Shows a poster until you tap, then plays. Safari plays HLS on its own; everywhere else
  * hls.js loads on the first tap, so a feed full of videos costs nothing until you press play.
  */
-export function VideoEmbed({ url, ratio }: { url: string; ratio?: number }) {
+export function VideoEmbed({ url, ratio, duration }: { url: string; ratio?: number; duration?: number }) {
   const hls = url.split("?")[0].endsWith(".m3u8");
   const poster = hls ? thumbFor(url) : null;
   const [on, setOn] = useState(false);
   const [posterOk, setPosterOk] = useState(true);
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
-  const style = { aspectRatio: ratio && ratio > 0.3 && ratio < 4 ? String(ratio) : "16 / 9" };
+  const style = { aspectRatio: ratio && ratio > 0.3 && ratio < 4 ? String(ratio) : "16 / 9", ...(ratio && ratio < 0.9 ? { maxHeight: "min(70dvh, 620px)" } : {}) };
 
   useEffect(() => {
     const video = ref.current;
@@ -75,11 +75,11 @@ export function VideoEmbed({ url, ratio }: { url: string; ratio?: number }) {
         ) : !hls ? (
           <video src={`${url}#t=0.1`} preload="metadata" muted playsInline tabIndex={-1} />
         ) : null}
-        <span className="yt-play" aria-hidden="true">
+        <span className="video-playback-badge"><span className="yt-play" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" fill="currentColor" />
           </svg>
-        </span>
+        </span>{duration && <small>{formatDuration(duration)}</small>}</span>
       </button>
     );
   }
@@ -89,4 +89,9 @@ export function VideoEmbed({ url, ratio }: { url: string; ratio?: number }) {
       <video ref={ref} controls playsInline poster={poster ?? undefined} />
     </div>
   );
+}
+
+function formatDuration(value: number): string {
+  const seconds = Math.max(0, Math.floor(value));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
