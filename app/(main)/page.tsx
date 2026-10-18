@@ -18,7 +18,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           </div>
         )}
         {canWrite && !cursor && <Composer me={me} channels={channels} />}
-        <Feed page={page} basePath="/" canWrite={canWrite} live={cursor ? undefined : "following"} emptyTitle="Your feed is empty" emptyBody="Follow some people and they'll show up here, newest first." />
+        <Feed page={page} basePath="/" canWrite={canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "following"} emptyTitle="Your feed is empty" emptyBody="Follow some people and they'll show up here, newest first." />
       </>
     );
   } catch (e) {

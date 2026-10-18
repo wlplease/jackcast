@@ -124,6 +124,7 @@ async function Results({ q, kind, cursor, fid, canWrite }: { q: string; kind: Ki
         page={{ ...filtered, cursor: res.result.next?.cursor ?? null }}
         basePath={`/search?${new URLSearchParams({ q, type: "casts" })}`}
         canWrite={canWrite}
+        viewerFid={viewer.fid}
         emptyTitle="Nothing left"
         emptyBody="Everything matching was hidden by your filters."
       />

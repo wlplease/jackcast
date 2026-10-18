@@ -14,6 +14,7 @@ export async function Feed({
   basePath,
   canWrite,
   live,
+  viewerFid,
   emptyTitle = "Quiet in here",
   emptyBody = "Nothing to show yet.",
 }: {
@@ -22,6 +23,7 @@ export async function Feed({
   canWrite: boolean;
   /** Feed id ("following" or "c:<channel>") to enable the caught-up line and new-casts pill. First page only. */
   live?: string;
+  viewerFid?: number;
   emptyTitle?: string;
   emptyBody?: string;
 }) {
@@ -50,10 +52,10 @@ export async function Feed({
   const list = groups.map((group, i) => (
     <Fragment key={group[0].hash}>
       {live && i > 0 && <SeenLine above={groups[i - 1][0].timestamp} below={group[0].timestamp} />}
-      <CastCard cast={group[0]} canWrite={canWrite} />
+      <CastCard cast={group[0]} canWrite={canWrite} viewerFid={viewerFid} mutes={prefs.mutes} />
       {group.length > 1 && (
         <ExpandableCasts count={group.length - 1}>
-          {group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} />)}
+          {group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} viewerFid={viewerFid} mutes={prefs.mutes} />)}
         </ExpandableCasts>
       )}
     </Fragment>

@@ -29,6 +29,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
         .filter((person) => searchTerms.every((term) => `${person.username} ${person.displayName}`.toLowerCase().includes(term)))
         .slice(0, 8)
     : [];
+  const visiblePeople = [...people].sort((a, b) => a.username.localeCompare(b.username));
 
   async function loadFollowed() {
     if (followedLoaded || loadingFollowed) return;
@@ -50,6 +51,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
   }
 
   function save(next: Person[]) {
+    const previous = people;
     setPeople(next);
     setStatus("saving");
     setError(null);
@@ -60,6 +62,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
         setStatus("saved");
         setTimeout(() => setStatus((current) => current === "saved" ? "idle" : current), 1800);
       } else {
+        setPeople(previous);
         setStatus("idle");
         setError(result.error);
       }
@@ -67,7 +70,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
   }
 
   async function add() {
-    if (checking || people.length >= MAX_FRIENDS) return;
+    if (checking || status === "saving" || people.length >= MAX_FRIENDS) return;
     setChecking(true);
     setError(null);
     const result = await checkFriend(username);
@@ -85,7 +88,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
   }
 
   function addFollowed(person: { fid: number; username: string }) {
-    if (people.length >= MAX_FRIENDS || people.some((added) => added.fid === person.fid)) return;
+    if (status === "saving" || people.length >= MAX_FRIENDS || people.some((added) => added.fid === person.fid)) return;
     setSearch("");
     save([...people, { fid: person.fid, username: person.username }]);
   }
@@ -111,7 +114,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
         <div className="field-head">
           <h3>People in {title}</h3>
           <span className={`save-status ${status}`} aria-live="polite">
-            {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : ""}
+            {people.length}/{MAX_FRIENDS} selected · {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : ""}
           </span>
         </div>
         <p className="field-hint">A private, chronological feed from up to {MAX_FRIENDS} people. This list is saved on this device.</p>
@@ -133,7 +136,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
                         <span className="best-friend-rank">{index + 1}</span>
                         <span>@{person.username}</span>
                         <small>{person.posts} posts</small>
-                        <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || people.length >= MAX_FRIENDS}>
+                    <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || status === "saving" || people.length >= MAX_FRIENDS}>
                           {added ? "Added" : "Add"}
                         </button>
                       </div>
@@ -146,10 +149,10 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
         )}
         <div className="chips favs" aria-label={`People in ${title} feed`}>
           {people.length === 0 && <span className="chips-empty">No one added yet. Search or add a username below.</span>}
-          {people.map((person) => (
+          {visiblePeople.map((person) => (
             <span key={person.fid} className="chip fav">
               @{person.username}
-              <button type="button" aria-label={`Remove @${person.username} from ${title}`} onClick={() => save(people.filter((item) => item.fid !== person.fid))}>
+              <button type="button" aria-label={`Remove @${person.username} from ${title}`} onClick={() => save(people.filter((item) => item.fid !== person.fid))} disabled={status === "saving"}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                   <path d="M7 7l10 10M17 7L7 17" />
                 </svg>
@@ -157,22 +160,21 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
             </span>
           ))}
         </div>
-        {field === "customPeople" && (
-          <div className="followed-search">
-            <label className="field-label" htmlFor="custom-followed-search">Find someone you already follow</label>
+        <div className="followed-search">
+            <label className="field-label" htmlFor={`${field}-followed-search`}>Add someone you already follow</label>
             <input
-              id="custom-followed-search"
+              id={`${field}-followed-search`}
               className="text-input find"
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onFocus={() => void loadFollowed()}
-              placeholder="Search names or usernames"
+              placeholder="Search your followed accounts"
               autoCapitalize="none"
               autoCorrect="off"
-              disabled={people.length >= MAX_FRIENDS}
+              disabled={people.length >= MAX_FRIENDS || status === "saving"}
             />
-            <span className="field-hint">Searches up to 2,000 of your followed accounts; exact usernames can also be added below.</span>
+            <span className="field-hint">Search by display name or username across up to 2,000 followed accounts. You can also add an exact username below.</span>
             {search.trim() && (
               <div className="followed-results" aria-live="polite" aria-busy={loadingFollowed}>
                 {loadingFollowed && <p className="field-hint">Loading accounts you follow…</p>}
@@ -185,8 +187,7 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
                 {followedLoaded && matches.length === 0 && <p className="field-hint">No followed accounts match “{search.trim()}”.</p>}
               </div>
             )}
-          </div>
-        )}
+        </div>
         <form className="friend-add" onSubmit={(event) => { event.preventDefault(); void add(); }}>
           <input
             className="text-input find"
@@ -196,9 +197,9 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
             aria-label="Farcaster username to add"
             autoCapitalize="none"
             autoCorrect="off"
-            disabled={people.length >= MAX_FRIENDS}
+            disabled={people.length >= MAX_FRIENDS || status === "saving"}
           />
-          <button className="btn ghost sm" type="submit" disabled={!username.trim() || checking || people.length >= MAX_FRIENDS}>
+          <button className="btn ghost sm" type="submit" disabled={!username.trim() || checking || status === "saving" || people.length >= MAX_FRIENDS}>
             {checking ? "Looking…" : "Add"}
           </button>
         </form>

@@ -14,6 +14,19 @@
   <img src="./docs/screenshot-dark.png" width="300" alt="Jackcast feed, dark">
 </p>
 
+## Jackcast and Selfcaster
+
+Jackcast is a personal, open-source fork of [Selfcaster](https://github.com/GenuineJack/selfcaster), the Farcaster client created by [GenuineJack](https://github.com/GenuineJack). The original app is at [selfcaster.xyz](https://selfcaster.xyz/). Jackcast keeps the Selfcaster foundation and MIT license, then adds features shaped around one person's workflow; it is an independent fork, not an official Selfcaster release.
+
+Compared with the upstream project, Jackcast adds:
+
+- **More focused timelines:** separate Friends and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration.
+- **Richer profile and posting tools:** Posts and Media profile tabs, a pinned cast, optional cover editing, local drafts, and a thread composer with partial-send recovery.
+- **Optional AI catch-up:** a user-triggered Gemini digest with optional ElevenLabs speech. Provider keys stay server-side; see the privacy and cost notes below before enabling them.
+- **Fork-specific hardening and polish:** responsive feed media and page layouts, server-side input and upload bounds, safer errors, baseline security headers, and documented security decisions.
+
+These are Jackcast-specific choices, not a claim that Selfcaster should adopt every feature. See [FORK-NOTES.md](./FORK-NOTES.md) for the detailed comparison, [RELEASE-NOTES.md](./RELEASE-NOTES.md) for the current change summary, and [UPSTREAM-ISSUE-DRAFT.md](./UPSTREAM-ISSUE-DRAFT.md) for a proposed discussion with the upstream maintainer.
+
 ## What you get
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
@@ -32,6 +45,8 @@
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
 
 What it doesn't do: DMs (on purpose), ads, an algorithm, or tracking.
+
+**AI is completely optional.** Jackcast works without Google or ElevenLabs keys; AI controls appear only when you configure the related server-side environment variables.
 
 ## What you need
 
@@ -101,7 +116,7 @@ All optional settings are in [`.env.example`](./.env.example).
 
 ### Optional Gemini catch-up
 
-Add `GOOGLE_AI_API_KEY` to your Vercel environment and redeploy. The key stays on the server. The digest is user-triggered, uses at most 20 loaded casts (text capped at 500 characters each), asks for at most 300 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
+This feature is off unless you choose to enable it. You do not need an AI key to deploy or use Jackcast's feeds, profiles, or posting features. To enable the digest, add `GOOGLE_AI_API_KEY` to your Vercel environment and redeploy. The key stays on the server. The digest is user-triggered, uses at most 20 loaded casts (text capped at 500 characters each), asks for at most 300 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
 
 To add spoken playback, also set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`. Choose a voice available to that key. Jackcast sends ElevenLabs only the generated digest, caps it at 2,400 characters, and allows one audio generation attempt per page visit. The MP3 is not saved by Jackcast; it is held in the browser until you leave the page, with an option to download it. ElevenLabs usage is billed separately; review [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) and set limits in your ElevenLabs account. The integration follows ElevenLabs' [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert). See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
 

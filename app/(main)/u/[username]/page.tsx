@@ -68,11 +68,12 @@ export default async function ProfilePage({
         <a href={`/u/${username}`} aria-current={activeView === "posts" ? "page" : undefined}>Posts</a>
         <a href={`/u/${username}?view=media`} aria-current={activeView === "media" ? "page" : undefined}>Media</a>
       </nav>
-      {pinned && <div className="pinned-cast"><div className="pinned-label">Pinned on this Selfcaster</div><CastCard cast={pinned} canWrite={viewer.canWrite} variant="focus" /></div>}
+      {pinned && <div className="pinned-cast"><div className="pinned-label">Pinned on this Selfcaster</div><CastCard cast={pinned} canWrite={viewer.canWrite} viewerFid={viewer.fid} mutes={prefs.mutes} variant="focus" /></div>}
       <Feed
         page={{ ...page, casts: visibleCasts }}
         basePath={`/u/${username}${activeView === "media" ? "?view=media" : ""}`}
         canWrite={viewer.canWrite}
+        viewerFid={viewer.fid}
         emptyTitle={activeView === "media" ? "No media yet" : "No posts yet"}
         emptyBody={activeView === "media" ? "Photos and videos from this profile will show up here." : "No casts to show yet."}
       />

@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { react } from "@/app/actions";
+import { savePrefs } from "@/app/(main)/me/actions";
 import { compact } from "@/lib/format";
+import { MAX_MUTES, normalizeMute } from "@/lib/prefs-shared";
 
 type State = { liked: boolean; recasted: boolean; likes: number; recasts: number };
 
@@ -39,6 +42,9 @@ export function CastActions(props: {
   liked: boolean;
   recasted: boolean;
   canWrite: boolean;
+  authorUsername?: string;
+  viewerFid?: number;
+  mutes?: string[];
 }) {
   // Local state that sticks after the request finishes. (useOptimistic snaps back to the
   // server value when the action ends, which made likes look like they didn't register.)
@@ -49,8 +55,15 @@ export function CastActions(props: {
     recasts: props.recasts,
   });
   const [busy, setBusy] = useState<"like" | "recast" | null>(null);
+  const [muteBusy, setMuteBusy] = useState(false);
+  const [muted, setMuted] = useState(() => Boolean(props.authorUsername && props.mutes?.includes(`@${props.authorUsername.toLowerCase()}`)));
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const touched = useRef(false);
+
+  useEffect(() => {
+    setMuted(Boolean(props.authorUsername && props.mutes?.includes(`@${props.authorUsername.toLowerCase()}`)));
+  }, [props.authorUsername, props.mutes]);
 
   // Fresh server data can update us, but never undo something you just tapped
   // (Neynar can take a moment to reflect a new reaction).
@@ -82,6 +95,33 @@ export function CastActions(props: {
       setError("Couldn't reach Farcaster. Try again.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function toggleMute() {
+    if (!props.authorUsername || muteBusy) return;
+    const term = normalizeMute(`@${props.authorUsername}`);
+    if (!term) return;
+    const current = props.mutes ?? [];
+    const next = muted ? current.filter((item) => item !== term) : [...current, term];
+    if (!muted && next.length > MAX_MUTES) {
+      setError(`Your mute list is full (${MAX_MUTES}). Remove a term in You → Filters first.`);
+      return;
+    }
+    setMuteBusy(true);
+    setError(null);
+    try {
+      const result = await savePrefs({ mutes: next });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setMuted(!muted);
+      router.refresh();
+    } catch {
+      setError("Couldn't update your mute list. Please try again.");
+    } finally {
+      setMuteBusy(false);
     }
   }
 
@@ -122,6 +162,19 @@ export function CastActions(props: {
         {Icon.like(state.liked)}
         {state.likes > 0 && compact(state.likes)}
       </button>
+      {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && (
+        <button
+          className={`act act-mute${muted ? " muted" : ""}`}
+          type="button"
+          onClick={toggleMute}
+          disabled={muteBusy}
+          aria-label={`${muted ? "Unhide" : "Hide"} posts from @${props.authorUsername}`}
+          aria-pressed={muted}
+          title={`${muted ? "Unhide" : "Hide"} posts from @${props.authorUsername}`}
+        >
+          {muteBusy ? "Saving…" : muted ? "Unhide" : "Hide"}
+        </button>
+      )}
       {error && (
         <span className="act-error" role="alert">
           {error}

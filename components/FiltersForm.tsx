@@ -53,12 +53,12 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
     <div className="filters" id="filters">
       <div className="field">
         <div className="field-head">
-          <h3>Muted words</h3>
+        <h3>Muted topics and accounts</h3>
           <span className={`save-status ${status}`} aria-live="polite">
             {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : ""}
           </span>
         </div>
-        <p className="field-hint">Casts containing these are hidden everywhere except your own posts. Works for words, phrases, $tickers, #tags and @handles.</p>
+        <p className="field-hint">Mute a word or phrase to quiet a repeated topic, or add @handle to hide a high-volume account and posts that mention it. Your own casts are never hidden.</p>
         <div className="chips">
           {prefs.mutes.map((m) => (
             <span key={m} className="chip">

@@ -19,7 +19,8 @@ export function muteMatcher(terms: string[]): ((text: string) => boolean) | null
 }
 
 function searchableText(c: CastView): string {
-  const bits = [c.text];
+  // Include the author's handle so muting @handle hides that account as well as mentions.
+  const bits = [c.text, `@${c.author.username}`];
   for (const e of c.embeds ?? []) {
     if (e.cast?.text) bits.push(e.cast.text);
     if (e.metadata?.html?.ogTitle) bits.push(e.metadata.html.ogTitle);

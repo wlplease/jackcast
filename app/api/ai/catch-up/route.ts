@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "The digest request must use JSON." }, { status: 415 });
   }
   if (!process.env.GOOGLE_AI_API_KEY) {
-    return NextResponse.json({ error: "Add GOOGLE_AI_API_KEY in your server environment to enable AI catch-up." }, { status: 503 });
+    return NextResponse.json({ error: "AI catch-up is optional and is not enabled on this deployment. Add GOOGLE_AI_API_KEY to enable it; the rest of Jackcast works without AI." }, { status: 503 });
   }
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > 24_000) return NextResponse.json({ error: "This digest request is too large." }, { status: 413 });
@@ -65,13 +65,23 @@ export async function POST(request: NextRequest) {
       signal: controller.signal,
       cache: "no-store",
     });
-    if (!response.ok) return NextResponse.json({ error: "Gemini could not make the digest. Check the API key and project quota." }, { status: 502 });
+    if (!response.ok) {
+      const error = response.status === 401 || response.status === 403
+        ? "Gemini rejected the API key or access. Check GOOGLE_AI_API_KEY and whether the Gemini API is enabled for this project."
+        : response.status === 429
+          ? "Gemini quota reached. Check the Google project limits and try again later."
+          : "Gemini is temporarily unavailable. Try again in a little while.";
+      return NextResponse.json({ error }, { status: 502 });
+    }
     const result = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const summary = result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim().slice(0, 2400);
     if (!summary) return NextResponse.json({ error: "Gemini returned an empty digest. Please try again." }, { status: 502 });
     return NextResponse.json({ summary }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return NextResponse.json({ error: "Gemini is temporarily unavailable. Please try again." }, { status: 502 });
+  } catch (error) {
+    const message = error instanceof Error && error.name === "AbortError"
+      ? "Gemini took too long to respond. Try again later."
+      : "Gemini is temporarily unavailable. Check your connection and try again.";
+    return NextResponse.json({ error: message }, { status: 502 });
   } finally {
     clearTimeout(timeout);
   }

@@ -11,11 +11,15 @@ export function CastCard({
   canWrite,
   variant,
   showReplyTo = true,
+  viewerFid,
+  mutes,
 }: {
   cast: CastView;
   canWrite: boolean;
   variant?: "focus" | "parent";
   showReplyTo?: boolean;
+  viewerFid?: number;
+  mutes?: string[];
 }) {
   const a = cast.author;
   return (
@@ -58,6 +62,9 @@ export function CastCard({
           liked={cast.viewer_context?.liked ?? false}
           recasted={cast.viewer_context?.recasted ?? false}
           canWrite={canWrite}
+          authorUsername={a.username}
+          viewerFid={viewerFid}
+          mutes={mutes}
         />
       </div>
     </article>

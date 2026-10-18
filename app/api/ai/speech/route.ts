@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
   if (!apiKey || !voiceId) {
-    return NextResponse.json({ error: "Add ElevenLabs API key and voice ID in the server environment to enable audio." }, { status: 503 });
+    return NextResponse.json({ error: "Read-aloud is optional and is not enabled on this deployment. Add an ElevenLabs API key and voice ID to enable it." }, { status: 503 });
   }
 
   const contentLength = Number(request.headers.get("content-length") || 0);
@@ -95,8 +95,11 @@ export async function POST(request: NextRequest) {
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch {
-    return NextResponse.json({ error: "ElevenLabs is temporarily unavailable. Please try again later." }, { status: 502 });
+  } catch (error) {
+    const message = error instanceof Error && error.name === "AbortError"
+      ? "ElevenLabs took too long to create the audio. Try again later."
+      : "ElevenLabs is temporarily unavailable. Check your connection and try again.";
+    return NextResponse.json({ error: message }, { status: 502 });
   } finally {
     clearTimeout(timeout);
   }

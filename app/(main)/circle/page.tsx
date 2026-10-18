@@ -27,7 +27,7 @@ export default async function CustomFeedPage({ searchParams }: { searchParams: P
     return (
       <>
         <div className="section-head"><h1>{prefs.customName}</h1><span className="meta">{prefs.customPeople.length} people · newest first</span></div>
-        <Feed page={page} basePath="/circle" canWrite={viewer.canWrite} live={cursor ? undefined : "circle"} emptyTitle="Quiet in this feed" emptyBody="New casts from this group will show up here." />
+        <Feed page={page} basePath="/circle" canWrite={viewer.canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "circle"} emptyTitle="Quiet in this feed" emptyBody="New casts from this group will show up here." />
       </>
     );
   } catch (error) {

@@ -36,7 +36,7 @@ export default async function ChannelPage({
         {canWrite && !cursor && (
           <Composer me={me} defaultChannel={channel} channels={channels} placeholder={`Cast to /${channel}`} />
         )}
-        <Feed page={page} basePath={`/c/${channel}`} canWrite={canWrite} live={cursor ? undefined : `c:${channel}`} emptyBody={`No casts in /${channel} yet.`} />
+        <Feed page={page} basePath={`/c/${channel}`} canWrite={canWrite} viewerFid={viewer.fid} live={cursor ? undefined : `c:${channel}`} emptyBody={`No casts in /${channel} yet.`} />
       </>
     );
   } catch (e) {

@@ -31,6 +31,17 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; pref
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
+function neynarFailure(error: unknown, fallback: string): string {
+  const value = error && typeof error === "object" ? error as { status?: unknown; response?: { status?: unknown }; message?: unknown } : {};
+  const status = Number(value.status ?? value.response?.status ?? 0);
+  const message = typeof value.message === "string" ? value.message : "";
+  if (/Missing env var NEYNAR_API_KEY/i.test(message)) return "Neynar is not configured. Add NEYNAR_API_KEY to the server environment and redeploy.";
+  if (status === 401 || status === 403) return "Neynar rejected this request. Check the API key and Farcaster account connection.";
+  if (status === 429) return "Neynar rate limit reached. Wait a moment before trying again.";
+  if (status >= 500 || /fetch failed|network|timed? ?out/i.test(message)) return "Neynar is temporarily unavailable. Try again shortly.";
+  return fallback;
+}
+
 export async function updateProfile(input: {
   displayName?: string;
   bio?: string;
@@ -68,16 +79,7 @@ export async function updateProfile(input: {
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {
-    const err = e as { response?: { status?: number }; status?: number };
-    const status = err?.status ?? err?.response?.status;
-    const error = status === 401 || status === 403
-      ? "Neynar rejected the update. Check your connection at /setup."
-      : status === 429
-        ? "Neynar is rate limiting updates. Wait and try again."
-        : status && status >= 500
-          ? "Neynar is temporarily unavailable. Try again shortly."
-          : "Couldn't update your profile. Check your connection and try again.";
-    return { ok: false, error };
+    return { ok: false, error: neynarFailure(e, "Couldn't update your profile. Check your connection and try again.") };
   }
 }
 
@@ -88,8 +90,8 @@ export async function checkChannel(raw: string): Promise<{ ok: true; id: string;
   try {
     const { channel } = await neynar().lookupChannel({ id });
     return { ok: true, id: channel.id, name: channel.name };
-  } catch {
-    return { ok: false, error: `Couldn't find /${id}.` };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, `Couldn't find /${id}.`) };
   }
 }
 
@@ -100,8 +102,8 @@ export async function checkFriend(raw: string): Promise<{ ok: true; fid: number;
   try {
     const { user } = await neynar().lookupUserByUsername({ username });
     return { ok: true, fid: user.fid, username: user.username.toLowerCase() };
-  } catch {
-    return { ok: false, error: `Couldn't find @${username}.` };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, `Couldn't find @${username}.`) };
   }
 }
 
@@ -111,8 +113,8 @@ export async function suggestRecentFriends(): Promise<{ ok: true; people: { fid:
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
     return { ok: true, ...await recentFriendSuggestions(viewer.fid) };
-  } catch {
-    return { ok: false, error: "Couldn't scan your recent feed. Check your Neynar connection and try again." };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, "Couldn't scan your recent feed. Check your Neynar connection and try again.") };
   }
 }
 
@@ -122,7 +124,7 @@ export async function loadFollowedPeople(): Promise<{ ok: true; people: { fid: n
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
     return { ok: true, people: await getFollowedPeople() };
-  } catch {
-    return { ok: false, error: "Couldn't load followed accounts. You can still add someone by exact username." };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, "Couldn't load followed accounts. You can still add someone by exact username.") };
   }
 }

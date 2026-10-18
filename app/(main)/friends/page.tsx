@@ -27,7 +27,7 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <div className="section-head"><h1>Friends</h1><span className="meta">{prefs.friends.length} people · newest first</span></div>
-        <Feed page={page} basePath="/friends" canWrite={viewer.canWrite} live={cursor ? undefined : "friends"} emptyTitle="Nothing new from your people" emptyBody="Their next casts will show up here." />
+        <Feed page={page} basePath="/friends" canWrite={viewer.canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "friends"} emptyTitle="Nothing new from your people" emptyBody="Their next casts will show up here." />
       </>
     );
   } catch (error) {
