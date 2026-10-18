@@ -20,10 +20,13 @@ type LoginWindow = { failures: number; resetAt: number; blockedUntil: number };
 const loginWindows = new Map<string, LoginWindow>();
 
 function errMessage(e: unknown, action: "cast" | "reaction" = "cast"): string {
-  const status = Number((e as { status?: unknown; response?: { status?: unknown } })?.status ?? (e as { response?: { status?: unknown } })?.response?.status);
-  if (status === 401 || status === 403) return "The Farcaster connection was rejected. Reconnect at /setup.";
-  if (status === 429) return "Farcaster is rate limiting requests. Wait a little and try again.";
-  if (status >= 500) return "Farcaster is temporarily unavailable. Try again shortly.";
+  const value = e && typeof e === "object" ? e as { status?: unknown; response?: { status?: unknown }; message?: unknown } : {};
+  const status = Number(value.status ?? value.response?.status ?? 0);
+  const message = typeof value.message === "string" ? value.message : "";
+  if (status === 401 || status === 403) return "Neynar rejected the request. Check your Farcaster connection at /setup.";
+  if (status === 429) return "Neynar rate limit reached. Wait a little and try again.";
+  if (status >= 500) return "Neynar is temporarily unavailable. Try again shortly.";
+  if (/fetch failed|network|timed? ?out/i.test(message)) return "Couldn't reach Neynar. Your account data is unchanged; try again shortly.";
   return action === "reaction" ? "Couldn't update that reaction. Check your connection and try again." : "Couldn't publish the cast. Check your connection and try again.";
 }
 

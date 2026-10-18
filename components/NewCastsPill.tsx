@@ -10,11 +10,13 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   const router = useRouter();
   const [count, setCount] = useState(0);
   const [capped, setCapped] = useState(false);
+  const [checkError, setCheckError] = useState("");
   const [pending, start] = useTransition();
   const last = useRef(0);
 
   useEffect(() => {
     setCount(0);
+    setCheckError("");
     if (!newest) return;
     const since = Date.parse(newest);
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -32,9 +34,16 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
           if (!stop) {
             setCount(n);
             setCapped(capped && n === timestamps.length);
+            setCheckError("");
           }
+        } else if (!stop) {
+          setCheckError(res.status === 401
+            ? "Your Farcaster connection needs attention. Reconnect in You → Account."
+            : "Neynar couldn't check for new casts. Your loaded feed is still available; it will retry shortly.");
         }
-      } catch {}
+      } catch {
+        if (!stop) setCheckError("Couldn't check for new casts. Your loaded feed is still available; it will retry shortly.");
+      }
     };
     const loop = () => {
       timer = setTimeout(async () => {
@@ -54,9 +63,10 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
     };
   }, [feed, newest]);
 
-  if (count < 1) return null;
   return (
-    <div className="pill-wrap">
+    <>
+    {checkError && <div className="feed-poll-status" role="status">{checkError}</div>}
+    {count > 0 && <div className="pill-wrap">
       <button
         className="pill"
         onClick={() => {
@@ -71,6 +81,7 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
         </svg>
         {pending ? "Loading…" : `${capped ? `${count}+` : count} new ${count === 1 ? "cast" : "casts"}`}
       </button>
-    </div>
+    </div>}
+    </>
   );
 }

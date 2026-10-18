@@ -163,17 +163,15 @@ export function CastActions(props: {
         {state.likes > 0 && compact(state.likes)}
       </button>
       {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && (
-        <button
-          className={`act act-mute${muted ? " muted" : ""}`}
-          type="button"
-          onClick={toggleMute}
-          disabled={muteBusy}
-          aria-label={`${muted ? "Unhide" : "Hide"} posts from @${props.authorUsername}`}
-          aria-pressed={muted}
-          title={`${muted ? "Unhide" : "Hide"} posts from @${props.authorUsername}`}
-        >
-          {muteBusy ? "Saving…" : muted ? "Unhide" : "Hide"}
-        </button>
+        <details className="cast-menu">
+          <summary className="act" aria-label="More cast options" title="More cast options">•••</summary>
+          <div className="cast-menu-panel">
+            <button type="button" onClick={toggleMute} disabled={muteBusy}>
+              {muteBusy ? "Saving…" : muted ? `Show posts from @${props.authorUsername}` : `Hide posts from @${props.authorUsername}`}
+            </button>
+            <small>Manage this in You → Filters.</small>
+          </div>
+        </details>
       )}
       {error && (
         <span className="act-error" role="alert">

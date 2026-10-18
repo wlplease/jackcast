@@ -8,20 +8,18 @@
 
 ## Title
 
-Would you be open to reviewing selected Jackcast improvements upstream?
+Would a curated feed and feed-noise controls fit Selfcaster?
 
 ## Body
 
 Hi GenuineJack — I’ve been using Selfcaster as the foundation for **Jackcast**, an open-source personal fork for my own Farcaster workflow. Thanks for making Selfcaster available. Jackcast keeps the upstream MIT license and credits Selfcaster in its README and app footer.
 
-I’ve added several independent features and documented the changes in [the Jackcast repository](https://github.com/wlplease/jackcast):
+One workflow improvement I’d like your input on is keeping a busy Following feed readable without changing its chronological order. Jackcast experiments with:
 
-- Separate Friends and named custom feeds, with followed-account search and cached activity-based friend suggestions.
-- Feed controls for replies and mini apps, repeated-link grouping, per-feed scroll restoration, and responsive media sizing.
-- Profile Posts and Media views, a pinned cast, optional cover editing, browser-local drafts, and a thread composer with partial-send recovery.
-- Optional, user-triggered Gemini catch-up with ElevenLabs read-aloud. Both are disabled unless configured; provider keys stay server-side, and the README describes data handling and cost considerations.
-- Security and reliability improvements such as bounded uploads and AI requests, signer input validation, safer server errors, baseline response headers, and best-effort login throttling.
+- A private Friends feed and a second named feed, each built from accounts the owner already follows.
+- Search by display name or username when selecting accounts, with a compact selected-account list that can be edited in place.
+- Optional reply and mini-app filters, repeated-link grouping, and manual `@handle` mutes for prolific accounts or unwanted conversations.
 
-These changes reflect one user's needs, so I don’t assume they fit Selfcaster’s direction. Would any of these be useful upstream, and if so, would you prefer focused pull requests for individual features or another contribution path? I’m happy to split out only the parts that fit.
+These are personal-client features, and the lists stay in the owner’s device settings. I’m not proposing that Selfcaster adopt the whole fork. Would a focused curated-feed or noise-control feature fit the project? If so, what boundaries or UX would you want considered before I prepare a small pull request?
 
-For this Jackcast snapshot, typecheck, theme contrast checks, and the production build pass. The fork’s [change summary](https://github.com/wlplease/jackcast/blob/main/RELEASE-NOTES.md) and [maintenance notes](https://github.com/wlplease/jackcast/blob/main/FORK-NOTES.md) describe the implementation and trade-offs in more detail.
+The [Jackcast README](https://github.com/wlplease/jackcast#jackcast-and-selfcaster) summarizes the fork; [FORK-NOTES.md](https://github.com/wlplease/jackcast/blob/main/FORK-NOTES.md) and [RELEASE-NOTES.md](https://github.com/wlplease/jackcast/blob/main/RELEASE-NOTES.md) contain the broader maintenance and change notes. The typecheck, theme contrast check, and production build pass for this source snapshot.

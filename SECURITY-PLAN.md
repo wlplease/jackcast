@@ -37,8 +37,21 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 | Medium | Drafts are not available. | Save drafts locally in the browser first, with explicit controls for restore and delete. Avoid syncing sensitive content without a separate storage decision. | Done (local browser drafts) |
 | Later | Settings are spread across several forms. | Group settings by common tasks such as reading, posting, and appearance; retain clear labels and previews. | Open |
 | High | Some long posts and embedded content can widen the page on small screens. | Contain the shared app layout and allow long text, URLs, embeds, notifications, and profile metadata to shrink and wrap without removing intentional horizontal tab scrolling. | Done |
+| Medium | High-volume accounts and repeated topics can dominate a personal timeline. | Keep keyword/phrase muting and repeated-link grouping optional; expose a per-cast account mute that can be reviewed and undone in settings. | Done |
+| Medium | Curated feed lists are harder to scan or edit when people are added over time. | Search followed accounts in both pickers, show a selected count, sort selections for review, and keep remove controls next to each person. | Done |
+| Medium | Provider failures are not always distinguishable from empty feeds or broken actions. | Show safe, actionable Neynar/Gemini/ElevenLabs status messages for configuration, authorization, rate-limit, timeout, and temporary availability failures. Preserve already-loaded posts when background polling fails. | Done |
 
 ## Change log
+
+### 2026-10-18 — Added account mutes, clearer feed management, and service status
+
+- **Changed:** Cast menus can mute or unmute an author using the existing `@handle` mute setting. Feed filtering now checks the cast author’s handle as well as post text, so the action hides that account across feeds and remains editable under You → Filters.
+- **Changed:** Friends and custom-feed pickers both search followed accounts. Selected counts are visible, lists sort alphabetically, and save failures restore the previous list instead of leaving unsaved entries on screen.
+- **Changed:** Neynar errors are sanitized and classified in feed pages, profile actions, account lookup, cast actions, and background new-cast checks. Gemini and ElevenLabs report API-key/access, quota, timeout, and temporary service failures without exposing provider response bodies.
+- **Changed:** Media wrappers and embed grid children are explicitly width-constrained to the cast column, including video and preview cards.
+- **Why:** Give the user control over repeated account/topic noise, make private feed setup easier to maintain, and distinguish a provider outage from an empty feed while keeping already-loaded content usable.
+- **Verification:** Local source typecheck, theme contrast checks, production build, and `git diff --check` passed. On the current deployed version, a 390px viewport measured 818px document scroll width; image/link embeds reached 725px wide. At 1440px, the document did not horizontally overflow, but embeds reached 748px inside a 638px feed column. The deployed build predates this source fix, so production must be redeployed before the same content can be verified against the corrected CSS.
+- **Upstream discussion:** Narrowed `UPSTREAM-ISSUE-DRAFT.md` to one question about curated feeds and feed-noise controls; it no longer asks the maintainer to consider the full Jackcast feature set.
 
 ### 2026-10-18 — Contained app width and added project footer
 

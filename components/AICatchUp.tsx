@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import type { CastView } from "@/lib/types";
 
+function providerError(error: unknown, service: "Gemini" | "ElevenLabs"): string {
+  if (!(error instanceof Error)) return `${service} is temporarily unavailable. Try again later.`;
+  if (/Failed to fetch|NetworkError|Load failed|Unexpected token|JSON Parse/i.test(error.message)) {
+    return `Couldn't reach ${service}. Check service availability and try again later.`;
+  }
+  return error.message || `${service} is temporarily unavailable. Try again later.`;
+}
+
 export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; audioEnabled?: boolean }) {
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +40,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
       if (!response.ok || !data.summary) throw new Error(data.error || "Could not make a digest right now.");
       setSummary(data.summary);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not make a digest right now.");
+      setError(providerError(e, "Gemini"));
     } finally {
       setBusy(false);
     }
@@ -56,7 +64,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
       const audio = await response.blob();
       setAudioUrl(URL.createObjectURL(audio));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create audio right now.");
+      setError(providerError(e, "ElevenLabs"));
     } finally {
       setAudioBusy(false);
     }
@@ -83,7 +91,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
           {audioUrl && <a className="ai-catchup-download" href={audioUrl} download="jackcast-digest.mp3">Download MP3</a>}
         </div>
       )}
-      {error && <p className="ai-catchup-error" role="status">{error}</p>}
+      {error && <p className="ai-catchup-error" role="alert"><strong>Service status:</strong> {error}</p>}
       <small>One digest and one audio request per visit. Selected post text and author names go to Google for the digest. If you choose Read aloud, only the summary goes to ElevenLabs. These services cannot take actions.</small>
     </section>
   );

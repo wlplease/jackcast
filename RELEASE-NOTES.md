@@ -5,7 +5,9 @@ Jackcast is a personal fork of [Selfcaster by GenuineJack](https://github.com/Ge
 ## What changed
 
 - **Separate feeds:** Added private Friends and named custom feeds, each with up to 20 selected accounts. Friends recommendations rank followed accounts by activity in a 180-day window, with a 1,000-post scan cap and a 24-hour cache. Followed-account search and channel directories are cached for an hour.
-- **Feed controls:** Added reply and mini-app filters, repeated-link grouping, per-feed scroll restoration, new-cast and caught-up markers, and an expandable image viewer. Feed media sizing is constrained for desktop and mobile.
+- **Feed controls:** Added reply and mini-app filters, repeated-link grouping, per-feed scroll restoration, new-cast and caught-up markers, and an expandable image viewer. Cast menus can mute prolific accounts through the reversible `@handle` filter. Feed images, video, and link cards are constrained to the cast column.
+- **Friend and custom feeds:** Followed accounts can be searched in either feed picker; selected counts, alphabetical lists, and direct removal make device-local lists easier to review.
+- **Service status:** Feed errors and failed new-cast checks explain whether Neynar needs configuration, is rate-limiting, or is temporarily unavailable. Gemini and ElevenLabs errors identify key/access, quota, timeout, and provider availability issues.
 - **Profiles:** Added Posts and Media tabs, an app-local pinned cast, profile header improvements, and optional cover editing through Neynar.
 - **Composer:** Added browser-local drafts, quote and media improvements, and a text thread composer for up to five casts with recovery guidance after a partial send.
 - **Optional AI:** Added an on-demand Gemini digest for up to 20 loaded Following posts. A separate optional ElevenLabs action can read the digest aloud. Both API keys stay server-side; speech receives only the digest and is not stored by Jackcast.
