@@ -51,7 +51,7 @@ export function Masthead({ channels, unseen, customName, aiEnabled }: { channels
   return (
     <header className="mast">
       <div className="mast-row">
-        <Link href="/" className="wordmark">
+        <Link href="/" className="wordmark" aria-label="Selfcaster home feed" title="Home feed" scroll>
           <Wordmark />
         </Link>
         <nav className="mast-nav" aria-label="Main">
