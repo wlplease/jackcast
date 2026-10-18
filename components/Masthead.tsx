@@ -1,7 +1,10 @@
 "use client";
 
+"use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { logout } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
 import { NotificationLink } from "@/components/NotificationLink";
@@ -43,6 +46,7 @@ const I = {
 
 export function Masthead({ channels, customName }: { channels: string[]; customName: string; aiEnabled?: boolean }) {
   const path = usePathname();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined}>
       {label}
@@ -67,11 +71,9 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
           <NotificationLink icon={I.bell} />
           {icon("/profile", "Profile and analytics", I.you)}
           {icon("/me", "Settings", I.settings)}
-          <form action={logout}>
-            <button type="submit" className="icon-btn" aria-label="Lock" title="Lock">
-              {I.lock}
-            </button>
-          </form>
+          <button type="button" className="icon-btn" aria-label="Sign out" title="Sign out" onClick={() => setConfirmSignOut(true)}>
+            {I.lock}
+          </button>
         </nav>
       </div>
       <nav className="tabs" aria-label="Feeds">
@@ -83,6 +85,17 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
         {tab("/dev", "Dev")}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
+      {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>
+        <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="signout-title" aria-describedby="signout-description">
+          <div className="confirm-icon">{I.lock}</div>
+          <h2 id="signout-title">Sign out of Jackcaster?</h2>
+          <p id="signout-description">You can sign back in any time with your app password.</p>
+          <div className="confirm-actions">
+            <button type="button" className="btn secondary" onClick={() => setConfirmSignOut(false)}>Stay signed in</button>
+            <form action={logout}><button type="submit" className="btn danger">Sign out</button></form>
+          </div>
+        </section>
+      </div>}
     </header>
   );
 }

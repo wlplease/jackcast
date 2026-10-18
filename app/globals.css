@@ -83,10 +83,27 @@ main { flex: 1; min-width: 0; }
 
 /* Masthead */
 .mast { border-top: 3px solid var(--brand); position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--rule); }
-.mast-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 14px 18px 8px; }
+.mast-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 12px 18px 8px; }
 .mast-row > .wordmark { flex: 0 1 auto; min-width: 0; font-family: var(--display); font-weight: var(--wordmark-weight); font-variation-settings: var(--display-fvs); font-size: 30px; line-height: 1; letter-spacing: var(--display-tracking); white-space: nowrap; }
 .wordmark em { color: var(--accent); font-style: var(--wordmark-em); }
-.mast-nav { display: flex; flex: none; align-items: center; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
+.mast-nav { display: flex; flex: none; align-items: center; gap: 5px; font-size: 13.5px; color: var(--ink-2); }
+.icon-btn { position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px; flex: none; padding: 0; border: 1px solid transparent; border-radius: 12px; color: var(--ink-2); background: transparent; transition: color 140ms ease, background 140ms ease, border-color 140ms ease, transform 140ms ease; }
+.icon-btn svg { display: block; width: 19px; height: 19px; }
+.icon-btn:hover { color: var(--ink); background: var(--card); border-color: var(--rule); }
+.icon-btn:active { transform: scale(.96); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.icon-btn[aria-current="page"] { color: var(--accent); background: var(--card); border-color: var(--rule-strong); }
+.icon-btn .badge { position: absolute; top: -2px; right: -3px; }
+.confirm-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgb(0 0 0 / 42%); backdrop-filter: blur(3px); }
+.confirm-dialog { width: min(100%, 390px); padding: 22px; border: 1px solid var(--rule-strong); border-radius: 18px; background: var(--paper); box-shadow: 0 24px 80px rgb(0 0 0 / 22%); }
+.confirm-icon { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--rule); border-radius: 13px; color: var(--ink-2); background: var(--card); }
+.confirm-icon svg { width: 20px; height: 20px; }
+.confirm-dialog h2 { margin: 16px 0 6px; font-family: var(--display); font-size: 21px; }
+.confirm-dialog p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
+.confirm-actions form { margin: 0; }
+.confirm-actions .btn { min-height: 40px; }
+.confirm-actions .danger { border-color: #b43d38; color: #fff; background: #b43d38; }
 .mast-nav a:hover, .mast-nav button:hover { color: var(--ink); }
 .mast-nav button { background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink-2); }
 .tabs { display: flex; gap: 6px; padding: 4px 14px 10px; overflow-x: auto; scrollbar-width: none; }
@@ -310,7 +327,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
   .mast-row { padding: 12px 12px 8px; }
   .mast-row .wordmark { font-size: clamp(22px, 7vw, 27px); }
   .mast-nav { gap: 0; }
-  .icon-btn { width: clamp(28px, 8vw, 32px); height: 36px; }
+  .icon-btn { width: clamp(32px, 8vw, 36px); height: 36px; }
   .icon-btn svg { width: 18px; height: 18px; }
 }
 
