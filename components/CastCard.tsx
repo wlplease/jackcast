@@ -29,7 +29,7 @@ export function CastCard({
         <Avatar user={a} />
       </Link>
       <div style={{ minWidth: 0 }}>
-        {cast.recastedByViewer && <div className="recast-context">↻ You recasted</div>}
+        {cast.sharedByFollowed && <div className="recast-context">↻ Recasted by someone you follow</div>}
         {showReplyTo && cast.parent_hash && variant !== "parent" && (
           <div className="reply-to">replying in a thread</div>
         )}

@@ -67,15 +67,35 @@ async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
 
-/** Recasts made by the signed-in user, kept separate from their chronological feeds. */
-export async function recastsFeed(cursor?: string, limit = 30): Promise<Page> {
+/** Recast-only view of the network feed. Neynar supplies casts added by the recast option, not the recaster identity. */
+export async function recastsFeed(cursor?: string, limit = 100): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  const res = await neynar().fetchRepliesAndRecastsForUser({ fid, filter: "recasts", limit, cursor, viewerFid: fid });
-  const filtered = await clean(res.casts, fid);
+  let recastCursor: string | undefined;
+  let directCursor: string | undefined;
+  if (cursor) {
+    try {
+      const parsed = JSON.parse(cursor) as { version?: unknown; recasts?: unknown; direct?: unknown };
+      if (parsed.version === 1 && (typeof parsed.recasts === "string" || parsed.recasts === null) && (typeof parsed.direct === "string" || parsed.direct === null)) {
+        recastCursor = parsed.recasts ?? undefined;
+        directCursor = parsed.direct ?? undefined;
+      } else recastCursor = cursor;
+    } catch {
+      recastCursor = cursor;
+    }
+  }
+  const [withRecasts, direct] = await Promise.all([
+    neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: true, limit, cursor: recastCursor }),
+    neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor: directCursor }),
+  ]);
+  const directHashes = new Set(direct.casts.map((cast) => cast.hash));
+  const onlyRecasts = withRecasts.casts.filter((cast) => !directHashes.has(cast.hash));
+  const filtered = await clean(onlyRecasts, fid);
   return {
-    casts: filtered.casts.map((cast) => ({ ...cast, recastedByViewer: true })),
+    casts: filtered.casts.map((cast) => ({ ...cast, sharedByFollowed: true })),
     hidden: filtered.hidden,
-    cursor: res.next?.cursor ?? null,
+    cursor: withRecasts.next?.cursor
+      ? JSON.stringify({ version: 1, recasts: withRecasts.next.cursor, direct: direct.next?.cursor ?? null })
+      : null,
   };
 }
 

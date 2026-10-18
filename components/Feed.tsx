@@ -46,6 +46,11 @@ export async function Feed({
           <p>{emptyBody}</p>
         </div>
         {hiddenNote}
+        {page.cursor && (
+          <Link className="more" href={`${basePath}${basePath.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(page.cursor)}`}>
+            older →
+          </Link>
+        )}
       </>
     );
   }

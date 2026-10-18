@@ -20,7 +20,7 @@ Jackcast is a personal, open-source fork of [Selfcaster](https://github.com/Genu
 
 Compared with the upstream project, Jackcast adds:
 
-- **More focused timelines:** separate Friends and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration.
+- **More focused timelines:** separate Friends, Recasts, and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration. Recasts by people you follow have their own tab and stay out of the regular feeds.
 - **Richer profile and posting tools:** Posts and Media profile tabs, a pinned cast, optional cover editing, local drafts, and a thread composer with partial-send recovery.
 - **Optional AI catch-up:** a user-triggered Gemini digest with optional ElevenLabs speech. Provider keys stay server-side; see the privacy and cost notes below before enabling them.
 - **Fork-specific hardening and polish:** responsive feed media and page layouts, server-side input and upload bounds, safer errors, baseline security headers, and documented security decisions.
@@ -29,7 +29,7 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 
 ## What you get
 
-- **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
+- **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Posts shared by people you follow appear in their own Recasts tab.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
 - **A Friends feed.** Search the accounts you already follow or scan recent Following posts to suggest the 20 most active people from the last 180 days (up to 1,000 posts per scan). Suggestions are cached for a day; followed-account and channel directories are cached for an hour to reduce repeat Neynar requests. Review the selected list and remove people at any time. The list is private to this app and saved on this device.
 - **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Review and edit the selected list in settings; Following, Friends, and this custom feed stay separate.
@@ -40,7 +40,7 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in You → Filters if you want every post shown separately.
 - **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
 - **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
-- **Optional AI catch-up and audio.** Ask Gemini for a short digest of up to 20 loaded posts in Following, then optionally have ElevenLabs read that digest aloud. Both are user-triggered; neither can post, like, or take actions. Add `GOOGLE_AI_API_KEY` for the digest. Add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text and author names; ElevenLabs receives only the generated summary. Audio is created on demand and kept in the browser for that visit.
+- **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for up to three short theme highlights from 20 loaded posts in Following. The digest stays out of the feed unless opened from the icon, and its options let you redo or clear it. Optionally have ElevenLabs read it aloud. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text and author names; ElevenLabs receives only the generated summary. Audio is created on demand and kept in the browser for that visit.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
 - **Service status.** When Neynar, Gemini, or ElevenLabs has a configuration, quota, or availability problem, Jackcast explains what happened and whether to check settings or try again. AI remains optional; the core app works without Google or ElevenLabs keys.

@@ -27,6 +27,8 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
     setBusy(true);
     setError("");
     setSummary("");
+    setAudioRequested(false);
+    setAudioUrl("");
     try {
       const response = await fetch("/api/ai/catch-up", {
         method: "POST",
@@ -44,6 +46,13 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
     } finally {
       setBusy(false);
     }
+  }
+
+  function clearDigest() {
+    setSummary("");
+    setError("");
+    setAudioRequested(false);
+    setAudioUrl("");
   }
 
   async function readAloud() {
@@ -81,6 +90,15 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
           <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary)}>
             {busy ? "Summarizing…" : summary ? "Digest ready" : "Make digest"}
           </button>
+          {summary && (
+            <details className="ai-catchup-menu">
+              <summary aria-label="Digest options" title="Digest options">⋯</summary>
+              <div className="ai-catchup-menu-popover">
+                <button type="button" onClick={summarize} disabled={busy}>Redo digest</button>
+                <button type="button" onClick={clearDigest} disabled={busy || audioBusy}>Clear digest</button>
+              </div>
+            </details>
+          )}
           <a className="ai-catchup-close" href="/" aria-label="Close AI catch-up">Close</a>
         </div>
       </div>
