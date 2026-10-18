@@ -40,6 +40,7 @@ export type CastView = {
   reactions: { likes_count: number; recasts_count: number };
   replies: { count: number };
   viewer_context?: { liked: boolean; recasted: boolean };
+  recastedByViewer?: boolean;
 };
 
 export function asCast(c: unknown): CastView {

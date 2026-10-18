@@ -9,7 +9,7 @@ Out of scope on purpose: DMs.
 
 ## Shipped
 
-Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, Gemini catch-up with optional ElevenLabs speech, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
+Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, separate recasts feed, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, cast stats, edit profile, Gemini catch-up with optional ElevenLabs speech, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
 
 ## Next up
 

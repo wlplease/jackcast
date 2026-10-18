@@ -83,7 +83,7 @@ main { flex: 1; min-width: 0; }
 /* Masthead */
 .mast { border-top: 3px solid var(--brand); position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--rule); }
 .mast-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 14px 18px 8px; }
-.wordmark { font-family: var(--display); font-weight: var(--wordmark-weight); font-variation-settings: var(--display-fvs); font-size: 30px; line-height: 1; letter-spacing: var(--display-tracking); }
+.mast-row > .wordmark { flex: 0 1 auto; min-width: 0; font-family: var(--display); font-weight: var(--wordmark-weight); font-variation-settings: var(--display-fvs); font-size: 30px; line-height: 1; letter-spacing: var(--display-tracking); white-space: nowrap; }
 .wordmark em { color: var(--accent); font-style: var(--wordmark-em); }
 .mast-nav { display: flex; flex: none; align-items: center; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
 .mast-nav a:hover, .mast-nav button:hover { color: var(--ink); }
@@ -113,6 +113,7 @@ main { flex: 1; min-width: 0; }
 .cast-head .handle { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cast-head .chan { max-width: 32%; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 11.5px; color: var(--accent); white-space: nowrap; }
 .cast-text { font-family: var(--read); font-size: var(--read-size); margin: 3px 0 0; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+.recast-context { margin-bottom: 2px; color: var(--ink-3); font-size: 11.5px; font-weight: 600; }
 .cast-text a.link { color: var(--accent); }
 .cast-text a.link:hover { text-decoration: underline; }
 .reply-to { font-size: 12.5px; color: var(--ink-3); margin-bottom: 2px; }
@@ -278,6 +279,17 @@ main { flex: 1; min-width: 0; }
 .icon-btn svg { width: 21px; height: 21px; }
 .icon-btn:hover, .icon-btn[aria-current="page"] { color: var(--ink); background: var(--card); }
 .badge { position: absolute; top: 2px; right: 1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--brand); color: var(--on-brand); font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; box-shadow: 0 0 0 2px var(--paper); }
+.active-filters { display: flex; align-items: center; gap: 8px; margin: 8px 18px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); font-size: 12px; }
+.active-filters-copy { display: grid; flex: 1; min-width: 0; line-height: 1.35; }
+.active-filters-copy span { overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
+.active-filters a, .active-filters button { flex: none; padding: 4px 7px; border: 0; border-radius: 6px; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+.active-filters a:hover, .active-filters button:hover:not(:disabled) { background: var(--paper); }
+.active-filters button:disabled { opacity: .6; cursor: wait; }
+.ai-catchup { display: none; }
+.ai-catchup:target { display: block; }
+.ai-catchup-actions { display: flex; align-items: center; gap: 8px; }
+.ai-catchup-close { color: var(--ink-3); font-size: 12px; }
+.ai-catchup-close:hover { color: var(--ink); text-decoration: underline; }
 @media (max-width: 420px) {
   .mast-row { padding: 12px 12px 8px; }
   .mast-row .wordmark { font-size: clamp(22px, 7vw, 27px); }

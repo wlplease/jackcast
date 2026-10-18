@@ -19,7 +19,7 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
     setPrefs(next);
     setStatus("saving");
     start(async () => {
-      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, recasts: next.recasts, showReplies: next.showReplies, hideMiniApps: next.hideMiniApps, groupLinks: next.groupLinks });
+      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, showReplies: next.showReplies, hideMiniApps: next.hideMiniApps, groupLinks: next.groupLinks });
       if (res.ok) {
         setPrefs(res.prefs);
         setStatus("saved");
@@ -155,27 +155,6 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
             className={`switch${prefs.hideMiniApps ? " on" : ""}`}
             onClick={() => commit({ ...prefs, hideMiniApps: !prefs.hideMiniApps })}
           ><span /></button>
-        </div>
-      </div>
-
-      <div className="field">
-        <div className="toggle-row">
-          <div>
-            <h3>Show recasts</h3>
-            <p className="field-hint">
-              Off keeps Following strictly chronological. A recast shows the original cast&apos;s time, so old posts would jump to the top.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={prefs.recasts}
-            aria-label="Show recasts"
-            className={`switch${prefs.recasts ? " on" : ""}`}
-            onClick={() => commit({ ...prefs, recasts: !prefs.recasts })}
-          >
-            <span />
-          </button>
         </div>
       </div>
 

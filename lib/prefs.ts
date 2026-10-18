@@ -36,7 +36,7 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const pinnedCastHash = typeof p.pinnedCastHash === "string" && /^0x[0-9a-f]{40}$/i.test(p.pinnedCastHash)
       ? p.pinnedCastHash.toLowerCase()
       : null;
-    return { mutes, quality: q, recasts: p.recasts === true, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
+    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

@@ -30,8 +30,7 @@ function byTime(casts: CastView[]): CastView[] {
 
 export async function followingFeed(cursor?: string, limit = 30): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  const prefs = await getPrefs();
-  const res = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: prefs.recasts, limit, cursor });
+  const res = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor });
   const filtered = await clean(res.casts, fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
@@ -53,7 +52,6 @@ export async function channelFeed(channelId: string, cursor?: string, limit = 30
 /** Chronological casts from the people selected for this device's private Friends feed. */
 async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  const prefs = await getPrefs();
   const fids = people.map((person) => person.fid);
   if (!fids.length) return { casts: [], hidden: 0, cursor: null };
   const res = await neynar().fetchFeed({
@@ -61,12 +59,24 @@ async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30
     filterType: "fids",
     fids,
     viewerFid: fid,
-    withRecasts: prefs.recasts,
+    withRecasts: false,
     limit,
     cursor,
   });
   const filtered = await clean(res.casts, fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+}
+
+/** Recasts made by the signed-in user, kept separate from their chronological feeds. */
+export async function recastsFeed(cursor?: string, limit = 30): Promise<Page> {
+  const { fid } = await viewerOrThrow();
+  const res = await neynar().fetchRepliesAndRecastsForUser({ fid, filter: "recasts", limit, cursor, viewerFid: fid });
+  const filtered = await clean(res.casts, fid);
+  return {
+    casts: filtered.casts.map((cast) => ({ ...cast, recastedByViewer: true })),
+    hidden: filtered.hidden,
+    cursor: res.next?.cursor ?? null,
+  };
 }
 
 export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {

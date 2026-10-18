@@ -75,11 +75,14 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
       <div className="ai-catchup-top">
         <div>
           <strong>Catch up with AI</strong>
-          <p>Gemini reads up to 20 posts from this page when you ask.</p>
+          <p>Three quick highlights from up to 20 posts.</p>
         </div>
-        <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary)}>
-          {busy ? "Summarizing…" : summary ? "Digest ready" : "Make digest"}
-        </button>
+        <div className="ai-catchup-actions">
+          <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary)}>
+            {busy ? "Summarizing…" : summary ? "Digest ready" : "Make digest"}
+          </button>
+          <a className="ai-catchup-close" href="/" aria-label="Close AI catch-up">Close</a>
+        </div>
       </div>
       {summary && <p className="ai-catchup-summary" aria-live="polite">{summary}</p>}
       {summary && audioEnabled && (

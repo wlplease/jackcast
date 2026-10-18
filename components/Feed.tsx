@@ -8,6 +8,7 @@ import { ExpandableCasts } from "./ExpandableCasts";
 import { groupRepeatedLinks } from "@/lib/feed-groups";
 import { getPrefs } from "@/lib/prefs";
 import { AICatchUp } from "./AICatchUp";
+import { ActiveFeedFilters } from "./ActiveFeedFilters";
 
 export async function Feed({
   page,
@@ -39,6 +40,7 @@ export async function Feed({
   if (!page.casts.length) {
     return (
       <>
+        <ActiveFeedFilters prefs={prefs} />
         <div className="empty">
           <h2>{emptyTitle}</h2>
           <p>{emptyBody}</p>
@@ -65,6 +67,7 @@ export async function Feed({
 
   return (
     <>
+      <ActiveFeedFilters prefs={prefs} />
       {live ? (
         <>
           {live === "following" && process.env.GOOGLE_AI_API_KEY && <AICatchUp casts={page.casts} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} />}

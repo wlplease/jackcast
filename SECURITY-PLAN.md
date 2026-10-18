@@ -30,8 +30,8 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 
 | Priority | Opportunity | Proposed direction | Status |
 | --- | --- | --- | --- |
-| High | Mobile masthead occupies substantial vertical space. | Prototype a denser phone header while keeping search, notifications, profile, and channel navigation easy to reach. Check at 390px in light and dark mode. | Open |
-| High | Feed controls are limited. | Add optional filters for replies and mini app casts alongside the existing recast control. Make active filters visible and easy to reset. | Partial (filters shipped; active summary/reset still open) |
+| High | Mobile masthead occupies substantial vertical space. | Prototype a denser phone header while keeping search, notifications, profile, and channel navigation easy to reach. Check at 390px in light and dark mode. | Partial (row now scales to narrow screens; visual check pending) |
+| High | Feed controls are limited. | Add optional filters for replies and mini app casts. Make active filters visible and easy to reset, and keep recasts in a dedicated feed. | Done (active summary, clear action, and separate recasts feed) |
 | Medium | Channel tabs are alphabetical and channel selection is limited. | Add channel discovery and manual tab ordering; preserve a useful fallback when no favorites are selected. | Open |
 | Medium | Posting a multi-cast thread takes repeated composer work. | Add a thread composer with per-cast byte counts and clear partial-failure recovery. | Done (text-only, up to five casts) |
 | Medium | Drafts are not available. | Save drafts locally in the browser first, with explicit controls for restore and delete. Avoid syncing sensitive content without a separate storage decision. | Done (local browser drafts) |
@@ -42,6 +42,13 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 | Medium | Provider failures are not always distinguishable from empty feeds or broken actions. | Show safe, actionable Neynar/Gemini/ElevenLabs status messages for configuration, authorization, rate-limit, timeout, and temporary availability failures. Preserve already-loaded posts when background polling fails. | Done |
 
 ## Change log
+
+### 2026-10-18 — Surface feed filters and separate recasts
+
+- **Changed:** Feeds now show a compact summary of non-default mute and quality settings, reply and mini-app filters, and repeated-link grouping. The summary links to filter settings and clears feed filters in one action.
+- **Changed:** Added a Recasts tab before the custom feed. Following, Friends, and custom feeds exclude recasts, while the dedicated tab shows the signed-in user's recast activity from Neynar.
+- **Why:** Keep the main chronological feeds focused and make recast activity easy to find.
+- **Verification:** Source review and `git diff --check` passed. The local page preview reached setup because this checkout has no `NEYNAR_API_KEY`; authenticated feed rendering and 390px light/dark visual checks remain pending.
 
 ### 2026-10-18 — Added account mutes, clearer feed management, and service status
 

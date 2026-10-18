@@ -69,6 +69,7 @@ export function Masthead({ channels, unseen, customName, aiEnabled }: { channels
       <nav className="tabs" aria-label="Feeds">
         {tab("/", "Following")}
         {tab("/friends", "Friends")}
+        {tab("/recasts", "Recasts")}
         {tab("/circle", customName)}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
