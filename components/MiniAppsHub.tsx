@@ -21,6 +21,7 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
   const [results, setResults] = useState<MiniAppSummary[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
   const [error, setError] = useState("");
   const [savedApps, setSavedApps] = useState(initialSaved);
   const [category, setCategory] = useState("all");
@@ -44,7 +45,8 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
   const visibleWeekly = category === "all" ? weekly : weekly.filter((app) => app.category === category);
 
   return <>
-    <section className="section-head miniapps-heading"><div><h1>Mini Apps</h1><p>Discover what people are building and using on Farcaster.</p></div><div className="miniapps-updated"><span className="meta">Updated {new Date(generatedAt).toLocaleDateString()}</span><button className="linkish" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await refreshMiniApps(); window.location.reload(); } finally { setRefreshing(false); } }}>{refreshing ? "Refreshing…" : "Refresh"}</button></div></section>
+    <section className="section-head miniapps-heading"><div><h1>Mini Apps</h1><p>Discover what people are building and using on Farcaster.</p></div><div className="miniapps-updated"><span className="meta">Updated {new Date(generatedAt).toLocaleDateString()}</span><button className="linkish" disabled={refreshing} onClick={async () => { setRefreshing(true); setRefreshError(""); try { await refreshMiniApps(); window.location.reload(); } catch { setRefreshError("Could not refresh the Mini App catalog. Your current list is still available; try again shortly."); } finally { setRefreshing(false); } }}>{refreshing ? "Refreshing…" : "Refresh"}</button></div></section>
+    {refreshError && <p className="form-error miniapp-error" role="status">{refreshError}</p>}
     <form className="miniapp-search" role="search" onSubmit={search}>
       <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mini apps" aria-label="Search mini apps" maxLength={80} />
       <button className="btn ghost sm" disabled={searching || query.trim().length < 2}>{searching ? "Searching…" : "Search"}</button>

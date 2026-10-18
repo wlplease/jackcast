@@ -172,7 +172,7 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
         <div className="toggle-row">
           <div>
             <h3>Show media and link previews</h3>
-            <p className="field-hint">Hide embedded images, videos, and link cards for a text-focused feed. Open a cast to see its full content.</p>
+            <p className="field-hint">Hide embedded images, videos, audio players, and link cards for a text-focused feed. Open a cast to see its full content.</p>
           </div>
           <button type="button" role="switch" aria-checked={prefs.showPreviews} aria-label="Show media and link previews" className={`switch${prefs.showPreviews ? " on" : ""}`} onClick={() => commit({ ...prefs, showPreviews: !prefs.showPreviews })}><span /></button>
         </div>

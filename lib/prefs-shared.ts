@@ -14,7 +14,7 @@ export type Prefs = {
   groupLinks: boolean;
   /** Comfortable or compact spacing across feed cards. */
   density: "comfortable" | "compact";
-  /** Render photo, video, and link embed previews in casts. */
+  /** Render image, video, audio, and link embed previews in casts. */
   showPreviews: boolean;
   /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
   tabs: string[] | null;
