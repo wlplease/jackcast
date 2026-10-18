@@ -59,11 +59,31 @@ export default async function SearchPage({
 
 function Hints() {
   return (
-    <div className="empty">
-      <h2>Find anything</h2>
-      <p>Try a word, a @handle, or a channel like music.</p>
-    </div>
+    <section className="search-suggestions" aria-label="Search suggestions">
+      <div className="search-suggestions-intro">
+        <span className="search-suggestions-mark" aria-hidden="true">⌕</span>
+        <div><h2>What are you looking for?</h2><p>Search the Farcaster conversation, find people, or explore a channel.</p></div>
+      </div>
+      <div className="search-suggestion-grid">
+        <SuggestionCard type="casts" title="Casts" description="Find conversations, ideas, and links" icon="✳" />
+        <SuggestionCard type="people" title="People" description="Discover creators and accounts" icon="♙" />
+        <SuggestionCard type="channels" title="Channels" description="Explore communities by topic" icon="#" />
+      </div>
+      <p className="search-suggestion-examples">Try <SuggestionLink type="casts" query="mini apps" label="mini apps" />, <SuggestionLink type="people" query="builders" label="builders" />, or <SuggestionLink type="channels" query="music" label="music" />.</p>
+    </section>
   );
+}
+
+function SuggestionCard({ type, title, description, icon }: { type: Kind; title: string; description: string; icon: string }) {
+  return <Link className="search-suggestion-card" href={`/search?${new URLSearchParams({ type })}`}>
+    <span className="search-suggestion-icon" aria-hidden="true">{icon}</span>
+    <span><strong>{title}</strong><small>{description}</small></span>
+    <span className="search-suggestion-arrow" aria-hidden="true">→</span>
+  </Link>;
+}
+
+function SuggestionLink({ type, query, label }: { type: Kind; query: string; label: string }) {
+  return <Link href={`/search?${new URLSearchParams({ type, q: query })}`}>{label}</Link>;
 }
 
 async function Results({ q, kind, cursor, fid, canWrite }: { q: string; kind: Kind; cursor?: string; fid: number; canWrite: boolean }) {

@@ -422,6 +422,23 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .search-bar:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--accent-soft); }
 .search-bar svg { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
 .search-bar input[type="search"] { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; padding: 11px 0; color: var(--ink); outline: none; }
+.search-suggestions { margin: 30px 18px 24px; padding: 20px; border: 1px solid var(--rule); border-radius: 18px; background: var(--card); }
+.search-suggestions-intro { display: flex; align-items: center; gap: 12px; }
+.search-suggestions-mark { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 13px; background: var(--accent-soft); color: var(--accent); font-size: 28px; line-height: 1; }
+.search-suggestions-intro h2 { margin: 0; font-family: var(--display); font-size: 20px; letter-spacing: var(--display-tracking); }
+.search-suggestions-intro p { margin: 3px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.search-suggestion-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+.search-suggestion-card { display: grid; grid-template-columns: 36px minmax(0, 1fr) 16px; align-items: center; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--rule); border-radius: 13px; background: var(--paper); color: var(--ink); transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease; }
+.search-suggestion-card:hover { border-color: var(--rule-strong); transform: translateY(-1px); box-shadow: 0 5px 16px color-mix(in srgb, var(--ink) 7%, transparent); }
+.search-suggestion-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.search-suggestion-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 18px; }
+.search-suggestion-card strong, .search-suggestion-card small { display: block; overflow: hidden; text-overflow: ellipsis; }
+.search-suggestion-card strong { font-size: 13px; }
+.search-suggestion-card small { margin-top: 3px; color: var(--ink-3); font-size: 11px; line-height: 1.35; }
+.search-suggestion-arrow { justify-self: end; color: var(--ink-3); }
+.search-suggestion-examples { margin: 14px 2px 0; color: var(--ink-3); font-size: 12px; }
+.search-suggestion-examples a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px; }
+@media (max-width: 600px) { .search-suggestion-grid { grid-template-columns: 1fr; } .search-suggestion-card { grid-template-columns: 36px minmax(0, 1fr) 16px; } .search-suggestions { margin: 22px 12px; padding: 16px; } }
 .seg { display: flex; gap: 4px; margin: 0 18px 8px; padding: 3px; border-radius: 999px; background: var(--card); border: 1px solid var(--rule); }
 .seg-item { flex: 1; text-align: center; font-size: 13.5px; padding: 6px 10px; border-radius: 999px; border: 0; background: none; color: var(--ink-2); cursor: pointer; font-family: inherit; }
 .seg-item[aria-current="page"], .seg-item[aria-checked="true"] { background: var(--ink); color: var(--paper); font-weight: 500; }
