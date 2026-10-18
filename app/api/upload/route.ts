@@ -40,8 +40,12 @@ export async function POST(request: Request) {
       { status: 501 }
     );
   }
-  const body = await request.json();
   try {
+    const length = Number(request.headers.get("content-length") ?? 0);
+    if (length > 64 * 1024) return NextResponse.json({ error: "Invalid upload request." }, { status: 413 });
+    const raw = await request.text();
+    if (raw.length > 64 * 1024) return NextResponse.json({ error: "Invalid upload request." }, { status: 413 });
+    const body = JSON.parse(raw);
     if (m === "presigned") {
       const json = await handleUploadPresigned({
         body,
@@ -84,6 +88,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(json);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    console.error("upload token request failed:", (e as Error)?.message);
+    return NextResponse.json({ error: "Could not authorize this upload. Check your connection and account setup." }, { status: 400 });
   }
 }

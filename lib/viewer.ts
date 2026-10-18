@@ -21,6 +21,10 @@ export type Viewer = {
 
 export const SIGNER_COOKIE = "selfcaster_signer";
 
+function bufferSource(value: string): ArrayBuffer {
+  return new TextEncoder().encode(value).buffer as ArrayBuffer;
+}
+
 function secret(): string {
   return `selfcaster:signer:${process.env.APP_PASSWORD ?? ""}:${process.env.NEYNAR_API_KEY ?? ""}`;
 }
@@ -28,12 +32,12 @@ function secret(): string {
 async function hmac(value: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secret()),
+    bufferSource(secret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
+  const sig = await crypto.subtle.sign("HMAC", key, bufferSource(value));
   return Buffer.from(sig).toString("base64url");
 }
 

@@ -45,6 +45,11 @@ export async function registerSigner(input: {
   deadline: number;
   signature: string;
 }): Promise<{ ok: true; approvalUrl: string; sponsored: boolean } | Fail> {
+  if (!/^[0-9a-f-]{36}$/i.test(input.signerUuid) || !Number.isSafeInteger(input.appFid) || input.appFid <= 0 ||
+      !Number.isSafeInteger(input.deadline) || input.deadline < Math.floor(Date.now() / 1000) ||
+      input.deadline > Math.floor(Date.now() / 1000) + 86400 || !/^0x[0-9a-f]{130}$/i.test(input.signature)) {
+    return { ok: false, error: "Invalid signer request. Start setup again." };
+  }
   const base = {
     signerUuid: input.signerUuid,
     appFid: input.appFid,
@@ -70,6 +75,7 @@ export async function registerSigner(input: {
 export async function checkSigner(
   signerUuid: string
 ): Promise<{ ok: true; status: string; fid?: number; username?: string } | Fail> {
+  if (!/^[0-9a-f-]{36}$/i.test(signerUuid)) return { ok: false, error: "Invalid signer request." };
   try {
     const s = await neynar().lookupSigner({ signerUuid });
     if (s.status !== "approved" || !s.fid) return { ok: true, status: s.status };

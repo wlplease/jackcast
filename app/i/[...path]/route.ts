@@ -21,12 +21,15 @@ async function serve(req: NextRequest, path: string[], head: boolean) {
       oidcToken: req.headers.get("x-vercel-oidc-token") ?? undefined,
     });
     if (!res || res.statusCode !== 200) return new Response("Not found", { status: 404 });
+    const storedType = res.blob.contentType?.toLowerCase().split(";")[0].trim();
+    if (storedType && storedType !== TYPES[ext]) return new Response("Not found", { status: 404 });
     const headers = {
-      "content-type": res.blob.contentType?.startsWith("image/") ? res.blob.contentType : TYPES[ext],
+      "content-type": TYPES[ext],
       "content-length": String(res.blob.size),
       // Uploads get a random suffix and never change, so caches can keep them forever.
       "cache-control": "public, max-age=31536000, immutable",
       "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; sandbox",
     };
     if (head) {
       res.stream.cancel().catch(() => {});
