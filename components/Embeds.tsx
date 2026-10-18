@@ -88,7 +88,7 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         if (isImage(e)) {
           const src = viaProxy(e.url);
           return (
-            <a key={i} href={src} target="_blank" rel="noreferrer">
+            <a key={i} className="embed-image-link" href={src} target="_blank" rel="noreferrer">
               <img className="embed-img" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
             </a>
           );

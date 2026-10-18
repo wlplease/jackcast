@@ -50,10 +50,10 @@ export async function channelFeed(channelId: string, cursor?: string, limit = 30
 }
 
 /** Chronological casts from the people selected for this device's private Friends feed. */
-export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {
+async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30): Promise<Page> {
   const { fid } = await viewerOrThrow();
   const prefs = await getPrefs();
-  const fids = prefs.friends.map((person) => person.fid);
+  const fids = people.map((person) => person.fid);
   if (!fids.length) return { casts: [], hidden: 0, cursor: null };
   const res = await neynar().fetchFeed({
     feedType: "filter",
@@ -66,6 +66,16 @@ export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {
   });
   const filtered = await clean(res.casts, fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+}
+
+export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {
+  const prefs = await getPrefs();
+  return peopleFeed(prefs.friends, cursor, limit);
+}
+
+export async function customFeed(cursor?: string, limit = 30): Promise<Page> {
+  const prefs = await getPrefs();
+  return peopleFeed(prefs.customPeople, cursor, limit);
 }
 
 function hasMedia(cast: CastView): boolean {

@@ -19,7 +19,7 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
     setPrefs(next);
     setStatus("saving");
     start(async () => {
-      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, recasts: next.recasts });
+      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, recasts: next.recasts, groupLinks: next.groupLinks });
       if (res.ok) {
         setPrefs(res.prefs);
         setStatus("saved");
@@ -105,6 +105,23 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
           </div>
         )}
         {error && <div className="form-error">{error}</div>}
+      </div>
+
+      <div className="field">
+        <div className="toggle-row">
+          <div>
+            <h3>Group repeated links</h3>
+            <p className="field-hint">When posts share the same link, show the newest one first and tuck the others into an expandable group.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs.groupLinks}
+            aria-label="Group repeated links"
+            className={`switch${prefs.groupLinks ? " on" : ""}`}
+            onClick={() => commit({ ...prefs, groupLinks: !prefs.groupLinks })}
+          ><span /></button>
+        </div>
       </div>
 
       <div className="field">

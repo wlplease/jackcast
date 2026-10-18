@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { ChannelTabsForm } from "@/components/ChannelTabsForm";
-import { FriendsFeedForm } from "@/components/FriendsFeedForm";
+import { CustomFeedForm, CustomFeedNameForm, FriendsFeedForm } from "@/components/FriendsFeedForm";
 import { PinnedCastForm } from "@/components/PinnedCastForm";
 import { FiltersForm } from "@/components/FiltersForm";
 import { ThemeForm } from "@/components/ThemeForm";
@@ -143,6 +143,15 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
             <span className="meta">this device</span>
           </div>
           <FriendsFeedForm initial={prefs.friends} />
+        </section>
+
+        <section className="me-section" id="custom-feed">
+          <div className="me-section-head">
+            <h2>Your custom feed</h2>
+            <span className="meta">this device</span>
+          </div>
+          <CustomFeedNameForm initial={prefs.customName} />
+          <CustomFeedForm initial={prefs.customPeople} />
         </section>
 
         <section className="me-section">

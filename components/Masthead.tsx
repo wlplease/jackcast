@@ -28,7 +28,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, unseen }: { channels: string[]; unseen: number }) {
+export function Masthead({ channels, unseen, customName }: { channels: string[]; unseen: number; customName: string }) {
   const path = usePathname();
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined}>
@@ -62,6 +62,7 @@ export function Masthead({ channels, unseen }: { channels: string[]; unseen: num
       <nav className="tabs" aria-label="Feeds">
         {tab("/", "Following")}
         {tab("/friends", "Friends")}
+        {tab("/circle", customName)}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
     </header>

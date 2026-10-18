@@ -39,6 +39,52 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 
 ## Change log
 
+### 2026-10-18 — Added private Gemini catch-up and fork notes
+
+- **Changed:** Added an optional Following-feed digest, shown only when `GOOGLE_AI_API_KEY` is configured. It runs only on a button press and summarizes at most 20 loaded casts, with author/text limits and a 300-token output cap.
+- **Changed:** The server sends only selected public post text and author names to Gemini Flash-Lite. The feature cannot post, react, use search grounding, or access the recovery phrase. API key remains server-side; the route validates same-origin requests, input size, shape, and timeout.
+- **Changed:** Added `.env.example` and `FORK-NOTES.md` to explain setup and the custom fork without replacing upstream attribution.
+- **Why:** Offer a useful AI assistant feature while keeping it opt-in, narrow, and cheaper than an open-ended agent. For stronger cost limits, configure spend caps/usage monitoring in AI Studio; provider caps may have processing delay.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit --omit=dev`, `npm run build`, and `git diff --check` passed. Build output includes `/api/ai/catch-up`; it still reports the existing workspace-root warning from the external `pnpm-lock.yaml`.
+- **Privacy:** Google receives the selected cast text and author names. Free-tier data-use terms differ from paid-tier terms; review current provider policy before enabling.
+
+### 2026-10-18 — Keep feed media within a balanced size
+
+- **Changed:** Feed image embeds now preserve the full image in a centered, fixed-height frame capped at 420px on desktop and 320px on phones. Video previews and players use matching viewport-aware frames.
+- **Changed:** Two-image posts keep their existing square gallery layout, and clicking any image still opens the original media.
+- **Why:** Large portrait and vote graphics were dominating the timeline and cropping their content. A smaller responsive cap gives posts a consistent rhythm while retaining the complete image.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit --omit=dev`, and `npm run build` passed. `git diff --check` passed. Build output includes the feed routes and reports the existing workspace-root warning from the external `pnpm-lock.yaml`.
+- **Limit:** Feed media was not screenshot-tested in a live Neynar-backed browser session; fixed-height frames cap rendered media dimensions by viewport, while original images remain available by click.
+
+### 2026-10-18 — Group repeated links across feeds
+
+- **Changed:** Added default-on repeated-link grouping to the shared feed renderer, so Following, Friends, custom, channel, and profile feeds show the newest cast for a repeated destination with the other casts in an expandable section.
+- **Changed:** Normalize URL host case, `www`, trailing slash, fragments, query ordering, and common tracking parameters before grouping. Only casts with the same complete set of destination URLs are grouped; shared domains and similar wording do not qualify.
+- **Changed:** Added a `Group repeated links` switch under You → Filters, and documented how grouping behaves.
+- **Why:** A burst of copied announcements or vote links should not consume the whole timeline, while each author’s text, timestamp, and reactions remain available when the group is opened.
+- **Product reference:** Uses the familiar collapsed conversation pattern from email clients: keep the newest item visible and let the reader expand the related items.
+- **Verification:** `npm run typecheck`, `npm audit`, and `npm run build` passed. Theme checks passed. Build output includes all feed routes and there are no dependency advisories.
+- **Limit:** Grouping applies to items on the current fetched page; posts that fall on a later cursor page are not pulled forward to join the current group.
+
+### 2026-10-18 — Added a named custom group feed
+
+- **Changed:** The main feed navigation now has three primary choices: Following, Friends, and a custom feed whose tab name can be edited (for example, Builders or Local).
+- **Changed:** Added per-device settings for a second list of up to 10 Farcaster accounts and `/circle`, which loads their chronological feed with existing filters, pagination, caught-up marker, and new-cast polling.
+- **Changed:** Added a 3,500-byte guard before saving preferences so two curated lists cannot silently exceed typical browser cookie limits; the UI receives a recovery hint if settings are too large.
+- **Changed:** Added an empty state that routes to `/me#custom-feed`, and documented the new feed in `README.md`, `CLAUDE.md`, and `ROADMAP.md`.
+- **Why:** One Friends list is useful for close contacts; a second custom list supports another focus without turning the product into a multi-user group platform. The three primary feed choices are visible before channel tabs.
+- **Verification:** After the cookie-size guard, `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` all passed. Build output includes `/circle`. The build continues to report the workspace-root warning due to an external `pnpm-lock.yaml`.
+- **Limit:** The group and its name live in the `selfcaster_prefs` cookie on this device. This does not create a Farcaster group or sync across devices.
+
+### 2026-10-18 — Added profile pinning, media view, and banner editing
+
+- **Changed:** Added Posts and Media tabs on Farcaster profile pages. Media pages include image and video casts and walk at most five pages of 30 casts to fill a sparse media view.
+- **Changed:** Added a profile setting to pin one of the account's 30 newest casts at the top of its profile in this Selfcaster. It is explicitly app-local and does not claim to pin the cast on Farcaster.
+- **Changed:** Added optional banner URL editing through Neynar's profile update API; rendered existing Farcaster profile banners on self and public profiles. The edit field states that Neynar Pro is required.
+- **Why:** Profiles now make posts and media easier to browse, let the owner highlight a cast in this private client, and make the existing Farcaster banner field editable.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` passed. Build output includes the updated `/me`, `/me/edit`, and `/u/[username]` routes. Build still reports the external workspace lockfile warning.
+- **Limit:** Banner editing depends on Neynar Pro and was not exercised against a live Neynar account. Media classification uses Neynar embed metadata and known image/video URL patterns.
+
 ### 2026-10-18 — Improved profile hierarchy and Friends curation
 
 - **Changed:** Added a theme-based cover band and a larger avatar treatment to self and public profile headers, and gave follower/following counts stronger visual emphasis.

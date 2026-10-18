@@ -8,10 +8,16 @@ export type Prefs = {
   quality: number | null;
   /** Show recasts in Following. Off by default: a recast carries the original cast's time, which scrambles a chronological feed. */
   recasts: boolean;
+  /** Collapse posts with the exact same normalized external link into expandable groups. */
+  groupLinks: boolean;
   /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
   tabs: string[] | null;
   /** People included in the private Friends feed. */
   friends: { fid: number; username: string }[];
+  /** People included in the additional private custom feed. */
+  customPeople: { fid: number; username: string }[];
+  /** Name for the additional feed tab, such as Builders or Local. */
+  customName: string;
   /** Optional app-local pinned cast on this deployment's profile page. */
   pinnedCastHash: string | null;
   /** Color theme (see lib/themes.ts). */
@@ -20,7 +26,7 @@ export type Prefs = {
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, tabs: null, friends: [], pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, groupLinks: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 10;

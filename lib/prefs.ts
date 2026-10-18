@@ -21,17 +21,22 @@ export function parsePrefs(raw: string | undefined): Prefs {
       : null;
     const theme = THEME_IDS.includes(p.theme as ThemeId) ? (p.theme as ThemeId) : DEFAULT_PREFS.theme;
     const mode = MODES.includes(p.mode as Mode) ? (p.mode as Mode) : DEFAULT_PREFS.mode;
-    const friends = Array.isArray(p.friends)
-      ? p.friends
+    const cleanPeople = (value: unknown) => Array.isArray(value)
+      ? value
           .map((entry) => ({ fid: Number(entry?.fid), username: String(entry?.username ?? "").trim().toLowerCase().replace(/^@/, "") }))
           .filter((entry) => Number.isSafeInteger(entry.fid) && entry.fid > 0 && /^[a-z0-9_-]{1,32}$/.test(entry.username))
           .filter((entry, index, all) => all.findIndex((x) => x.fid === entry.fid) === index)
           .slice(0, MAX_FRIENDS)
       : [];
+    const friends = cleanPeople(p.friends);
+    const customPeople = cleanPeople(p.customPeople);
+    const customName = typeof p.customName === "string"
+      ? p.customName.trim().replace(/\s+/g, " ").slice(0, 18) || DEFAULT_PREFS.customName
+      : DEFAULT_PREFS.customName;
     const pinnedCastHash = typeof p.pinnedCastHash === "string" && /^0x[0-9a-f]{40}$/i.test(p.pinnedCastHash)
       ? p.pinnedCastHash.toLowerCase()
       : null;
-    return { mutes, quality: q, recasts: p.recasts === true, tabs, friends, pinnedCastHash, theme, mode };
+    return { mutes, quality: q, recasts: p.recasts === true, groupLinks: p.groupLinks !== false, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

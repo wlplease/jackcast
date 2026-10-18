@@ -17,9 +17,13 @@
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
 - **A Friends feed.** Choose up to 10 people for a separate chronological feed. The list is private to this app and saved on this device.
+- **A custom feed.** Add a second group of up to 10 people and name its tab (for example, Builders or Local). Following, Friends, and this custom feed stay separate.
+- **Profiles.** Browse posts or media, pin one cast on your Selfcaster profile, and set an optional Farcaster profile cover (Neynar Pro required to update the cover).
 - **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
 - **Your filters.** Muted words, phrases, $tickers and @handles, plus a quality dial that hides low-score accounts.
+- **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in You → Filters if you want every post shown separately.
+- **Optional AI catch-up.** Ask Gemini for a short digest of up to 20 loaded posts in Following. It only runs when you press the button; it never posts, likes, or takes actions. Add `GOOGLE_AI_API_KEY` to enable it. The selected post text and author handles are sent to Google for that request.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
 
@@ -91,6 +95,12 @@ Open your URL in Safari or Chrome and **Add to Home Screen**.
 
 All optional settings are in [`.env.example`](./.env.example).
 
+### Optional Gemini catch-up
+
+Add `GOOGLE_AI_API_KEY` to your Vercel environment and redeploy. The key stays on the server. The digest is user-triggered, uses at most 20 loaded casts (text capped at 500 characters each), asks for at most 300 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
+
+To disable it, remove `GOOGLE_AI_API_KEY` and redeploy. See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
+
 ## Getting updates
 
 The Deploy button and the template both make a fresh copy, so your repo won't update on its own. Watch this repo's [releases and commits](https://github.com/GenuineJack/selfcaster/commits/main) and copy over what you want. If you're comfortable with git, you can merge directly (your copy has its own history, so the first merge needs a flag, and any files you changed may conflict):
@@ -127,7 +137,7 @@ Checks: `npm run typecheck`, `npm run check:themes`, `NEYNAR_API_KEY=x npm run b
 
 ## Contributing
 
-Issues and pull requests are welcome. [CLAUDE.md](./CLAUDE.md) has the architecture, decisions and conventions (written for people and AI coding agents alike), and [ROADMAP.md](./ROADMAP.md) has ideas.
+Issues and pull requests are welcome. [CLAUDE.md](./CLAUDE.md) has the architecture, decisions and conventions (written for people and AI coding agents alike), [ROADMAP.md](./ROADMAP.md) has ideas, and [FORK-NOTES.md](./FORK-NOTES.md) summarizes this personal fork.
 
 ## License
 

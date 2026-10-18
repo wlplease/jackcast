@@ -4,8 +4,12 @@ import type { Page } from "@/lib/data";
 import { CastCard } from "./CastCard";
 import { CaughtUpProvider, SeenLine } from "./CaughtUp";
 import { NewCastsPill } from "./NewCastsPill";
+import { ExpandableCasts } from "./ExpandableCasts";
+import { groupRepeatedLinks } from "@/lib/feed-groups";
+import { getPrefs } from "@/lib/prefs";
+import { AICatchUp } from "./AICatchUp";
 
-export function Feed({
+export async function Feed({
   page,
   basePath,
   canWrite,
@@ -21,6 +25,7 @@ export function Feed({
   emptyTitle?: string;
   emptyBody?: string;
 }) {
+  const prefs = await getPrefs();
   const hiddenNote =
     page.hidden > 0 ? (
       <div className="hidden-note">
@@ -41,10 +46,16 @@ export function Feed({
     );
   }
 
-  const list = page.casts.map((c, i) => (
-    <Fragment key={c.hash}>
-      {live && i > 0 && <SeenLine above={page.casts[i - 1].timestamp} below={c.timestamp} />}
-      <CastCard cast={c} canWrite={canWrite} />
+  const groups = prefs.groupLinks ? groupRepeatedLinks(page.casts) : page.casts.map((cast) => [cast]);
+  const list = groups.map((group, i) => (
+    <Fragment key={group[0].hash}>
+      {live && i > 0 && <SeenLine above={groups[i - 1][0].timestamp} below={group[0].timestamp} />}
+      <CastCard cast={group[0]} canWrite={canWrite} />
+      {group.length > 1 && (
+        <ExpandableCasts count={group.length - 1}>
+          {group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} />)}
+        </ExpandableCasts>
+      )}
     </Fragment>
   ));
 
@@ -54,6 +65,7 @@ export function Feed({
     <>
       {live ? (
         <>
+          {live === "following" && process.env.GOOGLE_AI_API_KEY && <AICatchUp casts={page.casts} />}
           <NewCastsPill feed={live} newest={newest} />
           <CaughtUpProvider feed={live} newest={newest}>
             {list}

@@ -9,7 +9,7 @@ Out of scope on purpose: DMs.
 
 ## Shipped
 
-Chronological Following and Friends feeds with caught-up line and new casts pill, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, color themes with light and dark, one-click Deploy button.
+Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, repeated-link grouping, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, color themes with light and dark, one-click Deploy button.
 
 ## Next up
 
@@ -19,7 +19,7 @@ _Pick from below._
 
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
-| Small circles | Named private groups such as Friends, Local, or Builders, each with its own feed. The groups are private app settings and do not create or publish a Farcaster group. | L | browser initially; db for sync |
+| More custom feeds | Add additional named private groups beyond the one custom feed, if the three-feed layout proves useful. | M | browser initially; db for sync |
 | Replies toggle | Hide replies in Following while keeping replies visible on cast detail pages. | S | browser |
 | Mini app toggle | Hide casts dominated by mini app embeds when you want a quieter feed. | S | browser |
 
@@ -66,5 +66,5 @@ Recommended sequence: start with the single Friends feed from selected accounts,
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
 | Keyboard shortcuts | `j`/`k` to move, `l` like, `r` reply, `c` compose. | S | none |
-| While you were out | An optional summary of what happened since your last visit. Needs an AI API key. | M | db |
+| Gemini catch-up | Shipped as an on-demand summary of up to 20 loaded Following posts. Sends only selected post text and author handles to Gemini; no autonomous actions. | S | none |
 | Scheduled casts | Write now, post later. | M | db |

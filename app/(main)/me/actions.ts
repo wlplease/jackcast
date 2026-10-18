@@ -12,8 +12,12 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; pref
   const current = await getPrefs();
   // Re-parse so only clean, bounded values ever reach the cookie.
   const prefs = parsePrefs(JSON.stringify({ ...current, ...patch }));
+  const serialized = JSON.stringify(prefs);
+  if (new TextEncoder().encode(serialized).length > 3500) {
+    return { ok: false, error: "Your device settings are too large to save. Remove a few mute terms or people from your feeds and try again." };
+  }
   const jar = await cookies();
-  jar.set(PREFS_COOKIE, JSON.stringify(prefs), {
+  jar.set(PREFS_COOKIE, serialized, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
