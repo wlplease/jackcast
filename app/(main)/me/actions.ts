@@ -138,8 +138,12 @@ export async function loadOwnMiniApps(): Promise<{ ok: true; apps: Awaited<Retur
   try {
     return { ok: true, apps: await ownMiniApps(viewer.fid) };
   } catch (error) {
-    return { ok: false, error: neynarFailure(error, "Couldn't find mini apps in your recent casts. Try again shortly.") };
+    return { ok: false, error: neynarFailure(error, "Couldn't load apps attributed to your account. Try again shortly.") };
   }
+}
+
+export async function refreshOwnMiniApps(): Promise<void> {
+  if (await getViewer()) revalidateTag("own-mini-apps");
 }
 
 /** Loads the signed-in user's followed accounts only when they open custom-feed search. */

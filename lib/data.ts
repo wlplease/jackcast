@@ -8,10 +8,10 @@ import { getPrefs, effectiveMinScore } from "./prefs";
 import { applyFilters } from "./filters";
 import { MAX_FRIENDS } from "./prefs-shared";
 
-export type MiniAppSummary = { title: string; url: string; image?: string; author?: string; description?: string; category?: string };
+export type MiniAppSummary = { title: string; url: string; image?: string; author?: string; authorFid?: number; description?: string; category?: string };
 export type MiniAppsOverview = { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number };
 
-function miniAppSummary(frame: { title?: string; frames_url: string; image?: string; author?: { username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string } }; metadata?: { html?: { ogDescription?: string; ogSiteName?: string } } }): MiniAppSummary {
+function miniAppSummary(frame: { title?: string; frames_url: string; image?: string; author?: { fid?: number; username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; screenshot_urls?: string[]; primary_category?: string } }; metadata?: { html?: { ogDescription?: string; ogSiteName?: string } } }): MiniAppSummary {
   let url = "";
   try {
     const candidate = new URL(frame.frames_url);
@@ -23,6 +23,7 @@ function miniAppSummary(frame: { title?: string; frames_url: string; image?: str
     url,
     image: frame.image || manifest?.icon_url || manifest?.screenshot_urls?.[0],
     author: frame.author?.display_name || frame.author?.username,
+    authorFid: frame.author?.fid,
     description: (manifest?.description || frame.metadata?.html?.ogDescription || "").slice(0, 240),
     category: manifest?.primary_category?.slice(0, 48),
   };
@@ -307,7 +308,7 @@ const weeklyMiniAppsCached = unstable_cache(
     const result = await neynar().fetchFrameCatalog({ limit: 30, timeWindow: "7d" });
     return { apps: result.frames.map((frame) => miniAppSummary(frame)).filter((app) => app.url), generatedAt: Date.now() };
   },
-  ["weekly-mini-apps-7d-v1"],
+  ["weekly-mini-apps-7d-v2"],
   { revalidate: 604800, tags: ["mini-apps-overview"] }
 );
 
@@ -316,7 +317,7 @@ const relevantMiniAppsCached = unstable_cache(
     const result = await neynar().fetchRelevantFrames({ viewerFid: fid, timeWindow: "7d" });
     return result.relevant_frames.map(({ frame }) => miniAppSummary(frame)).filter((app) => app.url);
   },
-  ["relevant-mini-apps-7d-v1"],
+  ["relevant-mini-apps-7d-v2"],
   { revalidate: 604800, tags: ["mini-apps-overview"] }
 );
 
@@ -332,24 +333,41 @@ export async function searchMiniApps(query: string): Promise<MiniAppSummary[]> {
   return result.frames.map((frame) => miniAppSummary(frame)).filter((app) => app.url);
 }
 
-/** Finds mini-app links published by this account in its latest 100 top-level casts. */
+/** Finds creator-attributed apps and recent embedded apps with a bounded, six-hour refresh. */
 const ownMiniAppsCached = unstable_cache(
   async (fid: number): Promise<MiniAppSummary[]> => {
-  const result = await neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100 });
-  const found = new Map<string, MiniAppSummary>();
-  for (const raw of result.casts) {
-    const cast = asCast(raw);
-    for (const embed of cast.embeds ?? []) {
-      const frame = embed.metadata?.frame as { frames_url?: string; title?: string; image?: string; author?: { fid?: number; username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; primary_category?: string } }; metadata?: { html?: { ogDescription?: string } } } | undefined;
-      if (!frame?.frames_url || frame.author?.fid !== fid) continue;
-      const app = miniAppSummary({ ...frame, frames_url: frame.frames_url });
-      if (app.url && !found.has(app.url)) found.set(app.url, app);
+    const [{ users }, castResult, weekly, relevant] = await Promise.all([
+      neynar().fetchBulkUsers({ fids: [fid] }),
+      neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100 }),
+      weeklyMiniAppsCached(),
+      relevantMiniAppsCached(fid),
+    ]);
+    const username = users[0]?.username?.trim().slice(0, 32);
+    let searched = username ? await neynar().searchFrames({ q: username, limit: 100 }) : null;
+    if (!searched?.frames.some((frame) => frame.author?.fid === fid)) {
+      searched = await neynar().searchFrames({ q: String(fid), limit: 100 });
     }
-  }
-  return [...found.values()].slice(0, 20);
+    const found = new Map<string, MiniAppSummary>();
+    const add = (app: MiniAppSummary) => { if (app.url && !found.has(app.url)) found.set(app.url, app); };
+
+    for (const frame of searched?.frames ?? []) {
+      if (frame.author?.fid === fid) add(miniAppSummary(frame));
+    }
+    for (const app of [...weekly.apps, ...relevant]) {
+      if (app.authorFid === fid) add(app);
+    }
+    for (const raw of castResult.casts) {
+      const cast = asCast(raw);
+      for (const embed of cast.embeds ?? []) {
+        const frame = embed.metadata?.frame as { frames_url?: string; title?: string; image?: string; author?: { fid?: number; username?: string; display_name?: string | null }; manifest?: { miniapp?: { name?: string; description?: string; icon_url?: string; primary_category?: string }; frame?: { name?: string; description?: string; icon_url?: string; primary_category?: string } }; metadata?: { html?: { ogDescription?: string } } } | undefined;
+        if (!frame?.frames_url || frame.author?.fid !== fid) continue;
+        add(miniAppSummary({ ...frame, frames_url: frame.frames_url }));
+      }
+    }
+    return [...found.values()].slice(0, 100);
   },
-  ["own-mini-apps-in-casts-v1"],
-  { revalidate: 3600, tags: ["own-mini-apps"] }
+  ["own-mini-apps-discovery-v2"],
+  { revalidate: 21600, tags: ["own-mini-apps"] }
 );
 
 export async function ownMiniApps(fid: number): Promise<MiniAppSummary[]> {
