@@ -46,7 +46,7 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 ### 2026-10-18 — Surface feed filters and separate recasts
 
 - **Changed:** Feeds now show a compact summary of non-default mute and quality settings, reply and mini-app filters, and repeated-link grouping. The summary links to filter settings and clears feed filters in one action.
-- **Changed:** Added a Recasts tab before the custom feed. Following, Friends, and custom feeds exclude recasts, while the dedicated tab shows the signed-in user's recast activity from Neynar.
+- **Changed:** Added a Recasts tab before the custom feed. Following, Friends, and custom feeds exclude recasts; the dedicated tab compares Neynar's Following feed with recasts on and off, then shows casts added by recasts. The provider response does not identify the recaster, so the UI does not guess.
 - **Why:** Keep the main chronological feeds focused and make recast activity easy to find.
 - **Verification:** Source review and `git diff --check` passed. The local page preview reached setup because this checkout has no `NEYNAR_API_KEY`; authenticated feed rendering and 390px light/dark visual checks remain pending.
 

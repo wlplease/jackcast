@@ -15,6 +15,23 @@ export const getMe = cache(async (): Promise<Author & { bio?: string }> => {
   return { ...(u as Author), bio: u?.profile?.bio?.text ?? "" };
 });
 
+/** Profile analytics are reused across range changes and quick revisits. */
+const ownProfileAnalyticsCached = unstable_cache(
+  async (fid: number) => {
+    const [{ users }, result] = await Promise.all([
+      neynar().fetchBulkUsers({ fids: [fid] }),
+      neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100 }),
+    ]);
+    return { user: users[0], casts: result.casts.map(asCast) };
+  },
+  ["own-profile-analytics-v1"],
+  { revalidate: 300, tags: ["own-profile-analytics"] }
+);
+
+export async function ownProfileAnalytics(fid: number) {
+  return ownProfileAnalyticsCached(fid);
+}
+
 /** Applies your quality dial and muted words. Returns what's left plus how many were hidden. */
 export async function clean(casts: unknown[], myFid: number) {
   const prefs = await getPrefs();
@@ -23,6 +40,19 @@ export async function clean(casts: unknown[], myFid: number) {
 
 export type Page = { casts: CastView[]; cursor: string | null; hidden: number };
 
+type RecastCursor = { version: 1; recasts: string | null; direct: string | null; directDone: boolean; excluded: [string, number][] };
+
+function parseRecastCursor(value: string): RecastCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<RecastCursor>;
+    if (parsed.version !== 1 || (typeof parsed.recasts !== "string" && parsed.recasts !== null) || (typeof parsed.direct !== "string" && parsed.direct !== null) || typeof parsed.directDone !== "boolean" || !Array.isArray(parsed.excluded)) return null;
+    const excluded = parsed.excluded.filter((entry): entry is [string, number] => Array.isArray(entry) && typeof entry[0] === "string" && typeof entry[1] === "number" && Number.isFinite(entry[1]));
+    return { version: 1, recasts: parsed.recasts, direct: parsed.direct, directDone: parsed.directDone, excluded };
+  } catch {
+    return null;
+  }
+}
+
 /** Newest first, strictly by time. */
 function byTime(casts: CastView[]): CastView[] {
   return [...casts].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
@@ -30,8 +60,10 @@ function byTime(casts: CastView[]): CastView[] {
 
 export async function followingFeed(cursor?: string, limit = 30): Promise<Page> {
   const { fid } = await viewerOrThrow();
+  const prefs = await getPrefs();
+  const friendFids = new Set(prefs.friends.map((person) => person.fid));
   const res = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor });
-  const filtered = await clean(res.casts, fid);
+  const filtered = await clean(res.casts.filter((cast) => !friendFids.has(cast.author.fid)), fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
 
@@ -50,7 +82,7 @@ export async function channelFeed(channelId: string, cursor?: string, limit = 30
 }
 
 /** Chronological casts from the people selected for this device's private Friends feed. */
-async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30): Promise<Page> {
+async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30, excludeFids: Set<number> = new Set()): Promise<Page> {
   const { fid } = await viewerOrThrow();
   const fids = people.map((person) => person.fid);
   if (!fids.length) return { casts: [], hidden: 0, cursor: null };
@@ -63,39 +95,39 @@ async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30
     limit,
     cursor,
   });
-  const filtered = await clean(res.casts, fid);
+  const filtered = await clean(res.casts.filter((cast) => !excludeFids.has(cast.author.fid)), fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
 
 /** Recast-only view of the network feed. Neynar supplies casts added by the recast option, not the recaster identity. */
 export async function recastsFeed(cursor?: string, limit = 100): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  let recastCursor: string | undefined;
-  let directCursor: string | undefined;
-  if (cursor) {
-    try {
-      const parsed = JSON.parse(cursor) as { version?: unknown; recasts?: unknown; direct?: unknown };
-      if (parsed.version === 1 && (typeof parsed.recasts === "string" || parsed.recasts === null) && (typeof parsed.direct === "string" || parsed.direct === null)) {
-        recastCursor = parsed.recasts ?? undefined;
-        directCursor = parsed.direct ?? undefined;
-      } else recastCursor = cursor;
-    } catch {
-      recastCursor = cursor;
-    }
-  }
+  const state = cursor ? parseRecastCursor(cursor) : null;
+  const recastCursor = state?.recasts ?? (state ? undefined : cursor);
+  const directCursor = state?.direct ?? undefined;
+  const directDone = state?.directDone ?? false;
   const [withRecasts, direct] = await Promise.all([
     neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: true, limit, cursor: recastCursor }),
-    neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor: directCursor }),
+    directDone
+      ? Promise.resolve({ casts: [] as { hash: string }[], next: undefined })
+      : neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor: directCursor }),
   ]);
-  const directHashes = new Set(direct.casts.map((cast) => cast.hash));
+  const directHashes = new Set([...(state?.excluded ?? []).map(([hash]) => hash), ...direct.casts.map((cast) => cast.hash)]);
   const onlyRecasts = withRecasts.casts.filter((cast) => !directHashes.has(cast.hash));
   const filtered = await clean(onlyRecasts, fid);
+  const timestamps = withRecasts.casts.map((cast) => Date.parse(cast.timestamp)).filter(Number.isFinite);
+  const cutoff = timestamps.length ? Math.min(...timestamps) : Number.NEGATIVE_INFINITY;
+  const excluded = new Map<string, number>();
+  for (const [hash, timestamp] of [...(state?.excluded ?? []), ...direct.casts.map((cast) => [cast.hash, Date.parse(cast.timestamp)] as [string, number])]) {
+    if (Number.isFinite(timestamp) && timestamp >= cutoff) excluded.set(hash, timestamp);
+  }
+  const nextState: RecastCursor | null = withRecasts.next?.cursor
+    ? { version: 1, recasts: withRecasts.next.cursor, direct: direct.next?.cursor ?? null, directDone: !direct.next?.cursor, excluded: [...excluded.entries()] }
+    : null;
   return {
     casts: filtered.casts.map((cast) => ({ ...cast, sharedByFollowed: true })),
     hidden: filtered.hidden,
-    cursor: withRecasts.next?.cursor
-      ? JSON.stringify({ version: 1, recasts: withRecasts.next.cursor, direct: direct.next?.cursor ?? null })
-      : null,
+    cursor: nextState ? Buffer.from(JSON.stringify(nextState)).toString("base64url") : null,
   };
 }
 
@@ -106,7 +138,7 @@ export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {
 
 export async function customFeed(cursor?: string, limit = 30): Promise<Page> {
   const prefs = await getPrefs();
-  return peopleFeed(prefs.customPeople, cursor, limit);
+  return peopleFeed(prefs.customPeople, cursor, limit, new Set(prefs.friends.map((person) => person.fid)));
 }
 
 function hasMedia(cast: CastView): boolean {
@@ -136,17 +168,6 @@ export async function userCasts(userFid: number, cursor?: string, mediaOnly = fa
     if (!mediaOnly || casts.length >= 30 || !nextCursor || batch.length === 0) break;
   }
   return { casts, cursor: nextCursor ?? null, hidden: 0 };
-}
-
-export async function unseenCount(): Promise<number> {
-  try {
-    const v = await getViewer();
-    if (!v) return 0;
-    const res = await neynar().fetchAllNotifications({ fid: v.fid, limit: 1 });
-    return res.unseen_notifications_count ?? 0;
-  } catch {
-    return 0;
-  }
 }
 
 export type ChannelChip = { id: string; name?: string; image_url?: string };

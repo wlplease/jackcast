@@ -1,21 +1,19 @@
 import { Masthead } from "@/components/Masthead";
 import { FeedScrollRestoration } from "@/components/FeedScrollRestoration";
-import { tabChannels, unseenCount } from "@/lib/data";
+import { tabChannels } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
 
 export const dynamic = "force-dynamic";
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
-  let unseen = 0;
   let channels: string[] = [];
   try {
-    const [nextChannels, nextUnseen, prefs] = await Promise.all([tabChannels(), unseenCount(), getPrefs()]);
+    const [nextChannels, prefs] = await Promise.all([tabChannels(), getPrefs()]);
     channels = nextChannels;
-    unseen = nextUnseen;
     return (
       <div className="shell">
         <FeedScrollRestoration />
-        <Masthead channels={channels} unseen={unseen} customName={prefs.customName} aiEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
+        <Masthead channels={channels} customName={prefs.customName} />
         <main>{children}</main>
       </div>
     );
@@ -24,7 +22,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <div className="shell">
       <FeedScrollRestoration />
-      <Masthead channels={channels} unseen={unseen} customName="Custom" aiEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
+      <Masthead channels={channels} customName="Custom" />
       <main>{children}</main>
     </div>
   );

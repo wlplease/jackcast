@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { StatPoint } from "@/lib/stats";
 
+type Metric = "e" | "likes" | "recasts" | "replies" | "casts";
 type Bucket = { label: string; long: string; n: number; avg: number };
 
 const BLOCKS = [
@@ -25,12 +26,12 @@ const DAYS = [
   ["Sat", "Saturdays"],
 ] as const;
 
-function bucketize(points: StatPoint[], keyOf: (d: Date) => number, defs: readonly (readonly [string, string])[]): Bucket[] {
+function bucketize(points: StatPoint[], keyOf: (d: Date) => number, defs: readonly (readonly [string, string])[], metric: Metric): Bucket[] {
   const acc = defs.map(([label, long]) => ({ label, long, n: 0, sum: 0 }));
   for (const p of points) {
     const b = acc[keyOf(new Date(p.ts))];
     b.n++;
-    b.sum += p.e;
+    b.sum += metric === "casts" ? 1 : p[metric];
   }
   return acc.map(({ label, long, n, sum }) => ({ label, long, n, avg: n ? sum / n : 0 }));
 }
@@ -41,7 +42,7 @@ function best(buckets: Bucket[]): Bucket | null {
   return eligible.reduce((a, b) => (b.avg > a.avg ? b : a));
 }
 
-function Bars({ title, buckets }: { title: string; buckets: Bucket[] }) {
+function Bars({ title, buckets, metric }: { title: string; buckets: Bucket[]; metric: Metric }) {
   const [sel, setSel] = useState<number | null>(null);
   const max = Math.max(1, ...buckets.map((b) => b.avg));
   const top = best(buckets);
@@ -58,7 +59,7 @@ function Bars({ title, buckets }: { title: string; buckets: Bucket[] }) {
             onMouseEnter={() => setSel(i)}
             onFocus={() => setSel(i)}
             onClick={() => setSel(sel === i ? null : i)}
-            aria-label={`${b.long}: ${b.n} ${b.n === 1 ? "cast" : "casts"}, ${b.avg.toFixed(1)} average engagement`}
+            aria-label={`${b.long}: ${b.n} casts, ${b.avg.toFixed(1)} average ${metric === "casts" ? "casts" : metric === "e" ? "engagement" : metric}`}
           >
             <span className="bar-track">
               {b.n > 0 && <span className="bar" style={{ height: `${Math.max(4, (b.avg / max) * 100)}%` }} />}
@@ -71,11 +72,11 @@ function Bars({ title, buckets }: { title: string; buckets: Bucket[] }) {
         {s ? (
           <>
             <b>{s.long}</b> · {s.n} {s.n === 1 ? "cast" : "casts"}
-            {s.n ? ` · ${s.avg.toFixed(1)} avg engagement` : ""}
+            {s.n ? ` · ${s.avg.toFixed(1)} avg ${metric === "casts" ? "casts" : metric === "e" ? "engagement" : metric}` : ""}
           </>
         ) : top ? (
           <>
-            Best: <b>{top.long}</b> · {top.avg.toFixed(1)} avg engagement
+          Best: <b>{top.long}</b> · {top.avg.toFixed(1)} avg {metric === "casts" ? "casts" : metric === "e" ? "engagement" : metric}
           </>
         ) : (
           "Cast a bit more to see a pattern."
@@ -107,14 +108,20 @@ function Bars({ title, buckets }: { title: string; buckets: Bucket[] }) {
 /** Buckets in your own time zone, which is why this runs in the browser. */
 export function StatsChart({ points }: { points: StatPoint[] }) {
   const [ready, setReady] = useState(false);
+  const [metric, setMetric] = useState<Metric>("e");
   useEffect(() => setReady(true), []);
-  const byTime = useMemo(() => bucketize(points, (d) => Math.floor(d.getHours() / 3), BLOCKS), [points]);
-  const byDay = useMemo(() => bucketize(points, (d) => d.getDay(), DAYS), [points]);
+  const byTime = useMemo(() => bucketize(points, (d) => Math.floor(d.getHours() / 3), BLOCKS, metric), [points, metric]);
+  const byDay = useMemo(() => bucketize(points, (d) => d.getDay(), DAYS, metric), [points, metric]);
   if (!ready) return <div className="bars-grid" style={{ minHeight: 210 }} />;
   return (
-    <div className="bars-grid">
-      <Bars title="Engagement by time of day" buckets={byTime} />
-      <Bars title="Engagement by day" buckets={byDay} />
-    </div>
+    <section className="stats-chart-section" aria-label="Analytics charts">
+      <label className="stats-metric-picker">Chart metric <select value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>
+        <option value="e">Total engagement</option><option value="likes">Likes</option><option value="recasts">Recasts</option><option value="replies">Replies</option><option value="casts">Casts</option>
+      </select></label>
+      <div className="bars-grid">
+        <Bars title={`${metric === "e" ? "Engagement" : metric === "casts" ? "Casts" : metric} by time of day`} buckets={byTime} metric={metric} />
+        <Bars title={`${metric === "e" ? "Engagement" : metric === "casts" ? "Casts" : metric} by day`} buckets={byDay} metric={metric} />
+      </div>
+    </section>
   );
 }

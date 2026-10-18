@@ -6,7 +6,7 @@ import { MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
 
 type Person = Prefs["friends"][number];
 
-function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "friends" | "customPeople"; title: string }) {
+function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Person[]; field: "friends" | "customPeople"; title: string; excluded?: Person[] }) {
   const [people, setPeople] = useState(initial);
   const [followedPeople, setFollowedPeople] = useState<{ fid: number; username: string; displayName: string }[]>([]);
   const [username, setUsername] = useState("");
@@ -23,9 +23,11 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
   const [followedError, setFollowedError] = useState("");
   const [, start] = useTransition();
   const searchTerms = search.trim().replace(/^@/, "").toLowerCase().split(/\s+/).filter(Boolean);
+  const excludedFids = new Set(excluded.map((person) => person.fid));
   const matches = searchTerms.length
     ? followedPeople
         .filter((person) => !people.some((added) => added.fid === person.fid))
+        .filter((person) => !excludedFids.has(person.fid))
         .filter((person) => searchTerms.every((term) => `${person.username} ${person.displayName}`.toLowerCase().includes(term)))
         .slice(0, 8)
     : [];
@@ -83,6 +85,10 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
       setError(`@${result.username} is already in this feed.`);
       return;
     }
+    if (excludedFids.has(result.fid)) {
+      setError(`@${result.username} is already in Friends and stays in that feed.`);
+      return;
+    }
     setUsername("");
     save([...people, { fid: result.fid, username: result.username }]);
   }
@@ -117,7 +123,8 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
             {people.length}/{MAX_FRIENDS} selected · {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : ""}
           </span>
         </div>
-        <p className="field-hint">A private, chronological feed from up to {MAX_FRIENDS} people. This list is saved on this device.</p>
+        <p className="field-hint">A private, chronological feed from up to {MAX_FRIENDS} people. Friends stay in this feed and are hidden from Following and Custom.</p>
+        {field === "customPeople" && excluded.length > 0 && <p className="field-hint">Accounts in Friends are kept out of Custom too.</p>}
         {field === "friends" && (
           <div className="best-friends">
             <button type="button" className="btn ghost sm" onClick={() => void findSuggestions()} disabled={finding || Boolean(suggestions) || people.length >= MAX_FRIENDS}>
@@ -213,8 +220,8 @@ export function FriendsFeedForm({ initial }: { initial: Person[] }) {
   return <PeopleFeedForm initial={initial} field="friends" title="Friends" />;
 }
 
-export function CustomFeedForm({ initial }: { initial: Person[] }) {
-  return <PeopleFeedForm initial={initial} field="customPeople" title="your custom feed" />;
+export function CustomFeedForm({ initial, excluded }: { initial: Person[]; excluded?: Person[] }) {
+  return <PeopleFeedForm initial={initial} excluded={excluded} field="customPeople" title="your custom feed" />;
 }
 
 export function CustomFeedNameForm({ initial }: { initial: string }) {

@@ -52,15 +52,18 @@ export default async function NotificationsPage({
   }
 
   const signerUuid = viewer.signerUuid;
-  if (signerUuid && !cursor && res.unseen_notifications_count > 0) {
-    after(() => neynar().markNotificationsAsSeen({ signerUuid }).catch(() => {}));
+  const unseenCount = res.notifications.reduce((count, notification) => count + (notification.seen ? 0 : notification.count ?? 1), 0);
+  if (signerUuid && !cursor && unseenCount > 0) {
+    after(async () => {
+      await neynar().markNotificationsAsSeen({ signerUuid }).catch(() => {});
+    });
   }
 
   return (
     <>
       <div className="section-head">
         <h1>Notifications</h1>
-        {res.unseen_notifications_count > 0 && <span className="meta">{res.unseen_notifications_count} new</span>}
+        {unseenCount > 0 && <span className="meta">{unseenCount} new</span>}
       </div>
       {res.notifications.map((n, i) => {
         const users: Author[] =

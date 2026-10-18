@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
 import type { PostCastReqBodyEmbeds } from "@neynar/nodejs-sdk/build/api";
@@ -66,6 +66,7 @@ export async function publish(input: {
       ...(!input.parentHash && input.channelId ? { channelId: input.channelId } : {}),
       ...(embeds.length ? { embeds: embeds as unknown as PostCastReqBodyEmbeds[] } : {}),
     });
+    revalidateTag("own-profile-analytics");
     revalidatePath("/", "layout");
     return { ok: true, hash: res.cast?.hash };
   } catch (e) {
@@ -113,6 +114,7 @@ export async function publishThread(input: { casts: string[]; parentHash?: strin
       return { ok: false, posted: hashes.length, lastHash: parent ?? null, error: `Cast ${i + 1} could not be confirmed. ${errMessage(e)}` };
     }
   }
+  if (hashes.length) revalidateTag("own-profile-analytics");
   revalidatePath("/", "layout");
   return { ok: true, hashes };
 }

@@ -8,31 +8,27 @@ import { ThemeForm } from "@/components/ThemeForm";
 import { RichText } from "@/components/RichText";
 import { SetupBanner } from "@/components/SetupBanner";
 import { StatsChart } from "@/components/StatsChart";
-import { followedChannels, tabChannels } from "@/lib/data";
-import { neynar } from "@/lib/neynar";
+import { followedChannels, ownProfileAnalytics, tabChannels } from "@/lib/data";
 import { compact, timeAgo } from "@/lib/format";
 import { getPrefs } from "@/lib/prefs";
-import { computeStats } from "@/lib/stats";
-import { asCast } from "@/lib/types";
+import { computeStats, type StatsWindow } from "@/lib/stats";
 import { requireViewer } from "@/lib/viewer";
 
-export default async function MePage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
-  const { saved } = await searchParams;
+export default async function MePage({ searchParams }: { searchParams: Promise<{ saved?: string; window?: string }> }) {
+  const { saved, window: requestedWindow } = await searchParams;
+  const window: StatsWindow = requestedWindow === "7d" || requestedWindow === "90d" || requestedWindow === "loaded" ? requestedWindow : "30d";
   const viewer = await requireViewer();
   const envDefault = Number(process.env.MIN_USER_SCORE ?? "0") || 0;
 
   try {
-    const [{ users }, casts, prefs, followed, currentTabs] = await Promise.all([
-      neynar().fetchBulkUsers({ fids: [viewer.fid] }),
-      neynar()
-        .fetchCastsForUser({ fid: viewer.fid, viewerFid: viewer.fid, includeReplies: false, limit: 150 })
-        .then((r) => r.casts.map(asCast)),
+    const [profileData, prefs, followed, currentTabs] = await Promise.all([
+      ownProfileAnalytics(viewer.fid),
       getPrefs(),
       followedChannels(),
       tabChannels(),
     ]);
-    const me = users[0];
-    const stats = computeStats(casts);
+    const { user: me, casts } = profileData;
+    const stats = computeStats(casts, window, me.follower_count ?? 0);
 
     return (
       <>
@@ -67,8 +63,13 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
         <section className="me-section">
           <div className="me-section-head">
             <h2>Your casts</h2>
-            <span className="meta">{stats.windowLabel}</span>
+            <span className="meta">{stats.windowLabel} · up to 100 most recent casts</span>
           </div>
+          <nav className="stats-range" aria-label="Analytics date range">
+            {([ ["7d", "7 days"], ["30d", "30 days"], ["90d", "90 days"], ["loaded", "Loaded casts"] ] as const).map(([value, label]) => (
+              <Link key={value} href={`/me?window=${value}`} className={`stats-range-link${window === value ? " active" : ""}`} aria-current={window === value ? "page" : undefined}>{label}</Link>
+            ))}
+          </nav>
           {stats.casts === 0 ? (
             <p className="field-hint">No casts yet. Post something and come back.</p>
           ) : (
@@ -90,10 +91,21 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
                   <b>{compact(stats.replies)}</b>
                   <span>replies</span>
                 </div>
+                <div className="tile">
+                  <b>{stats.avg.toFixed(1)}</b>
+                  <span>engagement per cast</span>
+                </div>
+                <div className="tile">
+                  <b>{stats.engagementRate.toFixed(1)}%</b>
+                  <span>engagement / followers</span>
+                </div>
+                <div className="tile">
+                  <b>{compact(stats.mediaCasts)}</b>
+                  <span>casts with media</span>
+                </div>
+                {stats.bestCast && <div className="tile"><b>{compact(stats.bestCast.e)}</b><span>best cast engagement</span></div>}
               </div>
-              <p className="field-hint">
-                {stats.avg.toFixed(1)} likes, recasts and replies per cast on average. Top-level casts only.
-              </p>
+              <p className="field-hint">Top-level casts only. Engagement rate is reactions and replies divided by follower count; it is an estimate, not unique reach.</p>
               <StatsChart points={stats.points} />
               {stats.top.length > 0 && (
                 <>
@@ -151,7 +163,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
             <span className="meta">this device</span>
           </div>
           <CustomFeedNameForm initial={prefs.customName} />
-          <CustomFeedForm initial={prefs.customPeople} />
+          <CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} />
         </section>
 
         <section className="me-section">

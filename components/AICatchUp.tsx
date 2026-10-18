@@ -28,6 +28,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
     setError("");
     setSummary("");
     setAudioRequested(false);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl("");
     try {
       const response = await fetch("/api/ai/catch-up", {
@@ -52,6 +53,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
     setSummary("");
     setError("");
     setAudioRequested(false);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl("");
   }
 
@@ -87,7 +89,7 @@ export function AICatchUp({ casts, audioEnabled = false }: { casts: CastView[]; 
           <p>Three quick highlights from up to 20 posts.</p>
         </div>
         <div className="ai-catchup-actions">
-          <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary)}>
+          <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary) || !process.env.NEXT_PUBLIC_AI_CATCHUP_ENABLED}>
             {busy ? "Summarizing…" : summary ? "Digest ready" : "Make digest"}
           </button>
           {summary && (

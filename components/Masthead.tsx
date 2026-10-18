@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
+import { NotificationLink } from "@/components/NotificationLink";
 
 const I = {
   search: (
@@ -34,7 +35,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, unseen, customName, aiEnabled }: { channels: string[]; unseen: number; customName: string; aiEnabled: boolean }) {
+export function Masthead({ channels, customName }: { channels: string[]; customName: string; aiEnabled?: boolean }) {
   const path = usePathname();
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined}>
@@ -51,13 +52,13 @@ export function Masthead({ channels, unseen, customName, aiEnabled }: { channels
   return (
     <header className="mast">
       <div className="mast-row">
-        <Link href="/" className="wordmark" aria-label="Selfcaster home feed" title="Home feed" scroll>
+        <Link href="/" className="wordmark" aria-label="Jackcaster home feed" title="Home feed" scroll>
           <Wordmark />
         </Link>
         <nav className="mast-nav" aria-label="Main">
-          {aiEnabled && icon("/#ai-catch-up", "AI catch-up", I.ai)}
+          {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           {icon("/search", "Search", I.search)}
-          {icon("/notifications", "Notifications", I.bell, unseen)}
+          <NotificationLink icon={I.bell} />
           {icon("/me", "You", I.you)}
           <form action={logout}>
             <button type="submit" className="icon-btn" aria-label="Lock" title="Lock">

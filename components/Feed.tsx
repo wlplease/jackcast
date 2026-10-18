@@ -15,6 +15,7 @@ export async function Feed({
   basePath,
   canWrite,
   live,
+  showAi = false,
   viewerFid,
   emptyTitle = "Quiet in here",
   emptyBody = "Nothing to show yet.",
@@ -24,6 +25,8 @@ export async function Feed({
   canWrite: boolean;
   /** Feed id ("following" or "c:<channel>") to enable the caught-up line and new-casts pill. First page only. */
   live?: string;
+  /** Show the AI panel only when opened from its masthead icon. */
+  showAi?: boolean;
   viewerFid?: number;
   emptyTitle?: string;
   emptyBody?: string;
@@ -75,7 +78,7 @@ export async function Feed({
       <ActiveFeedFilters prefs={prefs} />
       {live ? (
         <>
-          {live === "following" && process.env.GOOGLE_AI_API_KEY && <AICatchUp casts={page.casts} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} />}
+          {live === "following" && showAi && <AICatchUp casts={page.casts} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} />}
           <NewCastsPill feed={live} newest={newest} />
           <CaughtUpProvider feed={live} newest={newest}>
             {list}

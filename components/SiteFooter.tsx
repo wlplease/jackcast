@@ -1,7 +1,7 @@
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p>Jackcast is an open-source personal fork based on Selfcaster.</p>
+      <p>Jackcaster is an open-source personal fork based on Selfcaster.</p>
       <nav aria-label="Project credits">
         <a href="https://selfcaster.xyz/" target="_blank" rel="noopener noreferrer">Original app</a>
         <span aria-hidden="true">·</span>

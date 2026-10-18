@@ -336,11 +336,11 @@ export function Composer({
             </select>
           )}
           <span className={`count${over ? " over" : ""}`}>{MAX_BYTES - bytes}</span>
+          {!parentHash && !quoted && <Link className="btn ghost thread-compose-button" href="/compose/thread">Thread</Link>}
           <button className="btn" onClick={submit} disabled={empty || over || pending || uploading}>
             {pending ? "Casting…" : uploading ? "Uploading…" : parentHash ? "Reply" : quoted ? "Quote" : "Cast"}
           </button>
         </div>
-        {!parentHash && !quoted && <div className="composer-extra"><Link className="thread-link" href="/compose/thread">Write a thread →</Link></div>}
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}</div>}

@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
@@ -76,6 +76,7 @@ export async function updateProfile(input: {
 
   try {
     await neynar().updateUser({ signerUuid: v.signerUuid, ...patch });
+    revalidateTag("own-profile-analytics");
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {

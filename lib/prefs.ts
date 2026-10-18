@@ -29,7 +29,10 @@ export function parsePrefs(raw: string | undefined): Prefs {
           .slice(0, MAX_FRIENDS)
       : [];
     const friends = cleanPeople(p.friends);
-    const customPeople = cleanPeople(p.customPeople);
+    const friendFids = new Set(friends.map((person) => person.fid));
+    // A Friends selection belongs only in Friends, even if an older settings
+    // cookie also listed that account in the custom feed.
+    const customPeople = cleanPeople(p.customPeople).filter((person) => !friendFids.has(person.fid));
     const customName = typeof p.customName === "string"
       ? p.customName.trim().replace(/\s+/g, " ").slice(0, 18) || DEFAULT_PREFS.customName
       : DEFAULT_PREFS.customName;
