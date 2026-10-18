@@ -58,6 +58,7 @@ export function CastActions(props: {
   const [muteBusy, setMuteBusy] = useState(false);
   const [muted, setMuted] = useState(() => Boolean(props.authorUsername && props.mutes?.includes(`@${props.authorUsername.toLowerCase()}`)));
   const [error, setError] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const router = useRouter();
   const touched = useRef(false);
 
@@ -125,6 +126,36 @@ export function CastActions(props: {
     }
   }
 
+  async function shareCast() {
+    setShareMessage(null);
+    const castUrl = `https://farcaster.xyz/${props.authorUsername ? `${props.authorUsername}/` : "~/"}${props.hash}`;
+    try {
+      const { sdk } = await import("@farcaster/miniapp-sdk");
+      if (await sdk.isInMiniApp()) {
+        await sdk.actions.composeCast({ embeds: [castUrl] });
+        return;
+      }
+    } catch {
+      // The SDK is optional outside Farcaster; use the browser's share options below.
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Share this cast", url: castUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(castUrl);
+      setShareMessage("Cast link copied");
+    } catch (shareError) {
+      if (shareError instanceof DOMException && shareError.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(castUrl);
+        setShareMessage("Cast link copied");
+      } catch {
+        setShareMessage("Could not share this cast. Open the cast and copy its link.");
+      }
+    }
+  }
+
   useEffect(() => {
     if (!error) return;
     const t = setTimeout(() => setError(null), 4000);
@@ -162,6 +193,10 @@ export function CastActions(props: {
         {Icon.like(state.liked)}
         {state.likes > 0 && compact(state.likes)}
       </button>
+      <button type="button" className="act" onClick={shareCast} aria-label="Share cast" title="Share cast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" /></svg>
+      </button>
+      {shareMessage && <span className="share-status" role="status">{shareMessage}</span>}
       {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && (
         <details className="cast-menu">
           <summary className="act" aria-label="More cast options" title="More cast options">•••</summary>
