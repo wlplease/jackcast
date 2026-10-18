@@ -16,6 +16,7 @@
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
+- **A Friends feed.** Choose up to 10 people for a separate chronological feed. The list is private to this app and saved on this device.
 - **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
 - **Your filters.** Muted words, phrases, $tickers and @handles, plus a quality dial that hides low-score accounts.

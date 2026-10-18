@@ -39,6 +39,23 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 
 ## Change log
 
+### 2026-10-18 — Improved profile hierarchy and Friends curation
+
+- **Changed:** Added a theme-based cover band and a larger avatar treatment to self and public profile headers, and gave follower/following counts stronger visual emphasis.
+- **Changed:** Added an `Add to Friends` / `In Friends` action to public profiles. It saves to the same private device preferences and enforces the existing 10-person limit.
+- **Why:** Profiles needed a clearer focal point, and curation is easier while browsing a person's profile than returning to settings to enter their username.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` passed. `/u/[username]` builds with the profile action. Build still reports the external workspace lockfile warning.
+- **Design follow-ups:** An editable cover image/color, pinned profile cast, and profile tabs for casts/replies/media are potential next additions; keep them optional and lightweight.
+
+### 2026-10-18 — Added the personal Friends feed
+
+- **Changed:** Added `/friends`, a separate chronological feed for up to 10 selected Farcaster accounts, plus a settings form on `/me` to resolve usernames and add or remove people.
+- **Why:** This adds a personal feed choice without changing Following, creating a public Farcaster group, or requiring a database. The feed uses the existing device preferences cookie and remains private app configuration.
+- **Changed:** Added the Friends link to feed navigation, Neynar FID-filtered feed fetching, shared mute/quality filtering, pagination, its own caught-up marker, and `/api/head` polling for new casts.
+- **Changed:** Documented the feature in `README.md` and `CLAUDE.md`; moved it to shipped in `ROADMAP.md`.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` passed. Build output includes `/friends`. Build still prints the existing workspace-root warning caused by `C:\Users\xoopc\pnpm-lock.yaml` outside this repo.
+- **Limit:** Friends selections are saved on this device. Cross-device sync and named circles remain future work.
+
 ### 2026-10-18 — Restored repository hygiene and planned personal feeds
 
 - **Changed:** Added `.gitignore` rules for `node_modules`, Next build output, TypeScript build cache, and generated `next-env.d.ts`; removed those generated artifacts from this checkout.

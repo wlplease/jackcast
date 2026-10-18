@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { ChannelTabsForm } from "@/components/ChannelTabsForm";
+import { FriendsFeedForm } from "@/components/FriendsFeedForm";
+import { PinnedCastForm } from "@/components/PinnedCastForm";
 import { FiltersForm } from "@/components/FiltersForm";
 import { ThemeForm } from "@/components/ThemeForm";
 import { RichText } from "@/components/RichText";
@@ -35,6 +37,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
     return (
       <>
         <section className="profile me-head">
+          {me.profile?.banner?.url
+            ? <img className="profile-cover-image" src={me.profile.banner.url} alt="" />
+            : <div className="profile-cover" aria-hidden="true" />}
           <div className="me-top">
             <Avatar user={me} />
             {viewer.canWrite && (
@@ -52,9 +57,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
               <RichText text={me.profile.bio.text} />
             </p>
           )}
-          <div className="stats">
-            <span>{compact(me.following_count)} following</span>
-            <span>{compact(me.follower_count)} followers</span>
+          <div className="stats profile-stats">
+            <span><b>{compact(me.following_count)}</b> following</span>
+            <span><b>{compact(me.follower_count)}</b> followers</span>
           </div>
           {saved && <div className="form-ok">Profile updated. It can take a minute to show up everywhere.</div>}
         </section>
@@ -112,6 +117,11 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
         </section>
 
         <section className="me-section">
+          <div className="me-section-head"><h2>Profile</h2><span className="meta">this Selfcaster</span></div>
+          <PinnedCastForm casts={casts.slice(0, 30)} initial={prefs.pinnedCastHash} />
+        </section>
+
+        <section className="me-section">
           <div className="me-section-head">
             <h2>Look</h2>
             <span className="meta">this device</span>
@@ -125,6 +135,14 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
             <span className="meta">this device</span>
           </div>
           <ChannelTabsForm followed={followed} current={currentTabs} />
+        </section>
+
+        <section className="me-section" id="friends">
+          <div className="me-section-head">
+            <h2>Friends feed</h2>
+            <span className="meta">this device</span>
+          </div>
+          <FriendsFeedForm initial={prefs.friends} />
         </section>
 
         <section className="me-section">

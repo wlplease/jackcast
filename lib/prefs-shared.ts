@@ -10,15 +10,20 @@ export type Prefs = {
   recasts: boolean;
   /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
   tabs: string[] | null;
+  /** People included in the private Friends feed. */
+  friends: { fid: number; username: string }[];
+  /** Optional app-local pinned cast on this deployment's profile page. */
+  pinnedCastHash: string | null;
   /** Color theme (see lib/themes.ts). */
   theme: ThemeId;
   /** auto follows the system; light and dark pin it. */
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, tabs: null, theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, tabs: null, friends: [], pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
+export const MAX_FRIENDS = 10;
 export const CHANNEL_ID = /^[a-z0-9-]{1,32}$/;
 
 export const QUALITY_LEVELS = [

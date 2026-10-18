@@ -61,6 +61,7 @@ export function Masthead({ channels, unseen }: { channels: string[]; unseen: num
       </div>
       <nav className="tabs" aria-label="Feeds">
         {tab("/", "Following")}
+        {tab("/friends", "Friends")}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
     </header>

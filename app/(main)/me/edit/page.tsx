@@ -16,7 +16,7 @@ export default async function EditProfilePage() {
           <h1>Edit profile</h1>
         </div>
         <EditProfile
-          initial={{ displayName: me.display_name ?? "", bio: me.profile?.bio?.text ?? "", pfpUrl: me.pfp_url ?? "" }}
+          initial={{ displayName: me.display_name ?? "", bio: me.profile?.bio?.text ?? "", pfpUrl: me.pfp_url ?? "", bannerUrl: me.profile?.banner?.url ?? "" }}
         />
       </>
     );

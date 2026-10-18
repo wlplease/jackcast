@@ -39,7 +39,7 @@ lib/brand.ts                name, wordmark and description. Change these to rebr
 lib/themes.ts               color themes (token sets for light and dark) and themeCss(); checked by scripts/check-themes.ts
 lib/viewer.ts               who's using the app: env vars, else the /setup cookie, else read-only
 lib/data.ts                 feed fetchers, filtering, followed channels and favorites (cached 10 min)
-lib/prefs.ts, prefs-shared  settings (mutes, quality, recasts, favorites, theme, mode), per device in the selfcaster_prefs cookie
+lib/prefs.ts, prefs-shared  settings (mutes, quality, recasts, favorites, Friends feed people, theme, mode), per device in the selfcaster_prefs cookie
 lib/filters.ts              mute matching and score filtering (your own casts are never hidden)
 lib/players.ts              which links get inline players
 lib/image.ts                browser-side resize/compress (2048px JPEG) and square avatar crop
@@ -87,6 +87,8 @@ The Deploy button in the README asks for `NEYNAR_API_KEY` and `APP_PASSWORD` and
 - **Settings** live in the `selfcaster_prefs` cookie so the server can filter and theme before render (no flash). Per device; a database would sync them. `savePrefs()` takes a partial patch and merges it, so each form only sends its own fields.
 - **Feed order**: feeds are re-sorted newest first (`byTime` in `lib/data.ts`). Recasts are off by default because a recast carries the original cast's timestamp. `prefs.recasts` turns them on.
 - **Favorite channels**: `prefs.tabs` (picked on /me, A to Z), else `PINNED_CHANNELS`. They're the header tabs and the composer's whole channel menu (`composerChannels()`), plus the channel page you're on. The picker searches every followed channel: `fetchUserChannels` caps at 100 per page, so `lib/data.ts` walks the cursor.
+- **Friends feed**: `prefs.friends` stores up to 10 `{ fid, username }` entries in the device preferences cookie. `/friends` fetches a chronological Neynar FID-filtered feed, uses the same mute/quality filters, and has its own caught-up marker and new-casts poll. It is private app configuration and does not create a Farcaster group or change who you follow.
+- **Profile curation**: public profile headers offer an Add to Friends action backed by the same device cookie and ten-person limit. Profile cover styling uses theme tokens, not fixed colors.
 - **Stats** bucket by time of day and weekday in the browser, so they use your own time zone. Bars use `--chart`, which each theme validates against its card color.
 
 ## Design system

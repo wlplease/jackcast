@@ -49,11 +49,52 @@ export async function channelFeed(channelId: string, cursor?: string, limit = 30
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
 
-export async function userCasts(userFid: number, cursor?: string): Promise<Page> {
+/** Chronological casts from the people selected for this device's private Friends feed. */
+export async function friendsFeed(cursor?: string, limit = 30): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  const res = await neynar().fetchCastsForUser({ fid: userFid, viewerFid: fid, includeReplies: false, limit: 30, cursor });
-  // Don't filter a profile you deliberately opened; just pass casts through.
-  return { casts: res.casts.map(asCast), cursor: res.next?.cursor ?? null, hidden: 0 };
+  const prefs = await getPrefs();
+  const fids = prefs.friends.map((person) => person.fid);
+  if (!fids.length) return { casts: [], hidden: 0, cursor: null };
+  const res = await neynar().fetchFeed({
+    feedType: "filter",
+    filterType: "fids",
+    fids,
+    viewerFid: fid,
+    withRecasts: prefs.recasts,
+    limit,
+    cursor,
+  });
+  const filtered = await clean(res.casts, fid);
+  return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+}
+
+function hasMedia(cast: CastView): boolean {
+  return cast.embeds.some((embed) => {
+    if (embed.metadata?.content_type?.startsWith("image/") || embed.metadata?.content_type?.startsWith("video/") || embed.metadata?.image || embed.metadata?.video) return true;
+    if (!embed.url) return false;
+    try {
+      const url = new URL(embed.url);
+      return /\.(avif|gif|jpe?g|png|webp|mp4|webm|m3u8|mov)(?:$|[?#])/i.test(url.pathname + url.search) || /(^|\.)imagedelivery\.net$/i.test(url.hostname);
+    } catch {
+      return false;
+    }
+  });
+}
+
+export async function userCasts(userFid: number, cursor?: string, mediaOnly = false): Promise<Page> {
+  const { fid } = await viewerOrThrow();
+  const casts: CastView[] = [];
+  let nextCursor = cursor;
+  // Media can be sparse in a profile. Walk a few pages so the media tab stays useful without
+  // making one page load trigger an unbounded number of Neynar requests.
+  for (let page = 0; page < (mediaOnly ? 5 : 1); page++) {
+    const res = await neynar().fetchCastsForUser({ fid: userFid, viewerFid: fid, includeReplies: false, limit: 30, cursor: nextCursor });
+    const batch = res.casts.map(asCast);
+    casts.push(...(mediaOnly ? batch.filter(hasMedia) : batch));
+    nextCursor = res.next?.cursor ?? undefined;
+    if (!mediaOnly || casts.length >= 30 || !nextCursor || batch.length === 0) break;
+  }
+  return { casts, cursor: nextCursor ?? null, hidden: 0 };
 }
 
 export async function unseenCount(): Promise<number> {

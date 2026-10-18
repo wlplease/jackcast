@@ -30,11 +30,12 @@ export async function updateProfile(input: {
   displayName?: string;
   bio?: string;
   pfpUrl?: string;
+  bannerUrl?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const v = await getViewer();
   if (!v?.signerUuid) return { ok: false, error: "Connect your account at /setup first." };
 
-  const patch: { displayName?: string; bio?: string; pfpUrl?: string } = {};
+  const patch: { displayName?: string; bio?: string; pfpUrl?: string; banner?: string } = {};
   if (input.displayName !== undefined) {
     const d = input.displayName.trim();
     if (!d) return { ok: false, error: "Display name can't be empty." };
@@ -49,6 +50,11 @@ export async function updateProfile(input: {
   if (input.pfpUrl !== undefined) {
     if (!/^https:\/\//.test(input.pfpUrl) || input.pfpUrl.length > 256) return { ok: false, error: "That photo URL won't work." };
     patch.pfpUrl = input.pfpUrl;
+  }
+  if (input.bannerUrl !== undefined) {
+    const banner = input.bannerUrl.trim();
+    if (banner && (!/^https:\/\//i.test(banner) || banner.length > 512)) return { ok: false, error: "Cover image must be an HTTPS URL under 512 characters." };
+    patch.banner = banner;
   }
   if (!Object.keys(patch).length) return { ok: true };
 
@@ -71,5 +77,17 @@ export async function checkChannel(raw: string): Promise<{ ok: true; id: string;
     return { ok: true, id: channel.id, name: channel.name };
   } catch {
     return { ok: false, error: `Couldn't find /${id}.` };
+  }
+}
+
+/** Resolve a Farcaster username before adding it to this device's Friends feed. */
+export async function checkFriend(raw: string): Promise<{ ok: true; fid: number; username: string } | { ok: false; error: string }> {
+  const username = raw.trim().replace(/^@/, "").toLowerCase();
+  if (!/^[a-z0-9_-]{1,32}$/.test(username)) return { ok: false, error: "Enter a valid Farcaster username." };
+  try {
+    const { user } = await neynar().lookupUserByUsername({ username });
+    return { ok: true, fid: user.fid, username: user.username.toLowerCase() };
+  } catch {
+    return { ok: false, error: `Couldn't find @${username}.` };
   }
 }

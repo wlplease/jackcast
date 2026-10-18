@@ -9,7 +9,7 @@ Out of scope on purpose: DMs.
 
 ## Shipped
 
-Chronological feed with caught-up line and new casts pill, favorite channels (tabs + composer), photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, color themes with light and dark, one-click Deploy button.
+Chronological Following and Friends feeds with caught-up line and new casts pill, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, color themes with light and dark, one-click Deploy button.
 
 ## Next up
 
@@ -19,14 +19,13 @@ _Pick from below._
 
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
-| Friends feed | A second chronological feed for a hand-picked group of people, separate from Following. Start with one group and let the owner select people they already follow. | M | browser initially; db only if cross-device sync is requested |
 | Small circles | Named private groups such as Friends, Local, or Builders, each with its own feed. The groups are private app settings and do not create or publish a Farcaster group. | L | browser initially; db for sync |
 | Replies toggle | Hide replies in Following while keeping replies visible on cast detail pages. | S | browser |
 | Mini app toggle | Hide casts dominated by mini app embeds when you want a quieter feed. | S | browser |
 
 Design constraints for group feeds: chronological ordering, obvious group identity, empty-state guidance, no surprise posting to a group, and a visible indicator when a cast is also in another feed. Preserve the existing Following and channel feeds as separate choices.
 
-Recommended sequence: add a single Friends feed from followed accounts, learn whether that is enough, then expand to named circles only if you need more than one curated group. This avoids building a complicated group manager before there is a real use for it.
+Recommended sequence: start with the single Friends feed from selected accounts, learn whether that is enough, then expand to named circles only if you need more than one curated group.
 
 ## Post better
 

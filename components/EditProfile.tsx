@@ -10,12 +10,13 @@ import { prepareAvatar, randomName } from "@/lib/image";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial }: { initial: { displayName: string; bio: string; pfpUrl: string } }) {
+export function EditProfile({ initial }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string } }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
   const [bio, setBio] = useState(initial.bio);
   const [pfp, setPfp] = useState(initial.pfpUrl);
+  const [bannerUrl, setBannerUrl] = useState(initial.bannerUrl);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
 
   const bioBytes = bytes(bio);
   const nameBytes = bytes(displayName);
-  const changed = displayName !== initial.displayName || bio !== initial.bio || pfp !== initial.pfpUrl;
+  const changed = displayName !== initial.displayName || bio !== initial.bio || pfp !== initial.pfpUrl || bannerUrl !== initial.bannerUrl;
 
   async function pickPhoto(file: File) {
     setError(null);
@@ -56,6 +57,7 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
         displayName: displayName !== initial.displayName ? displayName : undefined,
         bio: bio !== initial.bio ? bio : undefined,
         pfpUrl: pfp !== initial.pfpUrl ? pfp : undefined,
+        bannerUrl: bannerUrl !== initial.bannerUrl ? bannerUrl : undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -94,6 +96,12 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
           Display name <span className={`count${nameBytes > 32 ? " over" : ""}`}>{32 - nameBytes}</span>
         </span>
         <input className="text-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="off" />
+      </label>
+
+      <label className="field">
+        <span className="field-label">Cover image URL <span className="meta">Neynar Pro required</span></span>
+        <input className="text-input" type="url" inputMode="url" placeholder="https://…" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} autoComplete="url" />
+        <span className="field-hint">Optional wide image shown on your Farcaster profile. Clear the field to remove it. Neynar requires a Pro subscription to change the banner.</span>
       </label>
 
       <label className="field">
