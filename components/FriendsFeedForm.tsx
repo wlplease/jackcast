@@ -5,6 +5,16 @@ import { checkFriend, loadFollowedPeople, savePrefs, suggestRecentFriends } from
 import { MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
 
 type Person = Prefs["friends"][number];
+const FEATURED_ACCOUNTS = [
+  { username: "balajis.eth", name: "Balaji", note: "Network State" },
+  { username: "grin", name: "Grin", note: "Community and builders" },
+  { username: "dwr", name: "Dan Romero", note: "Farcaster co-founder" },
+  { username: "linda", name: "Linda Xie", note: "Farcaster community" },
+  { username: "horsefacts.eth", name: "Horsefacts", note: "Farcaster builder" },
+  { username: "rish", name: "Rish", note: "Neynar" },
+  { username: "manan", name: "Manan", note: "Neynar" },
+  { username: "v", name: "Varun", note: "Farcaster co-founder" },
+] as const;
 
 function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Person[]; field: "friends" | "customPeople"; title: string; excluded?: Person[] }) {
   const [people, setPeople] = useState(initial);
@@ -15,7 +25,8 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [finding, setFinding] = useState(false);
-  const [suggestions, setSuggestions] = useState<(Person & { posts: number })[] | null>(null);
+  const [featuredChecking, setFeaturedChecking] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<(Person & { posts: number; followers: number })[] | null>(null);
   const [suggestionError, setSuggestionError] = useState("");
   const [suggestionScan, setSuggestionScan] = useState<{ scanned: number; complete: boolean; generatedAt: number } | null>(null);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
@@ -99,11 +110,11 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
     save([...people, { fid: person.fid, username: person.username }]);
   }
 
-  async function findSuggestions() {
-    if (finding || suggestions) return;
+  async function findSuggestions(refresh = false) {
+    if (finding) return;
     setFinding(true);
     setSuggestionError("");
-    const result = await suggestRecentFriends();
+    const result = await suggestRecentFriends(refresh);
     setFinding(false);
     if (!result.ok) {
       setSuggestionError(result.error);
@@ -112,6 +123,21 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
     setSuggestions(result.people);
     setSuggestionScan({ scanned: result.scanned, complete: result.complete, generatedAt: result.generatedAt });
     if (result.people.length === 0) setSuggestionError("No suggestions are available yet.");
+  }
+
+  async function addFeatured(username: string) {
+    if (featuredChecking || status === "saving" || people.length >= MAX_FRIENDS) return;
+    setFeaturedChecking(username);
+    setError(null);
+    const result = await checkFriend(username);
+    setFeaturedChecking(null);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    if (people.some((person) => person.fid === result.fid)) return;
+    setUsername("");
+    save([...people, { fid: result.fid, username: result.username }]);
   }
 
   return (
@@ -126,32 +152,49 @@ function PeopleFeedForm({ initial, field, title, excluded = [] }: { initial: Per
         <p className="field-hint">A private, chronological feed from up to {MAX_FRIENDS} people. Friends stay in this feed and are hidden from Following and Custom.</p>
         {field === "customPeople" && excluded.length > 0 && <p className="field-hint">Accounts in Friends are kept out of Custom too.</p>}
         {field === "friends" && (
-          <div className="best-friends">
-            <button type="button" className="btn ghost sm" onClick={() => void findSuggestions()} disabled={finding || Boolean(suggestions) || people.length >= MAX_FRIENDS}>
-              {finding ? "Loading recent suggestions…" : suggestions ? "Suggestions ready" : "Find top 20 from 180 days"}
-            </button>
-            <p className="field-hint">Ranks people you follow by activity in the last 180 days. Results are saved for a day, so reopening this page reuses the same scan; at most 1,000 posts are checked.</p>
-            {suggestionError && <p className="form-error" role="status">{suggestionError}</p>}
-            {suggestions && suggestions.length > 0 && (
-              <>
-                <p className="field-hint" role="status">Scanned {suggestionScan?.scanned.toLocaleString()} posts · saved {suggestionScan ? new Date(suggestionScan.generatedAt).toLocaleString() : ""}. {suggestionScan?.complete ? "Full 180-day window checked." : "Reached the 1,000-post cap; newer activity may dominate."}</p>
-                <div className="best-friend-list" aria-label="Top active people from the last 180 days">
-                  {suggestions.map((person, index) => {
-                    const added = people.some((current) => current.fid === person.fid);
-                    return (
-                      <div className="best-friend-row" key={person.fid}>
-                        <span className="best-friend-rank">{index + 1}</span>
-                        <span>@{person.username}</span>
-                        <small>{person.posts} posts</small>
-                    <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || status === "saving" || people.length >= MAX_FRIENDS}>
-                          {added ? "Added" : "Add"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+          <div className="top-accounts">
+            <h3>Top accounts</h3>
+            <p className="field-hint">Curated Farcaster and Neynar leaders, plus accounts active in your network over the last 90 days. Add only the people you want in Friends.</p>
+            <div className="featured-accounts" aria-label="Featured Farcaster accounts">
+              {FEATURED_ACCOUNTS.map((account) => {
+                const person = people.find((current) => current.username === account.username);
+                return (
+                  <div className="featured-account" key={account.username}>
+                    <div><b>{account.name}</b><span>@{account.username}</span><small>{account.note}</small></div>
+                    <button type="button" className="btn ghost sm" onClick={() => void addFeatured(account.username)} disabled={Boolean(person) || Boolean(featuredChecking) || status === "saving" || people.length >= MAX_FRIENDS}>
+                      {person ? "Added" : featuredChecking === account.username ? "Checking…" : "Add"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="best-friends">
+              <button type="button" className="btn ghost sm" onClick={() => void findSuggestions(Boolean(suggestions))} disabled={finding}>
+                {finding ? "Scanning recent activity…" : suggestions ? "Redo 90-day scan" : "Find most active in 90 days"}
+              </button>
+              <p className="field-hint">Ranks people you follow by cast activity in the last 90 days, then follower count. Results are cached for a day; at most 1,000 posts are checked.</p>
+              {suggestionError && <p className="form-error" role="status">{suggestionError}</p>}
+              {suggestions && suggestions.length > 0 && (
+                <>
+                  <p className="field-hint" role="status">Scanned {suggestionScan?.scanned.toLocaleString()} posts · saved {suggestionScan ? new Date(suggestionScan.generatedAt).toLocaleString() : ""}. {suggestionScan?.complete ? "Full 90-day window checked." : "Reached the 1,000-post cap; newer activity may dominate."}</p>
+                  <div className="best-friend-list" aria-label="Top active people from the last 90 days">
+                    {suggestions.map((person, index) => {
+                      const added = people.some((current) => current.fid === person.fid);
+                      return (
+                        <div className="best-friend-row" key={person.fid}>
+                          <span className="best-friend-rank">{index + 1}</span>
+                          <span>@{person.username}</span>
+                          <small>{person.posts} posts · {person.followers.toLocaleString()} followers</small>
+                          <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || status === "saving" || people.length >= MAX_FRIENDS}>
+                            {added ? "Added" : "Add"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
         <div className="chips favs" aria-label={`People in ${title} feed`}>

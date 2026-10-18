@@ -21,6 +21,8 @@ export function parsePrefs(raw: string | undefined): Prefs {
       : null;
     const theme = THEME_IDS.includes(p.theme as ThemeId) ? (p.theme as ThemeId) : DEFAULT_PREFS.theme;
     const mode = MODES.includes(p.mode as Mode) ? (p.mode as Mode) : DEFAULT_PREFS.mode;
+    const density = p.density === "compact" ? "compact" : "comfortable";
+    const showPreviews = p.showPreviews !== false;
     const cleanPeople = (value: unknown) => Array.isArray(value)
       ? value
           .map((entry) => ({ fid: Number(entry?.fid), username: String(entry?.username ?? "").trim().toLowerCase().replace(/^@/, "") }))
@@ -39,7 +41,7 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const pinnedCastHash = typeof p.pinnedCastHash === "string" && /^0x[0-9a-f]{40}$/i.test(p.pinnedCastHash)
       ? p.pinnedCastHash.toLowerCase()
       : null;
-    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
+    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

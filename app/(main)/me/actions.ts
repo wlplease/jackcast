@@ -108,11 +108,12 @@ export async function checkFriend(raw: string): Promise<{ ok: true; fid: number;
   }
 }
 
-/** Ranks followed accounts by post activity over the last 180 days, with a bounded scan. */
-export async function suggestRecentFriends(): Promise<{ ok: true; people: { fid: number; username: string; posts: number }[]; scanned: number; complete: boolean; generatedAt: number } | { ok: false; error: string }> {
+/** Ranks followed accounts by post activity over the last 90 days, with a bounded scan. */
+export async function suggestRecentFriends(refresh = false): Promise<{ ok: true; people: { fid: number; username: string; posts: number; followers: number }[]; scanned: number; complete: boolean; generatedAt: number } | { ok: false; error: string }> {
   const viewer = await getViewer();
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
+    if (refresh) revalidateTag("recent-friend-suggestions");
     return { ok: true, ...await recentFriendSuggestions(viewer.fid) };
   } catch (error) {
     return { ok: false, error: neynarFailure(error, "Couldn't scan your recent feed. Check your Neynar connection and try again.") };

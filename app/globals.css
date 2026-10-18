@@ -113,6 +113,11 @@ main { flex: 1; min-width: 0; }
 .cast-head .handle { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cast-head .chan { max-width: 32%; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 11.5px; color: var(--accent); white-space: nowrap; }
 .cast-text { font-family: var(--read); font-size: var(--read-size); margin: 3px 0 0; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+html[data-density="compact"] .cast { grid-template-columns: 32px minmax(0, 1fr); gap: 9px; padding-top: 9px; padding-bottom: 9px; }
+html[data-density="compact"] .cast > .avatar { width: 32px; height: 32px; }
+html[data-density="compact"] .cast.parent::before { left: 32px; top: 48px; }
+html[data-density="compact"] .cast.focus { padding-top: 16px; padding-bottom: 16px; }
+html[data-previews="off"] .cast .embeds { display: none; }
 .recast-context { margin-bottom: 2px; color: var(--ink-3); font-size: 11.5px; font-weight: 600; }
 .cast-text a.link { color: var(--accent); }
 .cast-text a.link:hover { text-decoration: underline; }
@@ -499,6 +504,14 @@ main { flex: 1; min-width: 0; }
 .followed-result b { color: var(--accent); font-size: 12px; }
 .followed-result:disabled { opacity: .55; cursor: default; }
 .best-friends { display: grid; justify-items: start; gap: 6px; }
+.top-accounts { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--rule); border-radius: 14px; background: var(--card); }
+.top-accounts > h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+.featured-accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; width: 100%; }
+.featured-account { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 9px 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper); }
+.featured-account > div { display: grid; min-width: 0; gap: 1px; }
+.featured-account b { font-size: 13px; }
+.featured-account span, .featured-account small { overflow: hidden; color: var(--ink-3); text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.featured-account .btn { flex: none; }
 .best-friend-list { width: 100%; max-height: 320px; overflow-y: auto; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); }
 .best-friend-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 38px; border-bottom: 1px solid var(--rule); }
 .best-friend-row:last-child { border-bottom: 0; }

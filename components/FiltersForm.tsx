@@ -19,7 +19,7 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
     setPrefs(next);
     setStatus("saving");
     start(async () => {
-      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, showReplies: next.showReplies, hideMiniApps: next.hideMiniApps, groupLinks: next.groupLinks });
+      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, showReplies: next.showReplies, hideMiniApps: next.hideMiniApps, groupLinks: next.groupLinks, density: next.density, showPreviews: next.showPreviews });
       if (res.ok) {
         setPrefs(res.prefs);
         setStatus("saved");
@@ -155,6 +155,26 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
             className={`switch${prefs.hideMiniApps ? " on" : ""}`}
             onClick={() => commit({ ...prefs, hideMiniApps: !prefs.hideMiniApps })}
           ><span /></button>
+        </div>
+      </div>
+
+      <div className="field">
+        <h3>Feed spacing</h3>
+        <p className="field-hint">Choose how much room each cast takes on screen.</p>
+        <div className="seg dial" role="radiogroup" aria-label="Feed spacing">
+          {([ ["comfortable", "Comfortable"], ["compact", "Compact"] ] as const).map(([value, label]) => (
+            <button key={value} type="button" role="radio" aria-checked={prefs.density === value} className="seg-item" onClick={() => commit({ ...prefs, density: value })}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="field">
+        <div className="toggle-row">
+          <div>
+            <h3>Show media and link previews</h3>
+            <p className="field-hint">Hide embedded images, videos, and link cards for a text-focused feed. Open a cast to see its full content.</p>
+          </div>
+          <button type="button" role="switch" aria-checked={prefs.showPreviews} aria-label="Show media and link previews" className={`switch${prefs.showPreviews ? " on" : ""}`} onClick={() => commit({ ...prefs, showPreviews: !prefs.showPreviews })}><span /></button>
         </div>
       </div>
 

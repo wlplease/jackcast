@@ -12,6 +12,10 @@ export type Prefs = {
   hideMiniApps: boolean;
   /** Collapse posts with the exact same normalized external link into expandable groups. */
   groupLinks: boolean;
+  /** Comfortable or compact spacing across feed cards. */
+  density: "comfortable" | "compact";
+  /** Render photo, video, and link embed previews in casts. */
+  showPreviews: boolean;
   /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
   tabs: string[] | null;
   /** People included in the private Friends feed. */
@@ -28,7 +32,7 @@ export type Prefs = {
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 20;

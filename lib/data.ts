@@ -118,7 +118,7 @@ export async function recastsFeed(cursor?: string, limit = 100): Promise<Page> {
   const timestamps = withRecasts.casts.map((cast) => Date.parse(cast.timestamp)).filter(Number.isFinite);
   const cutoff = timestamps.length ? Math.min(...timestamps) : Number.NEGATIVE_INFINITY;
   const excluded = new Map<string, number>();
-  for (const [hash, timestamp] of [...(state?.excluded ?? []), ...direct.casts.map((cast) => [cast.hash, Date.parse(cast.timestamp)] as [string, number])]) {
+  for (const [hash, timestamp] of [...(state?.excluded ?? []), ...direct.casts.map((cast) => [cast.hash, Date.parse("timestamp" in cast ? cast.timestamp : "")] as [string, number])]) {
     if (Number.isFinite(timestamp) && timestamp >= cutoff) excluded.set(hash, timestamp);
   }
   const nextState: RecastCursor | null = withRecasts.next?.cursor
@@ -173,7 +173,7 @@ export async function userCasts(userFid: number, cursor?: string, mediaOnly = fa
 export type ChannelChip = { id: string; name?: string; image_url?: string };
 export type FollowedPerson = { fid: number; username: string; displayName: string };
 
-export type RecentFriendSuggestion = { fid: number; username: string; posts: number };
+export type RecentFriendSuggestion = { fid: number; username: string; posts: number; followers: number };
 export type RecentFriendSuggestions = {
   people: RecentFriendSuggestion[];
   scanned: number;
@@ -181,14 +181,11 @@ export type RecentFriendSuggestions = {
   generatedAt: number;
 };
 
-/**
- * Expensive, bounded activity scan. Cache per viewer for a day so opening settings
- * again (or retrying the action) does not spend up to ten Neynar feed requests.
- */
+/** A bounded 90-day activity scan, cached per viewer for a day. */
 const recentFriendSuggestionsCached = unstable_cache(
   async (fid: number): Promise<RecentFriendSuggestions> => {
-    const cutoff = Date.now() - 180 * 24 * 60 * 60 * 1000;
-    const activity = new Map<number, { fid: number; username: string; posts: number; latest: number }>();
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const activity = new Map<number, { fid: number; username: string; posts: number; followers: number; latest: number }>();
     let cursor: string | undefined;
     let scanned = 0;
     let reachedCutoff = false;
@@ -206,11 +203,13 @@ const recentFriendSuggestionsCached = unstable_cache(
         scanned++;
         const username = cast.author.username;
         if (cast.author.fid === fid || !username || !/^[a-z0-9_-]{1,32}$/i.test(username)) continue;
+        const followerCount = Number((cast.author as typeof cast.author & { follower_count?: number }).follower_count ?? 0);
         const previous = activity.get(cast.author.fid);
         activity.set(cast.author.fid, {
           fid: cast.author.fid,
           username: username.toLowerCase(),
           posts: (previous?.posts ?? 0) + 1,
+          followers: Math.max(previous?.followers ?? 0, Number.isFinite(followerCount) ? followerCount : 0),
           latest: Math.max(previous?.latest ?? 0, timestamp),
         });
       }
@@ -221,12 +220,12 @@ const recentFriendSuggestionsCached = unstable_cache(
       }
     }
     const people = [...activity.values()]
-      .sort((a, b) => b.posts - a.posts || b.latest - a.latest)
+      .sort((a, b) => b.posts - a.posts || b.followers - a.followers || b.latest - a.latest)
       .slice(0, MAX_FRIENDS)
-      .map(({ fid: personFid, username, posts }) => ({ fid: personFid, username, posts }));
+      .map(({ fid: personFid, username, posts, followers }) => ({ fid: personFid, username, posts, followers }));
     return { people, scanned, complete, generatedAt: Date.now() };
   },
-  ["recent-friend-suggestions-v1"],
+  ["recent-friend-suggestions-90d-v2"],
   { revalidate: 86400, tags: ["recent-friend-suggestions"] }
 );
 

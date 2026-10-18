@@ -38,9 +38,10 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { theme, mode } = await getPrefs();
+  const prefs = await getPrefs();
+  const { theme, mode } = prefs;
   return (
-    <html lang="en" data-theme={theme} data-mode={mode}>
+    <html lang="en" data-theme={theme} data-mode={mode} data-density={prefs.density} data-previews={prefs.showPreviews ? "on" : "off"}>
       <head>
         {/* The chosen theme, rendered on the server so the first paint is already right. */}
         <style id="sc-theme" dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
