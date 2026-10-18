@@ -7,6 +7,7 @@ import { getPrefs } from "@/lib/prefs";
 import { themeById, themeCss } from "@/lib/themes";
 import { BRAND } from "@/lib/brand";
 import { SiteFooter } from "@/components/SiteFooter";
+import { MiniAppHostReady } from "@/components/MiniAppHostReady";
 
 export const metadata: Metadata = {
   title: BRAND.name,
@@ -48,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style id="sc-theme" dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
       </head>
       <body>
+        <MiniAppHostReady />
         <div className="app-frame">
           <div className="app-content">{children}</div>
           <SiteFooter />

@@ -4,15 +4,16 @@ import { useState } from "react";
 import { loadMiniAppSearch, refreshMiniApps } from "@/app/(main)/mini-apps/actions";
 import type { MiniAppSummary } from "@/lib/data";
 import { MiniAppSaveButton } from "@/components/MiniAppSaveButton";
+import { MiniAppLaunchButton } from "@/components/MiniAppLaunchButton";
 import type { Prefs } from "@/lib/prefs-shared";
 
 function AppGrid({ apps, saved, onSaved }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void }) {
   if (!apps.length) return <p className="field-hint">No mini apps found in this section yet.</p>;
-  return <div className="miniapp-grid">{apps.map((app) => <a key={app.url} className="miniapp-card" href={app.url} target="_blank" rel="noopener noreferrer">
+  return <div className="miniapp-grid">{apps.map((app) => <article key={app.url} className="miniapp-card">
     {app.image ? <img src={app.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="miniapp-placeholder" aria-hidden="true">✳</span>}
     <span className="miniapp-card-copy"><b>{app.title}</b>{app.author && <small>by {app.author}</small>}{app.description && <span>{app.description}</span>}</span>
-    <span className="miniapp-actions"><MiniAppSaveButton app={{ url: app.url, title: app.title }} saved={saved.some((item) => item.url === app.url)} allSaved={saved} onSaved={onSaved} /><span className="miniapp-open">Open ↗</span></span>
-  </a>)}</div>;
+    <span className="miniapp-actions"><MiniAppSaveButton app={{ url: app.url, title: app.title }} saved={saved.some((item) => item.url === app.url)} allSaved={saved} onSaved={onSaved} /><MiniAppLaunchButton app={{ url: app.url, title: app.title }} /></span>
+  </article>)}</div>;
 }
 
 export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number; initialSaved: Prefs["savedMiniApps"] }) {
