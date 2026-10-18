@@ -16,13 +16,13 @@ This document tracks review findings and implementation decisions for this repos
 | --- | --- | --- | --- |
 | High | The lockfile resolves Next.js 15.5.28 with PostCSS 8.4.31. `npm audit` reports high severity PostCSS advisories through Next.js. | Keep Next 15 and override PostCSS to a patched 8.5 release; re-audit after install. Revisit when a patched Next 15 release becomes available. | Done (PostCSS override) |
 | High | `selfcaster_session` is a deterministic, unkeyed SHA-256 digest of `APP_PASSWORD`; possession permits replay. It lasts 90 days. | Replace it with a versioned, keyed session token and invalidate old tokens. Replay remains possible if a current cookie is stolen; rotation still uses `APP_PASSWORD`. | Done (token); replay and lifetime remain open |
-| Medium | Login has no throttling, so password guessing can consume app resources. | Add bounded rate limiting appropriate to the deployment runtime and return generic login errors. Consider edge-level protection as an additional control. | Open |
+| Medium | Login has no throttling, so password guessing can consume app resources. | Apply five-attempt/15-minute process-local throttling and generic errors. Add edge-level limiting for durable enforcement across serverless instances. | Done (best-effort; edge-level still recommended) |
 | Medium | Signer setup can create signer requests and poll Neynar without app-level throttling. | Validate signer IDs and request data at the server boundary; rate-limit signer creation and polling; cap polling duration and request frequency. | Open |
 | Medium | The public image route trusts the Blob object's `image/*` content type and serves it at the app origin. | Verify the stored type and extension agree; restrict served formats; set `X-Content-Type-Options` and a restrictive content security policy for image responses. | Done (response checks) |
 | Medium | Upload route parses arbitrary JSON before its error handler and returns exception messages. | Bound request body size, handle malformed JSON consistently, return generic client errors, and keep diagnostic details in server logs. Confirm Blob SDK callback validation remains enabled. | Done (body cap and generic errors) |
 | Medium | Signer setup accepts signer request data from the browser. | Validate UUID, FID, deadline, and signature shapes before forwarding them to Neynar. | Done (input validation) |
-| Medium | Server actions can return raw Neynar messages to the browser. | Map expected upstream errors to safe, actionable messages and log bounded diagnostics server-side without credentials or user secrets. | Open |
-| Low | Security headers are not explicitly configured in `next.config.ts`. | Review and add appropriate headers, including a considered Content Security Policy. Test app styles, embeds, media, and setup flow against the selected policy. | Open |
+| Medium | Server actions can return raw Neynar messages to the browser. | Map expected upstream errors to safe, actionable messages without credentials or user secrets. | Done (cast, reaction, profile, signer setup) |
+| Low | Security headers are not explicitly configured in `next.config.ts`. | Add baseline headers. Keep CSP as a separate change after testing inline styles, embeds, media, and setup flow against a restrictive policy. | Done (baseline headers); CSP open |
 
 ## Product and design improvements
 
@@ -31,18 +31,28 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 | Priority | Opportunity | Proposed direction | Status |
 | --- | --- | --- | --- |
 | High | Mobile masthead occupies substantial vertical space. | Prototype a denser phone header while keeping search, notifications, profile, and channel navigation easy to reach. Check at 390px in light and dark mode. | Open |
-| High | Feed controls are limited. | Add optional filters for replies and mini app casts alongside the existing recast control. Make active filters visible and easy to reset. | Open |
+| High | Feed controls are limited. | Add optional filters for replies and mini app casts alongside the existing recast control. Make active filters visible and easy to reset. | Partial (filters shipped; active summary/reset still open) |
 | Medium | Channel tabs are alphabetical and channel selection is limited. | Add channel discovery and manual tab ordering; preserve a useful fallback when no favorites are selected. | Open |
-| Medium | Posting a multi-cast thread takes repeated composer work. | Add a thread composer with per-cast byte counts, attachment limits, and clear partial-failure recovery. | Open |
-| Medium | Drafts are not available. | Save drafts locally in the browser first, with explicit controls for restore and delete. Avoid syncing sensitive content without a separate storage decision. | Open |
+| Medium | Posting a multi-cast thread takes repeated composer work. | Add a thread composer with per-cast byte counts and clear partial-failure recovery. | Done (text-only, up to five casts) |
+| Medium | Drafts are not available. | Save drafts locally in the browser first, with explicit controls for restore and delete. Avoid syncing sensitive content without a separate storage decision. | Done (local browser drafts) |
 | Later | Settings are spread across several forms. | Group settings by common tasks such as reading, posting, and appearance; retain clear labels and previews. | Open |
 
 ## Change log
 
+### 2026-10-18 — Improved feeds, drafts, thread posting, and app security
+
+- **Changed:** Added optional reply and mini app filters, per-route scroll restoration, and a modal full-size image viewer.
+- **Changed:** Composer and thread drafts save locally in this browser. Added a text-only thread composer (up to five casts) with partial-send recovery and explicit duplicate-check guidance.
+- **Changed:** Added per-process login throttling (five failures, then a 15-minute block), safer provider error messages, and baseline security response headers.
+- **Why:** Reduce timeline repetition, preserve reading context, prevent losing unsent writing, and improve practical protections on a single-owner deployment.
+- **Changed:** Tightened feed and embed grid minimum sizing after live DOM inspection found image frames wider than their cast columns. The intrinsic image width could still cause horizontal overflow despite the height cap.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, full `npm audit`, `npm run build`, and `git diff --check` passed. Build includes `/compose/thread`. Live Gemini catch-up returned a summary from the deployed app. The live 390px feed still shows media overflow; source now constrains cast/embed grid widths, but that fix needs deployment for live confirmation.
+- **Limits:** The login limiter is per server process and is not a durable cross-instance rate limit. Add Vercel edge-level limiting for stronger protection. Content Security Policy remains open because inline styles and third-party media need a carefully tested policy.
+
 ### 2026-10-18 — Added private Gemini catch-up and fork notes
 
 - **Changed:** Added an optional Following-feed digest, shown only when `GOOGLE_AI_API_KEY` is configured. It runs only on a button press and summarizes at most 20 loaded casts, with author/text limits and a 300-token output cap.
-- **Changed:** The server sends only selected public post text and author names to Gemini Flash-Lite. The feature cannot post, react, use search grounding, or access the recovery phrase. API key remains server-side; the route validates same-origin requests, input size, shape, and timeout.
+- **Changed:** The server sends only selected public post text and author names to Gemini Flash-Lite. The feature cannot post, react, use search grounding, or access the recovery phrase. API key remains server-side; the route requires same-origin JSON, validates input size and shape, and times out. One successful digest is allowed per page visit to reduce accidental repeat calls.
 - **Changed:** Added `.env.example` and `FORK-NOTES.md` to explain setup and the custom fork without replacing upstream attribution.
 - **Why:** Offer a useful AI assistant feature while keeping it opt-in, narrow, and cheaper than an open-ended agent. For stronger cost limits, configure spend caps/usage monitoring in AI Studio; provider caps may have processing delay.
 - **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit --omit=dev`, `npm run build`, and `git diff --check` passed. Build output includes `/api/ai/catch-up`; it still reports the existing workspace-root warning from the external `pnpm-lock.yaml`.
@@ -54,7 +64,7 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 - **Changed:** Two-image posts keep their existing square gallery layout, and clicking any image still opens the original media.
 - **Why:** Large portrait and vote graphics were dominating the timeline and cropping their content. A smaller responsive cap gives posts a consistent rhythm while retaining the complete image.
 - **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit --omit=dev`, and `npm run build` passed. `git diff --check` passed. Build output includes the feed routes and reports the existing workspace-root warning from the external `pnpm-lock.yaml`.
-- **Limit:** Feed media was not screenshot-tested in a live Neynar-backed browser session; fixed-height frames cap rendered media dimensions by viewport, while original images remain available by click.
+- **Limit:** Live DOM inspection at 390px found some embeds wider than their cards because grid minimum sizing let intrinsic image width overflow. The source now fixes those minimums and adds a full-screen image viewer. The current Vercel deployment still has the old layout until this source change is deployed.
 
 ### 2026-10-18 — Group repeated links across feeds
 

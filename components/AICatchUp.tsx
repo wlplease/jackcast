@@ -19,7 +19,6 @@ export function AICatchUp({ casts }: { casts: CastView[] }) {
         body: JSON.stringify({ casts: casts.slice(0, 20).map((cast) => ({
           author: cast.author.display_name || cast.author.username || "Unknown",
           text: cast.text,
-          timestamp: cast.timestamp,
         })) }),
       });
       const data = await response.json() as { summary?: string; error?: string };
@@ -33,19 +32,19 @@ export function AICatchUp({ casts }: { casts: CastView[] }) {
   }
 
   return (
-    <section className="ai-catchup" aria-label="AI feed catch-up">
+    <section id="ai-catch-up" className="ai-catchup" aria-label="AI feed catch-up" tabIndex={-1}>
       <div className="ai-catchup-top">
         <div>
           <strong>Catch up with AI</strong>
           <p>Gemini reads up to 20 posts from this page when you ask.</p>
         </div>
-        <button type="button" onClick={summarize} disabled={busy || casts.length === 0}>
-          {busy ? "Summarizing…" : summary ? "Refresh digest" : "Make digest"}
+        <button type="button" onClick={summarize} disabled={busy || casts.length === 0 || Boolean(summary)}>
+          {busy ? "Summarizing…" : summary ? "Digest ready" : "Make digest"}
         </button>
       </div>
       {summary && <p className="ai-catchup-summary" aria-live="polite">{summary}</p>}
       {error && <p className="ai-catchup-error" role="status">{error}</p>}
-      <small>Post text and author names are sent to Google. The digest cannot take actions.</small>
+      <small>One digest per visit. Post text and author names are sent to Google; it cannot take actions.</small>
     </section>
   );
 }

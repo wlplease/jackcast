@@ -5,6 +5,7 @@ import { Avatar } from "./Avatar";
 import { Player } from "./Player";
 import { playerFor } from "@/lib/players";
 import { VideoEmbed } from "./VideoEmbed";
+import { ImageEmbed } from "./ImageEmbed";
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|heic)(\?|$)/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m3u8)(\?|$)/i;
@@ -88,9 +89,7 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         if (isImage(e)) {
           const src = viaProxy(e.url);
           return (
-            <a key={i} className="embed-image-link" href={src} target="_blank" rel="noreferrer">
-              <img className="embed-img" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
-            </a>
+            <ImageEmbed key={i} src={src} />
           );
         }
         const og = e.metadata?.html;

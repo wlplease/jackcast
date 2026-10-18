@@ -1,4 +1,5 @@
 import { Masthead } from "@/components/Masthead";
+import { FeedScrollRestoration } from "@/components/FeedScrollRestoration";
 import { tabChannels, unseenCount } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
 
@@ -13,7 +14,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     unseen = nextUnseen;
     return (
       <div className="shell">
-        <Masthead channels={channels} unseen={unseen} customName={prefs.customName} />
+        <FeedScrollRestoration />
+        <Masthead channels={channels} unseen={unseen} customName={prefs.customName} aiEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
         <main>{children}</main>
       </div>
     );
@@ -21,7 +23,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <div className="shell">
-      <Masthead channels={channels} unseen={unseen} customName="Custom" />
+      <FeedScrollRestoration />
+      <Masthead channels={channels} unseen={unseen} customName="Custom" aiEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
       <main>{children}</main>
     </div>
   );

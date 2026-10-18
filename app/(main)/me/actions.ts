@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
-import { CHANNEL_ID, type Prefs } from "@/lib/prefs-shared";
+import { followedPeople as getFollowedPeople } from "@/lib/data";
+import { CHANNEL_ID, MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
 
 /** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
 export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; prefs: Prefs } | { ok: false; error: string }> {
@@ -67,8 +68,16 @@ export async function updateProfile(input: {
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {
-    const err = e as { response?: { data?: { message?: string } }; message?: string };
-    return { ok: false, error: err?.response?.data?.message ?? err?.message ?? "Couldn't update your profile." };
+    const err = e as { response?: { status?: number }; status?: number };
+    const status = err?.status ?? err?.response?.status;
+    const error = status === 401 || status === 403
+      ? "Neynar rejected the update. Check your connection at /setup."
+      : status === 429
+        ? "Neynar is rate limiting updates. Wait and try again."
+        : status && status >= 500
+          ? "Neynar is temporarily unavailable. Try again shortly."
+          : "Couldn't update your profile. Check your connection and try again.";
+    return { ok: false, error };
   }
 }
 
@@ -94,4 +103,29 @@ export async function checkFriend(raw: string): Promise<{ ok: true; fid: number;
   } catch {
     return { ok: false, error: `Couldn't find @${username}.` };
   }
+}
+
+/** Fetches Neynar's interaction-ranked suggestions once when the user asks. */
+export async function suggestBestFriends(): Promise<{ ok: true; people: { fid: number; username: string }[] } | { ok: false; error: string }> {
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
+  try {
+    const result = await neynar().getUserBestFriends({ fid: viewer.fid, limit: MAX_FRIENDS });
+    const people = result.users
+      .filter((person) => person.fid !== viewer.fid && /^[a-z0-9_-]{1,32}$/i.test(person.username))
+      .map((person) => ({ fid: person.fid, username: person.username.toLowerCase() }))
+      .slice(0, MAX_FRIENDS);
+    return { ok: true, people };
+  } catch {
+    return { ok: false, error: "Couldn't load friend suggestions. Check your Neynar connection and try again." };
+  }
+}
+
+/** Loads the signed-in user's followed accounts only when they open custom-feed search. */
+export async function loadFollowedPeople(): Promise<{ ok: true; people: { fid: number; username: string; displayName: string }[] } | { ok: false; error: string }> {
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
+  const people = await getFollowedPeople();
+  if (!people.length) return { ok: true, people: [] };
+  return { ok: true, people };
 }

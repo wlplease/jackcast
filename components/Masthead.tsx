@@ -26,9 +26,15 @@ const I = {
       <rect x="5" y="11" width="14" height="9.5" rx="2" /><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
     </svg>
   ),
+  ai: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m12 2 1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2Z" />
+      <path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" />
+    </svg>
+  ),
 };
 
-export function Masthead({ channels, unseen, customName }: { channels: string[]; unseen: number; customName: string }) {
+export function Masthead({ channels, unseen, customName, aiEnabled }: { channels: string[]; unseen: number; customName: string; aiEnabled: boolean }) {
   const path = usePathname();
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined}>
@@ -49,6 +55,7 @@ export function Masthead({ channels, unseen, customName }: { channels: string[];
           <Wordmark />
         </Link>
         <nav className="mast-nav" aria-label="Main">
+          {aiEnabled && icon("/#ai-catch-up", "AI catch-up", I.ai)}
           {icon("/search", "Search", I.search)}
           {icon("/notifications", "Notifications", I.bell, unseen)}
           {icon("/me", "You", I.you)}

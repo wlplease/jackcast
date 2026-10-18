@@ -15,6 +15,7 @@ export type EmbedView = {
     content_type?: string | null;
     image?: { width_px?: number; height_px?: number };
     video?: unknown;
+    frame?: unknown;
     html?: {
       ogTitle?: string;
       ogDescription?: string;

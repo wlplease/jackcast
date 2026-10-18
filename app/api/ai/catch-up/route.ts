@@ -3,12 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type InputCast = { author: string; text: string; timestamp: string };
+type InputCast = { author: string; text: string };
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
+  if (!origin || origin !== new URL(request.url).origin) {
     return NextResponse.json({ error: "Request origin was not accepted." }, { status: 403 });
+  }
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    return NextResponse.json({ error: "The digest request must use JSON." }, { status: 415 });
   }
   if (!process.env.GOOGLE_AI_API_KEY) {
     return NextResponse.json({ error: "Add GOOGLE_AI_API_KEY in your server environment to enable AI catch-up." }, { status: 503 });
@@ -16,7 +19,7 @@ export async function POST(request: NextRequest) {
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > 24_000) return NextResponse.json({ error: "This digest request is too large." }, { status: 413 });
 
-  let body: { casts?: unknown };
+  let body: unknown;
   try {
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > 24_000) return NextResponse.json({ error: "This digest request is too large." }, { status: 413 });
@@ -24,20 +27,20 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "The digest request was not valid." }, { status: 400 });
   }
-  if (!Array.isArray(body.casts) || body.casts.length < 1 || body.casts.length > 20) {
+  const inputCasts = body && typeof body === "object" ? (body as { casts?: unknown }).casts : null;
+  if (!Array.isArray(inputCasts) || inputCasts.length < 1 || inputCasts.length > 20) {
     return NextResponse.json({ error: "Choose between 1 and 20 loaded posts." }, { status: 400 });
   }
   const casts: InputCast[] = [];
-  for (const item of body.casts) {
+  for (const item of inputCasts) {
     if (!item || typeof item !== "object") return NextResponse.json({ error: "The digest request was not valid." }, { status: 400 });
     const cast = item as Record<string, unknown>;
-    if ([cast.author, cast.text, cast.timestamp].some((v) => typeof v !== "string")) {
+    if ([cast.author, cast.text].some((v) => typeof v !== "string")) {
       return NextResponse.json({ error: "The digest request was not valid." }, { status: 400 });
     }
     casts.push({
       author: (cast.author as string).slice(0, 80),
       text: (cast.text as string).slice(0, 500),
-      timestamp: (cast.timestamp as string).slice(0, 40),
     });
   }
 

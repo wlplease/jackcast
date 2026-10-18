@@ -19,7 +19,7 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
     setPrefs(next);
     setStatus("saving");
     start(async () => {
-      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, recasts: next.recasts, groupLinks: next.groupLinks });
+      const res = await savePrefs({ mutes: next.mutes, quality: next.quality, recasts: next.recasts, showReplies: next.showReplies, hideMiniApps: next.hideMiniApps, groupLinks: next.groupLinks });
       if (res.ok) {
         setPrefs(res.prefs);
         setStatus("saved");
@@ -120,6 +120,40 @@ export function FiltersForm({ initial, envDefault }: { initial: Prefs; envDefaul
             aria-label="Group repeated links"
             className={`switch${prefs.groupLinks ? " on" : ""}`}
             onClick={() => commit({ ...prefs, groupLinks: !prefs.groupLinks })}
+          ><span /></button>
+        </div>
+      </div>
+
+      <div className="field">
+        <div className="toggle-row">
+          <div>
+            <h3>Show replies in feeds</h3>
+            <p className="field-hint">Hide replies from Following, Friends, and your custom feed. Replies still appear when you open a conversation.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs.showReplies}
+            aria-label="Show replies in feeds"
+            className={`switch${prefs.showReplies ? " on" : ""}`}
+            onClick={() => commit({ ...prefs, showReplies: !prefs.showReplies })}
+          ><span /></button>
+        </div>
+      </div>
+
+      <div className="field">
+        <div className="toggle-row">
+          <div>
+            <h3>Hide mini apps</h3>
+            <p className="field-hint">Hide casts that Neynar identifies as Farcaster mini apps. Some embeds may not be classified.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs.hideMiniApps}
+            aria-label="Hide mini apps"
+            className={`switch${prefs.hideMiniApps ? " on" : ""}`}
+            onClick={() => commit({ ...prefs, hideMiniApps: !prefs.hideMiniApps })}
           ><span /></button>
         </div>
       </div>

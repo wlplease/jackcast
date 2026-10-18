@@ -17,7 +17,7 @@ export const getMe = cache(async (): Promise<Author & { bio?: string }> => {
 /** Applies your quality dial and muted words. Returns what's left plus how many were hidden. */
 export async function clean(casts: unknown[], myFid: number) {
   const prefs = await getPrefs();
-  return applyFilters(casts.map(asCast), { myFid, minScore: effectiveMinScore(prefs), mutes: prefs.mutes });
+  return applyFilters(casts.map(asCast), { myFid, minScore: effectiveMinScore(prefs), mutes: prefs.mutes, showReplies: prefs.showReplies, hideMiniApps: prefs.hideMiniApps });
 }
 
 export type Page = { casts: CastView[]; cursor: string | null; hidden: number };
@@ -119,6 +119,39 @@ export async function unseenCount(): Promise<number> {
 }
 
 export type ChannelChip = { id: string; name?: string; image_url?: string };
+export type FollowedPerson = { fid: number; username: string; displayName: string };
+
+const followedPeopleCached = unstable_cache(
+  async (fid: number): Promise<FollowedPerson[]> => {
+    const out: FollowedPerson[] = [];
+    let cursor: string | undefined;
+    // Search a generous, bounded slice so settings stays quick and predictable.
+    for (let page = 0; page < 20; page++) {
+      const res = await neynar().fetchUserFollowing({ fid, viewerFid: fid, sortType: "desc_chron", limit: 100, cursor });
+      out.push(...res.users.map(({ user }) => ({
+        fid: user.fid,
+        username: user.username.toLowerCase(),
+        displayName: user.display_name || user.username,
+      })));
+      cursor = res.next?.cursor ?? undefined;
+      if (!cursor || !res.users.length) break;
+    }
+    return Array.from(new Map(out.map((person) => [person.fid, person])).values());
+  },
+  ["followed-people-all"],
+  { revalidate: 600, tags: ["followed-people"] }
+);
+
+/** A bounded, briefly cached list used to search accounts you already follow. */
+export async function followedPeople(): Promise<FollowedPerson[]> {
+  const v = await getViewer();
+  if (!v) return [];
+  try {
+    return await followedPeopleCached(v.fid);
+  } catch {
+    return [];
+  }
+}
 
 const followedChannelsCached = unstable_cache(
   async (fid: number): Promise<ChannelChip[]> => {

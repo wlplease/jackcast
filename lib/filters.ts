@@ -32,12 +32,18 @@ export type FilterResult = { casts: CastView[]; hidden: number };
 /** Applies the quality dial and muted words. Your own casts are never hidden. */
 export function applyFilters(
   casts: CastView[],
-  opts: { myFid: number; minScore: number; mutes: string[] }
+  opts: { myFid: number; minScore: number; mutes: string[]; showReplies?: boolean; hideMiniApps?: boolean }
 ): FilterResult {
   const muted = muteMatcher(opts.mutes);
   const kept: CastView[] = [];
   let hidden = 0;
   for (const c of casts) {
+    const isReply = Boolean(c.parent_hash);
+    const hasMiniApp = (c.embeds ?? []).some((embed) => Boolean(embed.metadata?.frame));
+    if ((opts.showReplies === false && isReply) || (opts.hideMiniApps && hasMiniApp)) {
+      hidden++;
+      continue;
+    }
     if (c.author.fid === opts.myFid) {
       kept.push(c);
       continue;

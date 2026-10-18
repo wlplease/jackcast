@@ -1,6 +1,6 @@
 # Jackcast fork notes
 
-This repository is a personal, single-owner Selfcaster deployment based on the open-source [GenuineJack/Selfcaster](https://github.com/GenuineJack/selfcaster). The upstream README remains the setup guide; this page summarizes the custom direction in this fork.
+Jackcast is an open-source, personal customization of [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This repository is [wlplease/jackcast](https://github.com/wlplease/jackcast); it keeps the upstream project's MIT license and credits the original author. The [README](./README.md) documents how to deploy this Jackcast repository, while this page records the custom direction and maintenance notes for the fork.
 
 ## What this fork adds
 

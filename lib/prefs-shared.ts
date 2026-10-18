@@ -8,6 +8,10 @@ export type Prefs = {
   quality: number | null;
   /** Show recasts in Following. Off by default: a recast carries the original cast's time, which scrambles a chronological feed. */
   recasts: boolean;
+  /** Include replies in Following and curated feeds. */
+  showReplies: boolean;
+  /** Hide posts with a detected Farcaster mini app embed. */
+  hideMiniApps: boolean;
   /** Collapse posts with the exact same normalized external link into expandable groups. */
   groupLinks: boolean;
   /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
@@ -26,10 +30,10 @@ export type Prefs = {
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, groupLinks: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, recasts: false, showReplies: true, hideMiniApps: false, groupLinks: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
-export const MAX_FRIENDS = 10;
+export const MAX_FRIENDS = 20;
 export const CHANNEL_ID = /^[a-z0-9-]{1,32}$/;
 
 export const QUALITY_LEVELS = [

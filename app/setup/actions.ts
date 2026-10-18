@@ -10,8 +10,12 @@ import { SIGNER_COOKIE, encodeSignerCookie } from "@/lib/viewer";
 type Fail = { ok: false; error: string };
 
 function message(e: unknown): string {
-  const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string };
-  return err?.response?.data?.message ?? err?.message ?? "Something went wrong";
+  const err = e as { response?: { status?: number }; status?: number };
+  const status = err?.status ?? err?.response?.status;
+  if (status === 401 || status === 403) return "Neynar rejected the request. Check NEYNAR_API_KEY.";
+  if (status === 429) return "Neynar is rate limiting requests. Wait and try again.";
+  if (status && status >= 500) return "Neynar is temporarily unavailable. Try again shortly.";
+  return "The Neynar request failed. Check your connection and try again.";
 }
 
 /** Find the Farcaster account whose custody wallet the phrase controls. */

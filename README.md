@@ -1,28 +1,32 @@
 <p align="center"><img src="./public/icon-192.png" width="96" height="96" alt=""></p>
 
-<h1 align="center">Selfcaster</h1>
+<h1 align="center">Jackcast</h1>
 
-<p align="center">Your own Farcaster client. Chronological, no algorithm, yours.<br>One deploy per person, locked with your password, hosted on your own Vercel.</p>
+<p align="center">A personal Farcaster client, customized for Jackcast.<br>Chronological feeds, no algorithm, hosted on your own Vercel.</p>
 
-<p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FGenuineJack%2Fselfcaster&project-name=selfcaster&repository-name=selfcaster&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=NEYNAR_API_KEY%20is%20your%20key%20from%20dev.neynar.com.%20APP_PASSWORD%20locks%20your%20client%3A%20anyone%20with%20it%20can%20post%20as%20you%2C%20so%20make%20it%20long.&envLink=https%3A%2F%2Fgithub.com%2FGenuineJack%2Fselfcaster%23setup&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D"><img src="https://vercel.com/button" alt="Deploy with Vercel"></a></p>
+<p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=NEYNAR_API_KEY%20is%20your%20key%20from%20dev.neynar.com.%20APP_PASSWORD%20locks%20your%20client%3A%20anyone%20with%20it%20can%20post%20as%20you%2C%20so%20make%20it%20long.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D"><img src="https://vercel.com/button" alt="Deploy Jackcast with Vercel"></a></p>
+
+> Jackcast is an open-source, personal build based on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This repository contains Jackcast-specific customizations; see [FORK-NOTES.md](./FORK-NOTES.md) for what changed and how the fork is maintained. The original project remains available at [github.com/GenuineJack/selfcaster](https://github.com/GenuineJack/selfcaster).
 
 <p align="center">
-  <img src="./docs/screenshot-light.png" width="300" alt="Selfcaster feed, light">
+  <img src="./docs/screenshot-light.png" width="300" alt="Jackcast feed, light">
   &nbsp;
-  <img src="./docs/screenshot-dark.png" width="300" alt="Selfcaster feed, dark">
+  <img src="./docs/screenshot-dark.png" width="300" alt="Jackcast feed, dark">
 </p>
 
 ## What you get
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
-- **A Friends feed.** Choose up to 10 people for a separate chronological feed. The list is private to this app and saved on this device.
-- **A custom feed.** Add a second group of up to 10 people and name its tab (for example, Builders or Local). Following, Friends, and this custom feed stay separate.
+- **A Friends feed.** Choose up to 20 people for a separate chronological feed, or load Neynar's one-call mutual-interaction suggestions. The list is private to this app and saved on this device.
+- **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Following, Friends, and this custom feed stay separate.
 - **Profiles.** Browse posts or media, pin one cast on your Selfcaster profile, and set an optional Farcaster profile cover (Neynar Pro required to update the cover).
 - **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
 - **Your filters.** Muted words, phrases, $tickers and @handles, plus a quality dial that hides low-score accounts.
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in You → Filters if you want every post shown separately.
+- **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
+- **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
 - **Optional AI catch-up.** Ask Gemini for a short digest of up to 20 loaded posts in Following. It only runs when you press the button; it never posts, likes, or takes actions. Add `GOOGLE_AI_API_KEY` to enable it. The selected post text and author handles are sent to Google for that request.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
@@ -103,14 +107,14 @@ To disable it, remove `GOOGLE_AI_API_KEY` and redeploy. See [FORK-NOTES.md](./FO
 
 ## Getting updates
 
-The Deploy button and the template both make a fresh copy, so your repo won't update on its own. Watch this repo's [releases and commits](https://github.com/GenuineJack/selfcaster/commits/main) and copy over what you want. If you're comfortable with git, you can merge directly (your copy has its own history, so the first merge needs a flag, and any files you changed may conflict):
+The Deploy button makes a fresh copy of Jackcast, so your repo won't update on its own. For upstream Selfcaster changes, review [GenuineJack/Selfcaster commits](https://github.com/GenuineJack/selfcaster/commits/main) and copy or merge the changes you want. This repository has its own customizations, so review changes and resolve conflicts before deploying an update:
 
 ```bash
 git remote add upstream https://github.com/GenuineJack/selfcaster.git
 git pull upstream main --allow-unrelated-histories
 ```
 
-Want updates to be one click? Fork this repo instead of using the Deploy button, then import your fork into Vercel by hand. GitHub's **Sync fork** button will pull in new versions. Forks of a public repo are public, which is fine: there are no secrets in the code.
+Want one-click updates to Jackcast? [Fork this repository](https://github.com/wlplease/jackcast/fork) instead of using the Deploy button, then import your fork into Vercel by hand. GitHub's **Sync fork** button can pull in later Jackcast changes. Forks of a public repo are public, so keep secrets in Vercel environment variables rather than in the code.
 
 ## How it works
 
@@ -137,8 +141,8 @@ Checks: `npm run typecheck`, `npm run check:themes`, `NEYNAR_API_KEY=x npm run b
 
 ## Contributing
 
-Issues and pull requests are welcome. [CLAUDE.md](./CLAUDE.md) has the architecture, decisions and conventions (written for people and AI coding agents alike), [ROADMAP.md](./ROADMAP.md) has ideas, and [FORK-NOTES.md](./FORK-NOTES.md) summarizes this personal fork.
+Issues and pull requests are welcome. This project builds on [the open-source Selfcaster project](https://github.com/GenuineJack/selfcaster); Jackcast-specific changes and maintenance notes are in [FORK-NOTES.md](./FORK-NOTES.md). [CLAUDE.md](./CLAUDE.md) has the architecture, decisions and conventions, and [ROADMAP.md](./ROADMAP.md) has ideas.
 
 ## License
 
-[MIT](./LICENSE). Made by [@genuinejack](https://farcaster.xyz/genuinejack).
+[MIT](./LICENSE). Jackcast is a community customization of [GenuineJack/Selfcaster](https://github.com/GenuineJack/selfcaster), originally made by [@genuinejack](https://farcaster.xyz/genuinejack).

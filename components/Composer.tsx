@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { uploadImage } from "@/lib/upload-client";
 import { publish } from "@/app/actions";
@@ -67,11 +68,58 @@ export function Composer({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, start] = useTransition();
+  const [draftStatus, setDraftStatus] = useState<"idle" | "restored" | "saved">("idle");
+  const draftReady = useRef(false);
+  const draftKey = `selfcaster:draft:v1:${initialText || initialLink ? "share" : quote ? `quote:${quote.hash}` : parentHash ? `reply:${parentHash}` : `compose:${defaultChannel || "main"}`}`;
 
   useEffect(() => {
     if (ref.current) grow(ref.current);
     if (autoFocus) ref.current?.focus();
   }, [autoFocus]);
+
+  useEffect(() => {
+    if (initialText || initialLink || quote) {
+      draftReady.current = true;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as { text?: unknown; link?: unknown; channel?: unknown };
+        if (typeof draft.text === "string") setText(draft.text.slice(0, 5000));
+        if (typeof draft.link === "string") { setLink(draft.link.slice(0, 2048)); setShowLink(Boolean(draft.link)); }
+        if (typeof draft.channel === "string") setChannel(draft.channel.slice(0, 32));
+        if (draft.text || draft.link) setDraftStatus("restored");
+      }
+    } catch {}
+    draftReady.current = true;
+  }, [draftKey, initialLink, initialText, quote]);
+
+  useEffect(() => {
+    if (!draftReady.current) return;
+    const hasDraft = Boolean(text.trim() || link.trim());
+    const timer = setTimeout(() => {
+      try {
+        if (hasDraft) {
+          localStorage.setItem(draftKey, JSON.stringify({ text, link, channel }));
+          setDraftStatus("saved");
+        } else {
+          localStorage.removeItem(draftKey);
+          setDraftStatus("idle");
+        }
+      } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [channel, draftKey, link, text]);
+
+  function discardDraft() {
+    try { localStorage.removeItem(draftKey); } catch {}
+    setText("");
+    setLink("");
+    setShowLink(false);
+    setDraftStatus("idle");
+    if (ref.current) ref.current.style.height = "auto";
+  }
 
   const bytes = new TextEncoder().encode(text).length;
   const over = bytes > MAX_BYTES;
@@ -138,6 +186,8 @@ export function Composer({
         return;
       }
       photos.forEach((p) => URL.revokeObjectURL(p.preview));
+      try { localStorage.removeItem(draftKey); } catch {}
+      setDraftStatus("idle");
       setText("");
       setLink("");
       setShowLink(false);
@@ -290,7 +340,9 @@ export function Composer({
             {pending ? "Casting…" : uploading ? "Uploading…" : parentHash ? "Reply" : quoted ? "Quote" : "Cast"}
           </button>
         </div>
+        {!parentHash && !quoted && <div className="composer-extra"><Link className="thread-link" href="/compose/thread">Write a thread →</Link></div>}
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
+        {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}</div>}
         {sent && <div className="form-ok">Sent.</div>}
       </div>

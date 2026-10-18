@@ -9,7 +9,7 @@ Out of scope on purpose: DMs.
 
 ## Shipped
 
-Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, repeated-link grouping, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, color themes with light and dark, one-click Deploy button.
+Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation from profiles, refreshed profile headers, profile Posts/Media tabs, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, show or hide recasts, cast stats, edit profile, Gemini catch-up, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
 
 ## Next up
 
@@ -20,8 +20,6 @@ _Pick from below._
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
 | More custom feeds | Add additional named private groups beyond the one custom feed, if the three-feed layout proves useful. | M | browser initially; db for sync |
-| Replies toggle | Hide replies in Following while keeping replies visible on cast detail pages. | S | browser |
-| Mini app toggle | Hide casts dominated by mini app embeds when you want a quieter feed. | S | browser |
 
 Design constraints for group feeds: chronological ordering, obvious group identity, empty-state guidance, no surprise posting to a group, and a visible indicator when a cast is also in another feed. Preserve the existing Following and channel feeds as separate choices.
 
@@ -31,8 +29,6 @@ Recommended sequence: start with the single Friends feed from selected accounts,
 
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
-| Thread composer | Write a multi-cast thread in one go, posted as a reply chain. | M | none |
-| Drafts | Start a cast, come back later. | S | browser, or db to sync |
 
 ## Channels
 
@@ -52,7 +48,7 @@ Recommended sequence: start with the single Friends feed from selected accounts,
 
 | Idea | What it does | Effort | Storage |
 | --- | --- | --- | --- |
-| Feed toggles | Hide mini app casts, replies on or off (the recasts toggle is shipped). | S | browser |
+| Remembered reading position | Restore position after a full browser restart, not only while the tab stays open. | S | browser |
 
 ## Your stuff
 

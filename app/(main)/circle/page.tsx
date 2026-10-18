@@ -15,7 +15,7 @@ export default async function CustomFeedPage({ searchParams }: { searchParams: P
         <div className="section-head"><h1>{prefs.customName}</h1></div>
         <div className="empty">
           <h2>Build your own feed</h2>
-          <p>Choose up to 10 people for a separate chronological feed. Name it anything you like.</p>
+          <p>Choose up to 20 people for a separate chronological feed. Search people you already follow in your profile settings.</p>
           <Link className="btn" href="/me#custom-feed">Set up this feed</Link>
         </div>
       </>

@@ -15,7 +15,7 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
         <div className="section-head"><h1>Friends</h1></div>
         <div className="empty">
           <h2>Make this feed yours</h2>
-          <p>Choose up to 10 people and their newest casts will show up here.</p>
+          <p>Choose up to 20 people in your profile settings and their newest casts will show up here.</p>
           <Link className="btn" href="/me#friends">Choose people</Link>
         </div>
       </>
