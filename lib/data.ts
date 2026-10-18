@@ -6,6 +6,7 @@ import { asCast, type Author, type CastView } from "./types";
 import { getViewer, viewerOrThrow } from "./viewer";
 import { getPrefs, effectiveMinScore } from "./prefs";
 import { applyFilters } from "./filters";
+import { MAX_FRIENDS } from "./prefs-shared";
 
 export const getMe = cache(async (): Promise<Author & { bio?: string }> => {
   const { fid } = await viewerOrThrow();
@@ -121,6 +122,67 @@ export async function unseenCount(): Promise<number> {
 export type ChannelChip = { id: string; name?: string; image_url?: string };
 export type FollowedPerson = { fid: number; username: string; displayName: string };
 
+export type RecentFriendSuggestion = { fid: number; username: string; posts: number };
+export type RecentFriendSuggestions = {
+  people: RecentFriendSuggestion[];
+  scanned: number;
+  complete: boolean;
+  generatedAt: number;
+};
+
+/**
+ * Expensive, bounded activity scan. Cache per viewer for a day so opening settings
+ * again (or retrying the action) does not spend up to ten Neynar feed requests.
+ */
+const recentFriendSuggestionsCached = unstable_cache(
+  async (fid: number): Promise<RecentFriendSuggestions> => {
+    const cutoff = Date.now() - 180 * 24 * 60 * 60 * 1000;
+    const activity = new Map<number, { fid: number; username: string; posts: number; latest: number }>();
+    let cursor: string | undefined;
+    let scanned = 0;
+    let reachedCutoff = false;
+    let complete = false;
+    for (let page = 0; page < 10; page++) {
+      const result = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit: 100, cursor });
+      for (const raw of result.casts) {
+        const cast = asCast(raw);
+        const timestamp = Date.parse(cast.timestamp);
+        if (!Number.isFinite(timestamp)) continue;
+        if (timestamp < cutoff) {
+          reachedCutoff = true;
+          continue;
+        }
+        scanned++;
+        const username = cast.author.username;
+        if (cast.author.fid === fid || !username || !/^[a-z0-9_-]{1,32}$/i.test(username)) continue;
+        const previous = activity.get(cast.author.fid);
+        activity.set(cast.author.fid, {
+          fid: cast.author.fid,
+          username: username.toLowerCase(),
+          posts: (previous?.posts ?? 0) + 1,
+          latest: Math.max(previous?.latest ?? 0, timestamp),
+        });
+      }
+      cursor = result.next?.cursor ?? undefined;
+      if (reachedCutoff || !cursor || !result.casts.length) {
+        complete = true;
+        break;
+      }
+    }
+    const people = [...activity.values()]
+      .sort((a, b) => b.posts - a.posts || b.latest - a.latest)
+      .slice(0, MAX_FRIENDS)
+      .map(({ fid: personFid, username, posts }) => ({ fid: personFid, username, posts }));
+    return { people, scanned, complete, generatedAt: Date.now() };
+  },
+  ["recent-friend-suggestions-v1"],
+  { revalidate: 86400, tags: ["recent-friend-suggestions"] }
+);
+
+export async function recentFriendSuggestions(fid: number): Promise<RecentFriendSuggestions> {
+  return recentFriendSuggestionsCached(fid);
+}
+
 const followedPeopleCached = unstable_cache(
   async (fid: number): Promise<FollowedPerson[]> => {
     const out: FollowedPerson[] = [];
@@ -139,18 +201,14 @@ const followedPeopleCached = unstable_cache(
     return Array.from(new Map(out.map((person) => [person.fid, person])).values());
   },
   ["followed-people-all"],
-  { revalidate: 600, tags: ["followed-people"] }
+  { revalidate: 3600, tags: ["followed-people"] }
 );
 
 /** A bounded, briefly cached list used to search accounts you already follow. */
 export async function followedPeople(): Promise<FollowedPerson[]> {
   const v = await getViewer();
   if (!v) return [];
-  try {
-    return await followedPeopleCached(v.fid);
-  } catch {
-    return [];
-  }
+  return followedPeopleCached(v.fid);
 }
 
 const followedChannelsCached = unstable_cache(
@@ -167,7 +225,7 @@ const followedChannelsCached = unstable_cache(
     return Array.from(new Map(out.map((c) => [c.id, c])).values());
   },
   ["followed-channels-all"],
-  { revalidate: 600, tags: ["followed-channels"] }
+  { revalidate: 3600, tags: ["followed-channels"] }
 );
 
 /**

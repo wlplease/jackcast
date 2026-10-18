@@ -6,6 +6,7 @@ import "./globals.css";
 import { getPrefs } from "@/lib/prefs";
 import { themeById, themeCss } from "@/lib/themes";
 import { BRAND } from "@/lib/brand";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: BRAND.name,
@@ -44,7 +45,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* The chosen theme, rendered on the server so the first paint is already right. */}
         <style id="sc-theme" dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <div className="app-frame">
+          <div className="app-content">{children}</div>
+          <SiteFooter />
+        </div>
+      </body>
     </html>
   );
 }

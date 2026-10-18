@@ -6,7 +6,7 @@
 
 <p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=NEYNAR_API_KEY%20is%20your%20key%20from%20dev.neynar.com.%20APP_PASSWORD%20locks%20your%20client%3A%20anyone%20with%20it%20can%20post%20as%20you%2C%20so%20make%20it%20long.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D"><img src="https://vercel.com/button" alt="Deploy Jackcast with Vercel"></a></p>
 
-> Jackcast is an open-source, personal build based on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This repository contains Jackcast-specific customizations; see [FORK-NOTES.md](./FORK-NOTES.md) for what changed and how the fork is maintained. The original project remains available at [github.com/GenuineJack/selfcaster](https://github.com/GenuineJack/selfcaster).
+> Jackcast is an open-source, personal build based on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This repository contains Jackcast-specific customizations; see [FORK-NOTES.md](./FORK-NOTES.md) for maintenance details and [RELEASE-NOTES.md](./RELEASE-NOTES.md) for a concise summary of changes prepared for upstream review. The original project remains available at [github.com/GenuineJack/selfcaster](https://github.com/GenuineJack/selfcaster).
 
 <p align="center">
   <img src="./docs/screenshot-light.png" width="300" alt="Jackcast feed, light">
@@ -18,7 +18,7 @@
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Recasts are off by default because they carry the original cast's time and scramble the order. Flip them on if you want them.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
-- **A Friends feed.** Choose up to 20 people for a separate chronological feed, or load Neynar's one-call mutual-interaction suggestions. The list is private to this app and saved on this device.
+- **A Friends feed.** Choose up to 20 people for a separate chronological feed, or scan recent Following posts to suggest the 20 most active people from the last 180 days (up to 1,000 posts per scan). Suggestions are cached for a day; followed-account and channel directories are cached for an hour to reduce repeat Neynar requests. The list is private to this app and saved on this device.
 - **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Following, Friends, and this custom feed stay separate.
 - **Profiles.** Browse posts or media, pin one cast on your Selfcaster profile, and set an optional Farcaster profile cover (Neynar Pro required to update the cover).
 - **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context.
@@ -27,7 +27,7 @@
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in You → Filters if you want every post shown separately.
 - **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
 - **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
-- **Optional AI catch-up.** Ask Gemini for a short digest of up to 20 loaded posts in Following. It only runs when you press the button; it never posts, likes, or takes actions. Add `GOOGLE_AI_API_KEY` to enable it. The selected post text and author handles are sent to Google for that request.
+- **Optional AI catch-up and audio.** Ask Gemini for a short digest of up to 20 loaded posts in Following, then optionally have ElevenLabs read that digest aloud. Both are user-triggered; neither can post, like, or take actions. Add `GOOGLE_AI_API_KEY` for the digest. Add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text and author names; ElevenLabs receives only the generated summary. Audio is created on demand and kept in the browser for that visit.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
 
@@ -103,7 +103,9 @@ All optional settings are in [`.env.example`](./.env.example).
 
 Add `GOOGLE_AI_API_KEY` to your Vercel environment and redeploy. The key stays on the server. The digest is user-triggered, uses at most 20 loaded casts (text capped at 500 characters each), asks for at most 300 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
 
-To disable it, remove `GOOGLE_AI_API_KEY` and redeploy. See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
+To add spoken playback, also set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`. Choose a voice available to that key. Jackcast sends ElevenLabs only the generated digest, caps it at 2,400 characters, and allows one audio generation attempt per page visit. The MP3 is not saved by Jackcast; it is held in the browser until you leave the page, with an option to download it. ElevenLabs usage is billed separately; review [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) and set limits in your ElevenLabs account. The integration follows ElevenLabs' [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert). See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
+
+To disable the digest and audio, remove `GOOGLE_AI_API_KEY` and redeploy. To keep the text digest but disable audio, remove either ElevenLabs variable and redeploy.
 
 ## Getting updates
 

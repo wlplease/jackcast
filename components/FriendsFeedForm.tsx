@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { checkFriend, loadFollowedPeople, savePrefs, suggestBestFriends } from "@/app/(main)/me/actions";
+import { checkFriend, loadFollowedPeople, savePrefs, suggestRecentFriends } from "@/app/(main)/me/actions";
 import { MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
 
 type Person = Prefs["friends"][number];
@@ -15,8 +15,9 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [finding, setFinding] = useState(false);
-  const [suggestions, setSuggestions] = useState<Person[] | null>(null);
+  const [suggestions, setSuggestions] = useState<(Person & { posts: number })[] | null>(null);
   const [suggestionError, setSuggestionError] = useState("");
+  const [suggestionScan, setSuggestionScan] = useState<{ scanned: number; complete: boolean; generatedAt: number } | null>(null);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
   const [followedLoaded, setFollowedLoaded] = useState(false);
   const [followedError, setFollowedError] = useState("");
@@ -93,13 +94,14 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
     if (finding || suggestions) return;
     setFinding(true);
     setSuggestionError("");
-    const result = await suggestBestFriends();
+    const result = await suggestRecentFriends();
     setFinding(false);
     if (!result.ok) {
       setSuggestionError(result.error);
       return;
     }
     setSuggestions(result.people);
+    setSuggestionScan({ scanned: result.scanned, complete: result.complete, generatedAt: result.generatedAt });
     if (result.people.length === 0) setSuggestionError("No suggestions are available yet.");
   }
 
@@ -116,25 +118,29 @@ function PeopleFeedForm({ initial, field, title }: { initial: Person[]; field: "
         {field === "friends" && (
           <div className="best-friends">
             <button type="button" className="btn ghost sm" onClick={() => void findSuggestions()} disabled={finding || Boolean(suggestions) || people.length >= MAX_FRIENDS}>
-              {finding ? "Finding people…" : suggestions ? "Top people loaded" : "Find my top 20"}
+              {finding ? "Loading recent suggestions…" : suggestions ? "Suggestions ready" : "Find top 20 from 180 days"}
             </button>
-            <p className="field-hint">One manual lookup. Neynar ranks by mutual interaction; it does not offer an exact 180-day cutoff.</p>
+            <p className="field-hint">Ranks people you follow by activity in the last 180 days. Results are saved for a day, so reopening this page reuses the same scan; at most 1,000 posts are checked.</p>
             {suggestionError && <p className="form-error" role="status">{suggestionError}</p>}
             {suggestions && suggestions.length > 0 && (
-              <div className="best-friend-list" aria-label="Neynar top friend suggestions">
-                {suggestions.map((person, index) => {
-                  const added = people.some((current) => current.fid === person.fid);
-                  return (
-                    <div className="best-friend-row" key={person.fid}>
-                      <span className="best-friend-rank">{index + 1}</span>
-                      <span>@{person.username}</span>
-                      <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || people.length >= MAX_FRIENDS}>
-                        {added ? "Added" : "Add"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <p className="field-hint" role="status">Scanned {suggestionScan?.scanned.toLocaleString()} posts · saved {suggestionScan ? new Date(suggestionScan.generatedAt).toLocaleString() : ""}. {suggestionScan?.complete ? "Full 180-day window checked." : "Reached the 1,000-post cap; newer activity may dominate."}</p>
+                <div className="best-friend-list" aria-label="Top active people from the last 180 days">
+                  {suggestions.map((person, index) => {
+                    const added = people.some((current) => current.fid === person.fid);
+                    return (
+                      <div className="best-friend-row" key={person.fid}>
+                        <span className="best-friend-rank">{index + 1}</span>
+                        <span>@{person.username}</span>
+                        <small>{person.posts} posts</small>
+                        <button type="button" className="linkish" onClick={() => save([...people, person])} disabled={added || people.length >= MAX_FRIENDS}>
+                          {added ? "Added" : "Add"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

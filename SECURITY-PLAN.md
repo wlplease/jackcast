@@ -36,8 +36,30 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 | Medium | Posting a multi-cast thread takes repeated composer work. | Add a thread composer with per-cast byte counts and clear partial-failure recovery. | Done (text-only, up to five casts) |
 | Medium | Drafts are not available. | Save drafts locally in the browser first, with explicit controls for restore and delete. Avoid syncing sensitive content without a separate storage decision. | Done (local browser drafts) |
 | Later | Settings are spread across several forms. | Group settings by common tasks such as reading, posting, and appearance; retain clear labels and previews. | Open |
+| High | Some long posts and embedded content can widen the page on small screens. | Contain the shared app layout and allow long text, URLs, embeds, notifications, and profile metadata to shrink and wrap without removing intentional horizontal tab scrolling. | Done |
 
 ## Change log
+
+### 2026-10-18 — Contained app width and added project footer
+
+- **Changed:** Added a shared centered app frame and responsive footer across the app, with links to the original Selfcaster site, GenuineJack's source repository, and this Jackcast fork.
+- **Changed:** Constrained feed cards and embeds, notifications, search results, profile metadata, setup text, and the image viewer so intrinsic content does not expand the viewport. Intentional feed tab scrolling remains available.
+- **Why:** The page could scroll sideways when long URLs or media used their intrinsic width. Shared width containment and shrinkable content prevent the issue across routes and viewport sizes; the footer gives the fork clear upstream credit.
+- **Verification:** At local 390px and 1440px viewport overrides, the document scroll width matched its content viewport; the app content and footer measured 375px (phone layout width accounting for the browser scrollbar) and 640px respectively. `npm run typecheck`, `npm run check:themes`, `npm run build`, and `git diff --check` passed. Full authenticated feed content could not be rendered locally because `NEYNAR_API_KEY` is not configured in this checkout.
+
+### 2026-10-18 — Added optional speech for AI catch-up
+
+- **Changed:** Added an optional ElevenLabs read-aloud action for a completed Gemini digest. Audio generation requires `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`; both remain server-side.
+- **Changed:** The same-origin route accepts at most 2,400 characters, has a 20-second provider timeout, returns non-cacheable MP3, and rejects oversized output. The interface permits one audio request per page visit. Audio stays in a temporary browser object URL and is released when the component changes or unmounts.
+- **Why:** Make the existing digest easier to consume while keeping speech generation explicit and limiting the text sent to the provider.
+- **Privacy and cost:** Gemini receives selected post text and author names. ElevenLabs receives only the digest text. Each provider can bill separately; the UI limit does not replace provider-side usage limits.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit --omit=dev`, `npm run build`, and `git diff --check` passed. The build generated `/api/ai/speech` without the previous workspace-root warning. A tracked-file scan found no populated credentials, private key material, or local machine paths. Live ElevenLabs synthesis still requires a configured voice and was not called during this source build.
+
+### 2026-10-18 — Prepared repository for sharing
+
+- **Changed:** Set Next.js output tracing to the repository root, removed local Windows paths from tracked security notes, and added a concise upstream review summary.
+- **Why:** Keep build behavior independent of the owner's surrounding workspace and avoid including local machine details in shareable project documentation.
+- **Verification:** Typecheck, theme contrast check, production build, production dependency audit, and diff whitespace check passed. Build output no longer includes an external workspace path. Tracked docs contain no local Windows paths or local username. Git commit author metadata uses a GitHub noreply address.
 
 ### 2026-10-18 — Improved feeds, drafts, thread posting, and app security
 
@@ -109,7 +131,7 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 - **Why:** This adds a personal feed choice without changing Following, creating a public Farcaster group, or requiring a database. The feed uses the existing device preferences cookie and remains private app configuration.
 - **Changed:** Added the Friends link to feed navigation, Neynar FID-filtered feed fetching, shared mute/quality filtering, pagination, its own caught-up marker, and `/api/head` polling for new casts.
 - **Changed:** Documented the feature in `README.md` and `CLAUDE.md`; moved it to shipped in `ROADMAP.md`.
-- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` passed. Build output includes `/friends`. Build still prints the existing workspace-root warning caused by `C:\Users\xoopc\pnpm-lock.yaml` outside this repo.
+- **Verification:** `npm run typecheck`, `npm run check:themes`, `npm audit`, and `npm run build` passed. Build output includes `/friends`. Build still prints a workspace-root warning because an external lockfile exists above this repository.
 - **Limit:** Friends selections are saved on this device. Cross-device sync and named circles remain future work.
 
 ### 2026-10-18 — Restored repository hygiene and planned personal feeds
@@ -129,7 +151,7 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 - **Changed:** Capped upload token request bodies at 64 KiB, moved JSON parsing inside error handling, and replaced raw upload exceptions in responses with a generic error while logging server-side details.
 - **Changed:** Public image responses now require the stored Blob content type to match the allowlisted extension, set the type from the extension, and include a restrictive CSP and `nosniff`.
 - **Changed:** Signer registration validates signer UUID, positive FID, deadline window, and signature shape; signer polling validates UUID format.
-- **Verification:** `npm ci` reported zero vulnerabilities; `npm audit` reported zero vulnerabilities; `npm run typecheck`, `npm run check:themes`, and `npm run build` passed. The build emitted a workspace-root warning because `C:\Users\xoopc\pnpm-lock.yaml` exists outside the repo; build output lists all app routes.
+- **Verification:** `npm ci` reported zero vulnerabilities; `npm audit` reported zero vulnerabilities; `npm run typecheck`, `npm run check:themes`, and `npm run build` passed. The build emitted a workspace-root warning because an external lockfile exists above the repository; build output lists all app routes.
 - **Remaining:** Dependency override should be revisited when Next.js publishes a compatible patched Next 15 version. Rate limiting, shorter session policy, CSP for the full app, and Neynar error sanitization remain open.
 
 ### 2026-10-18 — Reviewed recovery phrase handling

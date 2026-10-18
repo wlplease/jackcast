@@ -65,7 +65,7 @@ export async function Feed({
     <>
       {live ? (
         <>
-          {live === "following" && process.env.GOOGLE_AI_API_KEY && <AICatchUp casts={page.casts} />}
+          {live === "following" && process.env.GOOGLE_AI_API_KEY && <AICatchUp casts={page.casts} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} />}
           <NewCastsPill feed={live} newest={newest} />
           <CaughtUpProvider feed={live} newest={newest}>
             {list}

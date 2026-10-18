@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
-import { followedPeople as getFollowedPeople } from "@/lib/data";
-import { CHANNEL_ID, MAX_FRIENDS, type Prefs } from "@/lib/prefs-shared";
+import { followedPeople as getFollowedPeople, recentFriendSuggestions } from "@/lib/data";
+import { CHANNEL_ID, type Prefs } from "@/lib/prefs-shared";
 
 /** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
 export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; prefs: Prefs } | { ok: false; error: string }> {
@@ -105,19 +105,14 @@ export async function checkFriend(raw: string): Promise<{ ok: true; fid: number;
   }
 }
 
-/** Fetches Neynar's interaction-ranked suggestions once when the user asks. */
-export async function suggestBestFriends(): Promise<{ ok: true; people: { fid: number; username: string }[] } | { ok: false; error: string }> {
+/** Ranks followed accounts by post activity over the last 180 days, with a bounded scan. */
+export async function suggestRecentFriends(): Promise<{ ok: true; people: { fid: number; username: string; posts: number }[]; scanned: number; complete: boolean; generatedAt: number } | { ok: false; error: string }> {
   const viewer = await getViewer();
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
-    const result = await neynar().getUserBestFriends({ fid: viewer.fid, limit: MAX_FRIENDS });
-    const people = result.users
-      .filter((person) => person.fid !== viewer.fid && /^[a-z0-9_-]{1,32}$/i.test(person.username))
-      .map((person) => ({ fid: person.fid, username: person.username.toLowerCase() }))
-      .slice(0, MAX_FRIENDS);
-    return { ok: true, people };
+    return { ok: true, ...await recentFriendSuggestions(viewer.fid) };
   } catch {
-    return { ok: false, error: "Couldn't load friend suggestions. Check your Neynar connection and try again." };
+    return { ok: false, error: "Couldn't scan your recent feed. Check your Neynar connection and try again." };
   }
 }
 
@@ -125,7 +120,9 @@ export async function suggestBestFriends(): Promise<{ ok: true; people: { fid: n
 export async function loadFollowedPeople(): Promise<{ ok: true; people: { fid: number; username: string; displayName: string }[] } | { ok: false; error: string }> {
   const viewer = await getViewer();
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
-  const people = await getFollowedPeople();
-  if (!people.length) return { ok: true, people: [] };
-  return { ok: true, people };
+  try {
+    return { ok: true, people: await getFollowedPeople() };
+  } catch {
+    return { ok: false, error: "Couldn't load followed accounts. You can still add someone by exact username." };
+  }
 }
