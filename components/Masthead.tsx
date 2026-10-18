@@ -66,8 +66,8 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
           <Wordmark />
         </Link>
         <nav className="mast-nav" aria-label="Main">
-          {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           {icon("/search", "Search", I.search)}
+          {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           <NotificationLink icon={I.bell} />
           {icon("/profile", "Profile and analytics", I.you)}
           {icon("/me", "Settings", I.settings)}
