@@ -82,10 +82,10 @@ main { flex: 1; min-width: 0; }
 
 /* Masthead */
 .mast { border-top: 3px solid var(--brand); position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--rule); }
-.mast-row { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 18px 8px; }
+.mast-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 14px 18px 8px; }
 .wordmark { font-family: var(--display); font-weight: var(--wordmark-weight); font-variation-settings: var(--display-fvs); font-size: 30px; line-height: 1; letter-spacing: var(--display-tracking); }
 .wordmark em { color: var(--accent); font-style: var(--wordmark-em); }
-.mast-nav { display: flex; gap: 16px; font-size: 13.5px; color: var(--ink-2); }
+.mast-nav { display: flex; flex: none; align-items: center; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
 .mast-nav a:hover, .mast-nav button:hover { color: var(--ink); }
 .mast-nav button { background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink-2); }
 .tabs { display: flex; gap: 6px; padding: 4px 14px 10px; overflow-x: auto; scrollbar-width: none; }
@@ -278,12 +278,12 @@ main { flex: 1; min-width: 0; }
 .icon-btn svg { width: 21px; height: 21px; }
 .icon-btn:hover, .icon-btn[aria-current="page"] { color: var(--ink); background: var(--card); }
 .badge { position: absolute; top: 2px; right: 1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--brand); color: var(--on-brand); font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; box-shadow: 0 0 0 2px var(--paper); }
-@media (max-width: 380px) {
+@media (max-width: 420px) {
   .mast-row { padding: 12px 12px 8px; }
-  .mast-row .wordmark { font-size: 27px; }
+  .mast-row .wordmark { font-size: clamp(22px, 7vw, 27px); }
   .mast-nav { gap: 0; }
-  .icon-btn { width: 32px; height: 36px; }
-  .icon-btn svg { width: 19px; height: 19px; }
+  .icon-btn { width: clamp(28px, 8vw, 32px); height: 36px; }
+  .icon-btn svg { width: 18px; height: 18px; }
 }
 
 /* Composer tools + photos */
