@@ -7,7 +7,7 @@ export function SiteFooter() {
         <span aria-hidden="true">·</span>
         <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noopener noreferrer">Original Selfcaster project</a>
         <span aria-hidden="true">·</span>
-        <a href="https://selfcaster.xyz/" target="_blank" rel="noopener noreferrer">Selfcaster app by GenuineJack</a>
+        <a href="https://farcaster.xyz/genuinejack" target="_blank" rel="noopener noreferrer">GenuineJack on Farcaster</a>
       </nav>
     </footer>
   );
