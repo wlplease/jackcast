@@ -15,7 +15,7 @@ const MAX_BYTES = 1024;
 const MAX_EMBEDS = 2;
 
 type Photo = { id: string; preview: string; status: "uploading" | "done" | "error"; url?: string; error?: string };
-type GifSelection = { url: string; preview: string; title: string };
+type GifSelection = { url: string; preview: string; title: string; sourceUrl?: string };
 
 export type QuoteTarget = { hash: string; fid: number; author: Author; text: string };
 
@@ -274,7 +274,7 @@ export function Composer({
           </div>
         )}
 
-        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
+        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}{gif.sourceUrl && <a href={gif.sourceUrl} target="_blank" rel="noreferrer">Open GIF ↗</a>}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
 
         {quoted && (
           <div className="quote composer-quote">
@@ -349,10 +349,12 @@ export function Composer({
             </select>
           )}
           <span className={`count${over ? " over" : ""}`}>{MAX_BYTES - bytes}</span>
-          {!parentHash && !quoted && <Link className="btn ghost thread-compose-button" href="/compose/thread">Thread</Link>}
-          <button className="btn" onClick={submit} disabled={empty || over || pending || uploading}>
-            {pending ? "Casting…" : uploading ? "Uploading…" : parentHash ? "Reply" : quoted ? "Quote" : "Cast"}
-          </button>
+          <div className="composer-actions">
+            {!parentHash && !quoted && <Link className="btn ghost sm thread-compose-button" href="/compose/thread">Thread</Link>}
+            <button className="btn" onClick={submit} disabled={empty || over || pending || uploading}>
+              {pending ? "Casting…" : uploading ? "Uploading…" : parentHash ? "Reply" : quoted ? "Quote" : "Cast"}
+            </button>
+          </div>
         </div>
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}

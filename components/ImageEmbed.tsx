@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /* eslint-disable @next/next/no-img-element */
-export function ImageEmbed({ src }: { src: string }) {
+export function ImageEmbed({ src, animated = false }: { src: string; animated?: boolean }) {
   const [open, setOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -16,9 +16,12 @@ export function ImageEmbed({ src }: { src: string }) {
 
   return (
     <>
-      <button type="button" className="embed-image-link" onClick={() => setOpen(true)} aria-label="Expand image">
-        <img className="embed-img" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
-      </button>
+      <div className="embed-image-wrap">
+        <button type="button" className={`embed-image-link${animated ? " animated-image" : ""}`} onClick={() => setOpen(true)} aria-label={animated ? "Expand GIF" : "Expand image"}>
+          <img className="embed-img" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+        </button>
+        <a className="embed-image-open" href={src} target="_blank" rel="noreferrer" aria-label={animated ? "Open GIF in a new tab" : "Open image in a new tab"} title="Open original in a new tab">↗</a>
+      </div>
       <dialog
         ref={dialog}
         className="image-lightbox"

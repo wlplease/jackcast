@@ -16,7 +16,7 @@ export type Prefs = {
   density: "comfortable" | "compact";
   /** Render image, video, audio, and link embed previews in casts. */
   showPreviews: boolean;
-  /** Channel tabs you picked, alphabetical. null means "use the channels you follow". */
+  /** Channel tabs you picked, in the order shown in the feed and composer. null means "use the channels you follow". */
   tabs: string[] | null;
   /** People included in the private Friends feed. */
   friends: { fid: number; username: string }[];

@@ -48,6 +48,9 @@ function isVideo(e: EmbedView) {
 function isAudio(e: EmbedView) {
   return e.metadata?.content_type?.startsWith("audio/") || (e.url && AUDIO_EXT.test(e.url));
 }
+function isAnimatedImage(url: string) {
+  return /\.gif(?:[?#]|$)/i.test(url) || /(^|\.)media\d*\.giphy\.com$|(^|\.)media\.tenor\.com$/i.test(host(url));
+}
 /**
  * Photos from a private Vercel Blob store can't be opened directly, so the app serves them
  * itself at /i/<pathname> (see app/i/[...path]/route.ts).
@@ -93,7 +96,7 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         if (isImage(e)) {
           const src = viaProxy(e.url);
           return (
-            <ImageEmbed key={i} src={src} />
+            <ImageEmbed key={i} src={src} animated={isAnimatedImage(e.url)} />
           );
         }
         const og = e.metadata?.html;

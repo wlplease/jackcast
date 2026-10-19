@@ -78,7 +78,6 @@ export function Masthead({ channels, customName, audioTracks = [] }: { channels:
       </div>
       <nav className="tabs" aria-label="Feeds">
         {tab("/", "Following")}
-        {tab("/saved", "Saved")}
         {tab("/media", "Media")}
         {tab("/friends", "Top Friends")}
         {tab("/top", "Top Accounts")}

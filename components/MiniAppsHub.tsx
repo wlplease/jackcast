@@ -6,6 +6,7 @@ import type { MiniAppSummary } from "@/lib/data";
 import { MiniAppSaveButton } from "@/components/MiniAppSaveButton";
 import { MiniAppLaunchButton } from "@/components/MiniAppLaunchButton";
 import type { Prefs } from "@/lib/prefs-shared";
+import { savePrefs } from "@/app/(main)/me/actions";
 
 const RECENT_KEY = "jackcaster:recent-mini-apps:v1";
 type RecentApp = { url: string; title: string };
@@ -29,6 +30,10 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
   const [savedApps, setSavedApps] = useState(initialSaved);
   const [category, setCategory] = useState("all");
   const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualError, setManualError] = useState("");
+  const [addingManual, setAddingManual] = useState(false);
 
   useEffect(() => {
     try {
@@ -63,6 +68,37 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
     } finally { setSearching(false); }
   }
 
+  async function addManualApp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setManualError("");
+    let url: URL;
+    try { url = new URL(manualUrl.trim()); } catch { setManualError("Enter a complete HTTPS Mini App URL."); return; }
+    if (url.protocol !== "https:" || url.username || url.password || url.href.length > 192) {
+      setManualError("Use a secure HTTPS URL without embedded credentials (192 characters max).");
+      return;
+    }
+    const normalized = url.toString();
+    if (savedApps.some((app) => app.url === normalized)) {
+      setManualError("That app is already in your favorites.");
+      return;
+    }
+    if (savedApps.length >= 6) {
+      setManualError("Your favorites are full. Remove one before adding another app.");
+      return;
+    }
+    const title = manualTitle.trim().slice(0, 64) || url.hostname.replace(/^www\./, "");
+    setAddingManual(true);
+    try {
+      const result = await savePrefs({ savedMiniApps: [...savedApps, { url: normalized, title }] });
+      if (!result.ok) { setManualError(result.error); return; }
+      setSavedApps(result.prefs.savedMiniApps);
+      setManualUrl("");
+      setManualTitle("");
+    } catch {
+      setManualError("Could not save this Mini App. Try again.");
+    } finally { setAddingManual(false); }
+  }
+
   const categories = ["all", ...Array.from(new Set(weekly.map((app) => app.category).filter((value): value is string => Boolean(value))))];
   const visibleWeekly = category === "all" ? weekly : weekly.filter((app) => app.category === category);
 
@@ -74,8 +110,9 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
       <button className="btn ghost sm" disabled={searching || query.trim().length < 2}>{searching ? "Searching…" : "Search"}</button>
     </form>
     {error && <p className="form-error miniapp-error" role="status">{error}</p>}
+    <section className="me-section miniapp-manual-section"><div className="me-section-head"><div><h2>Add an app by link</h2><p className="field-hint">Add a secure Mini App URL when it isn’t in Neynar’s catalog. It uses one of your six favorite slots.</p></div></div><form className="miniapp-manual-form" onSubmit={addManualApp}><label>HTTPS app URL<input type="url" required maxLength={192} value={manualUrl} onChange={(event) => setManualUrl(event.target.value)} placeholder="https://example.com" /></label><label>Name (optional)<input type="text" maxLength={64} value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Use the site name" /></label><button className="btn ghost sm" disabled={addingManual || !manualUrl.trim()}>{addingManual ? "Adding…" : "Add to favorites"}</button></form>{manualError && <p className="form-error" role="alert">{manualError}</p>}</section>
     {recentApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Recently opened</h2><button type="button" className="linkish" onClick={() => { setRecentApps([]); try { localStorage.removeItem(RECENT_KEY); } catch {} }}>Clear</button></div><AppGrid apps={recentApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
-    {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Saved apps</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
+    {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Favorites</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
     {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
     <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button key={value} className={category === value ? "active" : ""} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>
     <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>

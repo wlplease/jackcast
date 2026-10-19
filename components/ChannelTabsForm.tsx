@@ -17,7 +17,7 @@ function ChannelIcon({ c }: { c?: Chip }) {
   );
 }
 
-/** Pick your favorite channels: they become the feed tabs and the composer's channel menu. Saves as you tap. */
+/** Pick and order favorite channels: they become the feed tabs and composer's channel menu. Saves as you edit. */
 export function ChannelTabsForm({
   followed,
   current,
@@ -34,7 +34,7 @@ export function ChannelTabsForm({
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [known, setKnown] = useState<Chip[]>([]);
-  const [, start] = useTransition();
+  const [isPending, start] = useTransition();
 
   const byId = useMemo(() => new Map([...followed, ...known].map((c) => [c.id, c])), [followed, known]);
 
@@ -48,6 +48,7 @@ export function ChannelTabsForm({
   const canAdd = !!q && matches.length === 0 && CHANNEL_ID.test(q) && !byId.has(q) && !favs.includes(q);
 
   function save(next: string[]) {
+    const previous = favs;
     setFavs(next);
     setStatus("saving");
     setError(null);
@@ -58,6 +59,7 @@ export function ChannelTabsForm({
         setStatus("saved");
         setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 1800);
       } else {
+        setFavs(previous);
         setStatus("error");
         setError(res.error);
       }
@@ -65,12 +67,22 @@ export function ChannelTabsForm({
   }
 
   function toggle(id: string) {
+    if (isPending) return;
     const on = favs.includes(id);
     if (!on && favs.length >= MAX_TABS) {
       setError(`Up to ${MAX_TABS} favorites.`);
       return;
     }
-    save(on ? favs.filter((x) => x !== id) : [...favs, id].sort((a, b) => a.localeCompare(b)));
+    save(on ? favs.filter((x) => x !== id) : [...favs, id]);
+  }
+
+  function move(id: string, offset: -1 | 1) {
+    const index = favs.indexOf(id);
+    const target = index + offset;
+    if (index < 0 || target < 0 || target >= favs.length || isPending) return;
+    const next = [...favs];
+    [next[index], next[target]] = [next[target], next[index]];
+    save(next);
   }
 
   async function addByName() {
@@ -97,14 +109,18 @@ export function ChannelTabsForm({
             {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : ""}
           </span>
         </div>
-        <p className="field-hint">Your favorites are the tabs at the top of your feed and the only channels in the composer.</p>
+        <p className="field-hint">Your favorites are the tabs at the top of your feed and the only channels in the composer. Use the arrows to set their order.</p>
 
         <div className="chips favs" aria-label="Your favorites">
           {favs.length === 0 && <span className="chips-empty">None yet. Pick a few below.</span>}
           {favs.map((id) => (
-            <span key={id} className="chip fav">
-              <ChannelIcon c={byId.get(id)} />/{id}
-              <button type="button" aria-label={`Remove /${id} from favorites`} onClick={() => toggle(id)}>
+            <span key={id} className="chip fav channel-favorite-row">
+              <span className="channel-favorite-name"><ChannelIcon c={byId.get(id)} />/{id}</span>
+              <span className="channel-order-controls">
+                <button type="button" aria-label={`Move /${id} up`} title="Move up" disabled={isPending || favs.indexOf(id) === 0} onClick={() => move(id, -1)}>↑</button>
+                <button type="button" aria-label={`Move /${id} down`} title="Move down" disabled={isPending || favs.indexOf(id) === favs.length - 1} onClick={() => move(id, 1)}>↓</button>
+              </span>
+              <button type="button" aria-label={`Remove /${id} from favorites`} disabled={isPending} onClick={() => toggle(id)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                   <path d="M7 7l10 10M17 7L7 17" />
                 </svg>
@@ -141,7 +157,7 @@ export function ChannelTabsForm({
             {matches.map((c) => {
               const on = favs.includes(c.id);
               return (
-                <button key={c.id} type="button" className={`pick${on ? " on" : ""}`} aria-pressed={on} onClick={() => toggle(c.id)}>
+                <button key={c.id} type="button" className={`pick${on ? " on" : ""}`} aria-pressed={on} disabled={isPending} onClick={() => toggle(c.id)}>
                   <ChannelIcon c={c} />
                   <span className="pick-id">/{c.id}</span>
                   <svg className="pick-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

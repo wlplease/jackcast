@@ -82,7 +82,7 @@ export function DonationPanel() {
   const quoteTime = priceUpdatedAt ? new Date(priceUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
   const selected = DONATION_RECIPIENTS[recipient];
 
-  return <div className="donation-panel" id="donate">
+  return <div className="donation-panel">
     <p className="field-hint">Support the original Selfcaster project or Jackcaster. Donations go directly to the selected wallet on Base; Jackcaster does not add a fee.</p>
     <div className="donation-field"><span className="donation-label">Recipient</span><div className="donation-choice-grid">{(Object.keys(DONATION_RECIPIENTS) as Recipient[]).map((key) => <button type="button" key={key} className={`donation-choice${recipient === key ? " active" : ""}`} onClick={() => { setRecipient(key); setTxHash(""); }}>{DONATION_RECIPIENTS[key].label}</button>)}</div><code className="donation-address">{selected.address}</code></div>
     <div className="donation-field"><span className="donation-label">Choose an amount in USD</span><div className="donation-amount-grid">{AMOUNTS.map((value) => <button type="button" key={value} className={`donation-amount${amount === value ? " active" : ""}`} onClick={() => setAmount(value)}>${value}</button>)}</div></div>

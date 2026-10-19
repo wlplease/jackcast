@@ -150,6 +150,7 @@ export function AICatchUp({ casts, audioEnabled = false, digestEnabled = false }
   }
 
   const cited = (hashes: string[]) => hashes.map((hash) => sourceByHash.get(hash.toLowerCase())).filter((cast): cast is CastView => Boolean(cast));
+  const analyzedSourceCasts = digestHashes.map((hash) => sourceByHash.get(hash)).filter((cast): cast is CastView => Boolean(cast));
   const sampleLabel = eligibleCasts.length ? `${eligibleCasts.length} posts · ${shortDate(eligibleCasts[eligibleCasts.length - 1].timestamp)}–${shortDate(eligibleCasts[0].timestamp)}` : "No posts in this period";
 
   return (
@@ -181,7 +182,8 @@ export function AICatchUp({ casts, audioEnabled = false, digestEnabled = false }
         <section className="digest-topics"><div className="digest-subhead"><h3>What people talked about</h3><span>{digest.sections.length} themes</span></div>{digest.sections.map((section, index) => <article className="ai-digest-section" key={`${section.title}-${index}`}><h4>{section.title}</h4><p>{section.summary}</p><SourceCasts casts={cited(section.castHashes)} /></article>)}</section>
         <section className="digest-people"><div className="digest-subhead"><h3>Most active in this sample</h3><span>by posts · engagement</span></div><div className="digest-people-list">{analytics.people.map((person, index) => <div key={`${person.username}-${index}`}><span>{person.username ? <Link href={`/u/${encodeURIComponent(person.username)}`}>@{person.username}</Link> : person.name}</span><small>{person.posts} {person.posts === 1 ? "post" : "posts"} · {person.engagement.toLocaleString()} reactions and replies</small></div>)}</div></section>
         <section className="digest-top-posts"><div className="digest-subhead"><h3>Posts with the strongest response</h3><span>likes + 2× recasts + replies</span></div>{analytics.topPosts.map((cast) => <DigestPost key={cast.hash} cast={cast} />)}</section>
-        <small className="digest-source-note">Source coverage: {digestHashes.length} posts sent for this digest. Each linked post opens in Jackcaster.</small>
+        <details className="digest-all-sources"><summary>Review all {analyzedSourceCasts.length} posts analyzed</summary><p>These are the exact posts Gemini received. Engagement figures are the current counts returned with the feed.</p><div>{analyzedSourceCasts.map((cast) => <DigestPost key={cast.hash} cast={cast} />)}</div></details>
+        <small className="digest-source-note">Source coverage: {analyzedSourceCasts.length} of {digestHashes.length} analyzed posts are available in this view. Topic and insight links point to the posts Gemini cited. Each post opens in Jackcaster.</small>
       </div>}
       {digest && audioEnabled && <div className="ai-catchup-audio"><button type="button" onClick={readAloud} disabled={audioBusy || audioRequested}>{audioBusy ? "Creating audio…" : audioUrl ? "Audio ready" : audioRequested ? "Audio attempt used" : "Read aloud"}</button>{audioUrl && <audio controls preload="none" src={audioUrl}>Audio playback is not supported in this browser.</audio>}{audioUrl && <a className="ai-catchup-download" href={audioUrl} download="jackcast-weekly-digest.mp3">Download MP3</a>}</div>}
       {error && <p className="ai-catchup-error" role="alert"><strong>Service status:</strong> {error}</p>}

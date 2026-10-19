@@ -16,7 +16,6 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const q = typeof p.quality === "number" && p.quality >= 0 && p.quality <= 1 ? p.quality : null;
     const tabs = Array.isArray(p.tabs)
       ? Array.from(new Set(p.tabs.map((t) => String(t).trim().toLowerCase().replace(/^\//, "")).filter((t) => CHANNEL_ID.test(t))))
-          .sort()
           .slice(0, MAX_TABS)
       : null;
     const theme = THEME_IDS.includes(p.theme as ThemeId) ? (p.theme as ThemeId) : DEFAULT_PREFS.theme;

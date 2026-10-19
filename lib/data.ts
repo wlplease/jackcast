@@ -527,7 +527,7 @@ const followedChannelsCached = unstable_cache(
 );
 
 /**
- * Your favorite channels: the ones you picked on the You page, A to Z.
+ * Your favorite channels: the ones you picked on the You page, in the user's order.
  * Until you pick, PINNED_CHANNELS. They're the header tabs and the composer's channel menu.
  */
 export async function tabChannels(): Promise<string[]> {
