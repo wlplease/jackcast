@@ -4,6 +4,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { friendsFeed } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
 import { requireViewer } from "@/lib/viewer";
+import { FeedComposer } from "@/components/FeedComposer";
 
 export default async function FriendsPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
   const { cursor } = await searchParams;
@@ -13,6 +14,7 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <div className="section-head"><h1>{prefs.feedNames.friends}</h1></div>
+        <FeedComposer canWrite={viewer.canWrite} cursor={cursor} />
         <div className="empty">
           <h2>Make this feed yours</h2>
           <p>Add your top 20 active accounts, 20 curated Farcaster accounts, or choose people yourself. Their newest posts will show up here.</p>
@@ -31,6 +33,7 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
           <span className="meta">{prefs.friends.length} people · newest first</span>
           <Link className="btn ghost sm" href="/me#friends">Manage friends</Link>
         </div>
+        <FeedComposer canWrite={viewer.canWrite} cursor={cursor} />
         <Feed page={page} basePath="/friends" canWrite={viewer.canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "friends"} emptyTitle="Nothing new from your people" emptyBody="Their next casts will show up here." />
       </>
     );

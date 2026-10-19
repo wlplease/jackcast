@@ -3,6 +3,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { recastsFeed } from "@/lib/data";
 import { requireViewer } from "@/lib/viewer";
 import { getPrefs } from "@/lib/prefs";
+import { FeedComposer } from "@/components/FeedComposer";
 
 export default async function RecastsPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
   const { cursor } = await searchParams;
@@ -13,6 +14,7 @@ export default async function RecastsPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <div className="section-head"><h1>{prefs.feedNames.recasts}</h1><span className="meta">Shared by people you follow</span></div>
+        <FeedComposer canWrite={viewer.canWrite} cursor={cursor} />
         <Feed page={page} basePath="/recasts" canWrite={viewer.canWrite} viewerFid={viewer.fid} emptyTitle="No new recasts" emptyBody="Posts recast by people you follow will show up here." />
       </>
     );

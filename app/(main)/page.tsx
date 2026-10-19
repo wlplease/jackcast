@@ -1,14 +1,14 @@
-import { Composer } from "@/components/Composer";
+import { FeedComposer } from "@/components/FeedComposer";
 import { Feed } from "@/components/Feed";
 import { SetupBanner } from "@/components/SetupBanner";
-import { followingFeed, getMe, composerChannels } from "@/lib/data";
+import { followingFeed } from "@/lib/data";
 import { requireViewer } from "@/lib/viewer";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
   const { cursor } = await searchParams;
   const viewer = await requireViewer();
   try {
-    const [me, page, channels] = await Promise.all([getMe(), followingFeed(cursor), composerChannels()]);
+    const page = await followingFeed(cursor);
     const canWrite = viewer.canWrite;
     return (
       <>
@@ -17,7 +17,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             Read-only mode. <a href="/setup" style={{ color: "var(--accent)", fontWeight: 500 }}>Connect your account</a> to cast, like and reply.
           </div>
         )}
-        {canWrite && !cursor && <Composer me={me} channels={channels} />}
+        <FeedComposer canWrite={canWrite} cursor={cursor} />
         <Feed page={page} basePath="/" canWrite={canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "following"} emptyTitle="Your feed is empty" emptyBody="Follow some people and they'll show up here, newest first." />
       </>
     );
