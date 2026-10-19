@@ -46,11 +46,22 @@ export const getMe = cache(async (): Promise<Author & { bio?: string }> => {
 /** Profile analytics are reused across range changes and quick revisits. */
 const ownProfileAnalyticsCached = unstable_cache(
   async (fid: number) => {
-    const [{ users }, result] = await Promise.all([
+    const [{ users }, first] = await Promise.all([
       neynar().fetchBulkUsers({ fids: [fid] }),
       neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100 }),
     ]);
-    return { user: users[0], casts: result.casts.map(asCast) };
+    // Page only as far back as needed for 90-day analytics, with a hard cap to
+    // keep sparse profiles useful without creating unbounded Neynar traffic.
+    const raw = [...first.casts];
+    let cursor = first.next?.cursor ?? null;
+    const cutoff = Date.now() - 90 * 86_400_000;
+    while (cursor && raw.length < 500 && raw.length && Date.parse(raw[raw.length - 1].timestamp) > cutoff) {
+      const next = await neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: false, limit: 100, cursor });
+      if (!next.casts.length) break;
+      raw.push(...next.casts);
+      cursor = next.next?.cursor ?? null;
+    }
+    return { user: users[0], casts: raw.map(asCast) };
   },
   ["own-profile-analytics-v1"],
   { revalidate: 300, tags: ["own-profile-analytics"] }

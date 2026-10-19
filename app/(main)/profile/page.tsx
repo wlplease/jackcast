@@ -4,16 +4,14 @@ import { CastCard } from "@/components/CastCard";
 import { PinnedCastForm } from "@/components/PinnedCastForm";
 import { RichText } from "@/components/RichText";
 import { SetupBanner } from "@/components/SetupBanner";
-import { StatsChart } from "@/components/StatsChart";
+import { ProfileAnalytics } from "@/components/ProfileAnalytics";
 import { ownProfileAnalytics } from "@/lib/data";
-import { compact, timeAgo } from "@/lib/format";
+import { compact } from "@/lib/format";
 import { getPrefs } from "@/lib/prefs";
-import { computeStats, type StatsWindow } from "@/lib/stats";
 import { requireViewer } from "@/lib/viewer";
 
 export default async function MePage({ searchParams }: { searchParams: Promise<{ saved?: string; window?: string }> }) {
-  const { saved, window: requestedWindow } = await searchParams;
-  const window: StatsWindow = requestedWindow === "7d" || requestedWindow === "90d" || requestedWindow === "loaded" ? requestedWindow : "30d";
+  const { saved } = await searchParams;
   const viewer = await requireViewer();
 
   try {
@@ -22,7 +20,6 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
       getPrefs(),
     ]);
     const { user: me, casts } = profileData;
-    const stats = computeStats(casts, window, me.follower_count ?? 0);
 
     return (
       <>
@@ -54,73 +51,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           {saved && <div className="form-ok">Profile updated. It can take a minute to show up everywhere.</div>}
         </section>
 
-        <section className="me-section">
-          <div className="me-section-head">
-            <h2>Your casts</h2>
-            <span className="meta">{stats.windowLabel} · up to 100 most recent casts</span>
-          </div>
-          <nav className="stats-range" aria-label="Analytics date range">
-            {([ ["7d", "7 days"], ["30d", "30 days"], ["90d", "90 days"], ["loaded", "Loaded casts"] ] as const).map(([value, label]) => (
-              <Link key={value} href={`/me?window=${value}`} className={`stats-range-link${window === value ? " active" : ""}`} aria-current={window === value ? "page" : undefined}>{label}</Link>
-            ))}
-          </nav>
-          {stats.casts === 0 ? (
-            <p className="field-hint">No casts yet. Post something and come back.</p>
-          ) : (
-            <>
-              <div className="tiles">
-                <div className="tile">
-                  <b>{compact(stats.casts)}</b>
-                  <span>casts</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.likes)}</b>
-                  <span>likes</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.recasts)}</b>
-                  <span>recasts</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.replies)}</b>
-                  <span>replies</span>
-                </div>
-                <div className="tile">
-                  <b>{stats.avg.toFixed(1)}</b>
-                  <span>engagement per cast</span>
-                </div>
-                <div className="tile">
-                  <b>{stats.engagementRate.toFixed(1)}%</b>
-                  <span>engagement / followers</span>
-                </div>
-                <div className="tile">
-                  <b>{compact(stats.mediaCasts)}</b>
-                  <span>casts with media</span>
-                </div>
-                {stats.bestCast && <div className="tile"><b>{compact(stats.bestCast.e)}</b><span>best cast engagement</span></div>}
-              </div>
-              <p className="field-hint">Top-level casts only. Engagement rate is reactions and replies divided by follower count; it is an estimate, not unique reach.</p>
-              <StatsChart points={stats.points} />
-              {stats.top.length > 0 && (
-                <>
-                  <h3 className="sub-head">What landed</h3>
-                  <ol className="top-casts">
-                    {stats.top.map((c) => (
-                      <li key={c.hash}>
-                        <Link href={`/cast/${c.hash}`}>
-                          <span className="tc-text">{c.text || (c.hasMedia ? "(photo or link)" : "(no text)")}</span>
-                          <span className="tc-meta">
-                            ♥ {compact(c.likes)} · ↻ {compact(c.recasts)} · ↳ {compact(c.replies)} · {timeAgo(c.ts)}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              )}
-            </>
-          )}
-        </section>
+        <ProfileAnalytics casts={casts} followerCount={me.follower_count ?? 0} />
 
         <section className="me-section">
           <div className="me-section-head"><h2>Profile</h2><span className="meta">this Selfcaster</span></div>
