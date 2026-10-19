@@ -40,6 +40,14 @@ export async function publish(input: {
   /** Quote another cast */
   quote?: { hash: string; fid: number };
 }): Promise<ActionResult> {
+  if (!input || typeof input.text !== "string" ||
+      (input.parentHash !== undefined && !/^0x[0-9a-f]{40}$/i.test(input.parentHash)) ||
+      (input.parentAuthorFid !== undefined && (!Number.isSafeInteger(input.parentAuthorFid) || input.parentAuthorFid <= 0)) ||
+      (input.channelId !== undefined && !/^[a-z0-9-]{1,32}$/i.test(input.channelId)) ||
+      (input.quote !== undefined && (!input.quote || !/^0x[0-9a-f]{40}$/i.test(input.quote.hash) || !Number.isSafeInteger(input.quote.fid) || input.quote.fid <= 0)) ||
+      (input.embedUrls !== undefined && (!Array.isArray(input.embedUrls) || input.embedUrls.length > 2 || input.embedUrls.some((url) => typeof url !== "string")))) {
+    return { ok: false, error: "That cast request is not valid." };
+  }
   const text = input.text.trim();
   const urls = (input.embedUrls ?? []).map((u) => u.trim()).filter(Boolean);
   if (urls.some((u) => !/^https?:\/\//i.test(u) || u.length > 256)) {
@@ -125,6 +133,10 @@ export async function react(input: {
   kind: "like" | "recast";
   on: boolean;
 }): Promise<ActionResult> {
+  if (!input || !/^0x[0-9a-f]{40}$/i.test(input.hash) || !Number.isSafeInteger(input.authorFid) || input.authorFid <= 0 ||
+      (input.kind !== "like" && input.kind !== "recast") || typeof input.on !== "boolean") {
+    return { ok: false, error: "That reaction request is not valid." };
+  }
   try {
     const args = {
       signerUuid: await signer(),

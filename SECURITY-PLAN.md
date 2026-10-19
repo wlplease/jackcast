@@ -200,3 +200,11 @@ When implementing an item:
 2. Add a dated change-log entry with files or behavior changed, why the chosen fix addresses the finding, and the checks run with their results.
 3. Update `SECURITY.md` whenever the documented security behavior changes.
 4. Keep unresolved risks marked `Open`; do not present audit findings or planned controls as fixed.
+
+### 2026-10-18 — Pre-launch security and location review
+
+- **Changed:** Added runtime validation for cast and reaction server actions in Jackcaster and Selfcaster; tightened Selfcaster's signer request validation, upload request size limits, safe provider errors, and process-local login throttling.
+- **Changed:** Replaced Selfcaster's password-derived plain SHA-256 session cookie with a versioned HMAC, added baseline response security headers, and ignored local dependency/build artifacts.
+- **Changed:** Added opt-in coarse location pins to Jackcaster. The browser snaps coordinates to a broad grid before storing only the rounded OSM URL; raw device coordinates are not persisted or sent to Jackcaster's server.
+- **Verification:** Both production builds and TypeScript checks passed. `npm audit` reports six moderate advisories in the official Farcaster Mini App SDK's transitive Solana packages in both apps; npm reports no fix. Circle's published USDC-on-Base contract and Base's chain ID were checked against official documentation.
+- **Remaining:** Login throttling is process-local, not durable across serverless instances. A full CSP, durable rate limits for signer and paid AI endpoints, and live deployment/runtime review remain open. Browser geolocation is user-controlled and spoofable; location pins are approximate sharing aids, not proof of presence.

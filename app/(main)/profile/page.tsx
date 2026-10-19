@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { CastCard } from "@/components/CastCard";
 import { PinnedCastForm } from "@/components/PinnedCastForm";
 import { RichText } from "@/components/RichText";
 import { SetupBanner } from "@/components/SetupBanner";
@@ -146,6 +147,16 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
               {viewer.canWrite ? "Connection details" : "Connect"}
             </Link>
           </p>
+        </section>
+
+        <section className="me-section profile-recent-casts">
+          <div className="me-section-head">
+            <div><h2>Recent casts</h2><p className="field-hint">Your latest public posts, newest first.</p></div>
+            {me.username && <Link href={`/u/${encodeURIComponent(me.username)}`} className="linkish">View all casts →</Link>}
+          </div>
+          {casts.length === 0
+            ? <div className="empty"><h2>No casts yet</h2><p>When you post on Farcaster, your recent casts will appear here.</p></div>
+            : casts.slice(0, 10).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={viewer.canWrite} viewerFid={viewer.fid} mutes={prefs.mutes} />)}
         </section>
       </>
     );

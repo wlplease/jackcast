@@ -20,7 +20,7 @@ This is evidence about the checked-in source code only. It cannot prove which co
 
 ## Your password
 
-`APP_PASSWORD` gates every page and API route (`middleware.ts`). The session cookie contains a versioned HMAC derived from the password; it does not contain the password itself. Anyone who obtains the cookie can replay it to access the app until the password changes or the cookie expires. Use a long, unique password and protect access to your browser and deployment. The HMAC prevents offline guessing against a stolen cookie as easily as an unkeyed hash, but it does not prevent replay.
+The middleware protects app pages and API routes; login, static assets, and the public posted-image route are exceptions. `APP_PASSWORD` gates access. The session cookie contains a versioned HMAC derived from the password; it does not contain the password itself. Anyone who obtains the cookie can replay it to access the app until the password changes or the cookie expires. Use a long, unique password and protect access to your browser and deployment. The HMAC prevents offline guessing against a stolen cookie as easily as an unkeyed hash, but it does not prevent replay.
 
 Login applies a best-effort, process-local limit of five failed attempts per client address followed by a 15-minute block. Serverless instances do not share this counter, so it is not a durable edge-level rate limit. Sessions last 90 days. Treat the cookie as a bearer credential and rotate `APP_PASSWORD` if you suspect it was exposed. Remaining limitations are tracked in [`SECURITY-PLAN.md`](./SECURITY-PLAN.md).
 
@@ -31,6 +31,12 @@ One route is public on purpose: `/i/...`, which serves photos you've already pos
 `NEYNAR_API_KEY` and `SIGNER_UUID` live in your Vercel environment variables and are only used on the server. Neither ever reaches the browser. A `SIGNER_UUID` only works with the API key that created it.
 
 To cut off access: revoke the app in Farcaster settings (connected apps), and rotate your Neynar key at dev.neynar.com.
+
+Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Jackcaster has baseline response headers; a full Content Security Policy remains open because the app depends on inline theme styles, embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
+
+## Location sharing
+
+Location is opt-in per cast. The browser provides a device location; Jackcaster snaps it to a broad grid (roughly a few miles across) and discards the raw coordinates before creating a public OpenStreetMap link. The rounded location becomes public if you publish the cast. Browser GPS and network-assisted location can be spoofed or inaccurate; this feature cannot prove physical presence. Wi-Fi alone does not provide a trustworthy anti-cheat proof. Review the preview and remove the pin before posting if you do not want to share it.
 
 ## Reporting a problem
 
