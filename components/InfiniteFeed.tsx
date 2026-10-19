@@ -15,14 +15,78 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [earlierOpen, setEarlierOpen] = useState(false);
+  const [digestLoading, setDigestLoading] = useState(false);
+  const [digestLoadError, setDigestLoadError] = useState("");
+  const [digestLoadMore, setDigestLoadMore] = useState(false);
+  const [digestLoadAttempt, setDigestLoadAttempt] = useState(0);
+  const castsRef = useRef(casts);
+  const cursorRef = useRef(cursor);
+  const requestInFlight = useRef(false);
   const sentinel = useRef<HTMLDivElement>(null);
   const path = usePathname();
   const search = useSearchParams();
   const router = useRouter();
   const aiOpen = path === "/" && search.get("ai") === "1";
 
+  castsRef.current = casts;
+  cursorRef.current = cursor;
+
+  const appendCasts = useCallback((additions: CastView[]) => {
+    const hashes = new Set(castsRef.current.map((cast) => cast.hash));
+    const unique = additions.filter((cast) => {
+      if (hashes.has(cast.hash)) return false;
+      hashes.add(cast.hash);
+      return true;
+    });
+    const next = [...castsRef.current, ...unique];
+    castsRef.current = next;
+    setCasts(next);
+  }, []);
+
+  useEffect(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const currentCasts = castsRef.current;
+    let loadedRecent = currentCasts.filter((cast) => Date.parse(cast.timestamp) >= cutoff).length;
+    if (!aiOpen || busy || !cursorRef.current || loadedRecent >= 40 || currentCasts.some((cast) => Date.parse(cast.timestamp) < cutoff) || requestInFlight.current) return;
+    let cancelled = false;
+    async function loadRecentPosts() {
+      setDigestLoading(true);
+      setDigestLoadError("");
+      setDigestLoadMore(false);
+      let pages = 0;
+      try {
+        while (cursorRef.current && pages < 4 && loadedRecent < 40 && !cancelled) {
+          requestInFlight.current = true;
+          const nextCursor = cursorRef.current;
+          const response = await fetch(`/api/feed/following?cursor=${encodeURIComponent(nextCursor)}`);
+          if (!response.ok) throw new Error("Couldn’t load recent Following posts. Try again.");
+          const page = await response.json() as Page;
+          if (cancelled) break;
+          const existing = new Set(castsRef.current.map((cast) => cast.hash));
+          const additions = page.casts.filter((cast) => !existing.has(cast.hash));
+          loadedRecent += additions.filter((cast) => Date.parse(cast.timestamp) >= cutoff).length;
+          appendCasts(additions);
+          cursorRef.current = page.cursor;
+          setCursor(page.cursor);
+          pages++;
+          const oldest = page.casts.reduce((value, cast) => Math.min(value, Date.parse(cast.timestamp) || Infinity), Infinity);
+          if (oldest < cutoff || loadedRecent >= 40) break;
+        }
+        if (!cancelled && cursorRef.current && pages >= 4 && loadedRecent < 40 && !castsRef.current.some((cast) => Date.parse(cast.timestamp) < cutoff)) setDigestLoadMore(true);
+      } catch (error) {
+        if (!cancelled) setDigestLoadError(error instanceof Error ? error.message : "Couldn’t load recent Following posts. Try again.");
+      } finally {
+        requestInFlight.current = false;
+        if (!cancelled) setDigestLoading(false);
+      }
+    }
+    void loadRecentPosts();
+    return () => { cancelled = true; };
+  }, [aiOpen, busy, digestLoadAttempt, appendCasts]);
+
   const loadMore = useCallback(async () => {
-    if (!cursor || busy) return;
+    if (!cursor || busy || requestInFlight.current) return;
+    requestInFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -41,20 +105,13 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
         pages++;
       }
       const additions = [...extra, ...page.casts];
-      setCasts((previous) => {
-        const hashes = new Set(previous.map((cast) => cast.hash));
-        const unique = additions.filter((cast) => {
-          if (hashes.has(cast.hash)) return false;
-          hashes.add(cast.hash);
-          return true;
-        });
-        return [...previous, ...unique];
-      });
+      appendCasts(additions);
+      cursorRef.current = page.cursor;
       setCursor(page.cursor);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load more casts. Try again.");
-    } finally { setBusy(false); }
-  }, [busy, cursor, mediaKind, path]);
+    } finally { requestInFlight.current = false; setBusy(false); }
+  }, [appendCasts, busy, cursor, mediaKind, path]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -95,6 +152,9 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     {aiOpen && <div className="ai-overlay" role="dialog" aria-modal="true" aria-label="AI catch-up">
       <button className="ai-overlay-backdrop" type="button" onClick={closeAi} aria-label="Close AI catch-up" />
       <div className="ai-overlay-panel"><button className="ai-overlay-x" type="button" onClick={closeAi} aria-label="Close AI catch-up">×</button>
+        {digestLoading && <p className="field-hint" role="status">Loading recent Following posts for the seven-day catch-up…</p>}
+        {digestLoadError && <p className="form-error" role="alert">{digestLoadError} <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Retry</button></p>}
+        {digestLoadMore && !digestLoading && <p className="field-hint">More recent posts may be available. <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Load more recent posts</button></p>}
         <AIDigestMount casts={casts.slice(0, 40)} viewerFid={viewerFid} audioEnabled={audioEnabled} digestEnabled={digestEnabled} />
       </div>
     </div>}

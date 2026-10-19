@@ -46,6 +46,10 @@ function shortDate(value: string): string {
   return Number.isNaN(date.getTime()) ? "Date unavailable" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
 }
 
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnabled = false }: { casts: CastView[]; viewerFid: number; audioEnabled?: boolean; digestEnabled?: boolean }) {
   const [scope, setScope] = useState<Scope>("week");
   const [digest, setDigest] = useState<Digest | null>(null);
@@ -59,22 +63,25 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
   const [audioUrl, setAudioUrl] = useState("");
   const [now] = useState(() => Date.now());
   const storageKey = `jackcaster:ai-digest:v1:${viewerFid}`;
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  const weekStart = today.getTime() - 6 * 24 * 60 * 60 * 1000;
+  const weekCutoff = now - 7 * 24 * 60 * 60 * 1000;
+  const weekStartDate = new Date(now);
+  weekStartDate.setHours(0, 0, 0, 0);
+  weekStartDate.setDate(weekStartDate.getDate() - 6);
+  const weekStart = weekStartDate.getTime();
   const eligibleCasts = useMemo(() => {
     const sorted = [...casts].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
     return (scope === "week" ? sorted.filter((cast) => {
       const time = Date.parse(cast.timestamp);
-      return Number.isFinite(time) && time >= weekStart && time <= now;
+      return Number.isFinite(time) && time >= weekCutoff && time <= now;
     }) : sorted).slice(0, 40);
-  }, [casts, scope, weekStart, now]);
+  }, [casts, scope, weekCutoff, now]);
   const digestViewSources = digest ? digestSources : [];
   const sourceByHash = useMemo(() => new Map(digestViewSources.map((cast) => [cast.hash.toLowerCase(), cast])), [digestViewSources]);
   const analytics = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(weekStart + index * 24 * 60 * 60 * 1000);
-      return { key: date.toISOString().slice(0, 10), label: new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date), count: 0 };
+      const date = new Date(weekStart);
+      date.setDate(date.getDate() + index);
+      return { key: localDateKey(date), label: new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date), count: 0 };
     });
     const dayMap = new Map(days.map((day) => [day.key, day]));
     const people = new Map<number, { name: string; username: string; posts: number; engagement: number }>();
@@ -82,7 +89,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
     for (const cast of digestViewSources) {
       const date = new Date(cast.timestamp);
       if (!Number.isNaN(date.getTime())) {
-        const day = dayMap.get(date.toISOString().slice(0, 10));
+        const day = dayMap.get(localDateKey(date));
         if (day) day.count++;
       }
       likes += cast.likes;
@@ -212,7 +219,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
         </div>
         <div className="ai-catchup-actions">
           <button type="button" onClick={summarize} disabled={busy || eligibleCasts.length === 0 || !digestEnabled}>
-            {busy ? "Analyzing…" : digest ? "Redo digest" : digestEnabled ? `Analyze ${eligibleCasts.length} posts` : "AI not enabled"}
+            {busy ? "Analyzing…" : digest ? "Redo digest" : error ? "Retry digest" : digestEnabled ? `Analyze ${eligibleCasts.length} posts` : "AI not enabled"}
           </button>
           {digest && <details className="ai-catchup-menu"><summary aria-label="Digest options" title="Digest options">⋯</summary><div className="ai-catchup-menu-popover"><button type="button" onClick={clearDigest} disabled={busy || audioBusy}>Clear digest</button></div></details>}
         </div>
