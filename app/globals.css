@@ -462,6 +462,8 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .gif-key-settings > summary { color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; }
 .gif-key-settings > p { margin: 6px 0; color: var(--ink-2); font-size: 10px; line-height: 1.4; }
 .gif-key-form { display: flex; gap: 6px; }
+.gif-remember-key { display: flex; flex: 0 0 100%; align-items: center; gap: 6px; color: var(--ink-2); font-size: 11px; }
+.gif-remember-key input { accent-color: var(--accent); }
 .gif-key-form input { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid var(--rule-strong); border-radius: 7px; color: var(--ink); background: var(--card); font: inherit; font-size: 11px; }
 .gif-key-form button { flex: none; padding: 7px 9px; border: 0; border-radius: 7px; color: var(--accent-ink); background: var(--accent); font: inherit; font-size: 11px; font-weight: 650; cursor: pointer; }
 .gif-key-message, .gif-key-links { display: block; margin-top: 6px; color: var(--ink-3); font-size: 10px; line-height: 1.4; }

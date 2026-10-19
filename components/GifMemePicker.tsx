@@ -31,6 +31,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [error, setError] = useState("");
   const [userApiKey, setUserApiKey] = useState("");
   const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [rememberApiKey, setRememberApiKey] = useState(true);
   const [apiKeyReady, setApiKeyReady] = useState(false);
   const [keySettingsOpen, setKeySettingsOpen] = useState(false);
   const [keyMessage, setKeyMessage] = useState("");
@@ -45,6 +46,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       const saved = localStorage.getItem("jackcaster.giphy.api-key.v1") || "";
       setUserApiKey(saved);
       setApiKeyDraft(saved);
+      setRememberApiKey(true);
       if (!saved && !process.env.NEXT_PUBLIC_GIPHY_API_KEY) setKeySettingsOpen(true);
     } catch {}
     setApiKeyReady(true);
@@ -58,14 +60,14 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       return;
     }
     try {
-      if (key) localStorage.setItem("jackcaster.giphy.api-key.v1", key);
+      if (key && rememberApiKey) localStorage.setItem("jackcaster.giphy.api-key.v1", key);
       else localStorage.removeItem("jackcaster.giphy.api-key.v1");
     } catch {
       setKeyMessage("This browser could not save the key. Check its storage settings.");
       return;
     }
     setUserApiKey(key);
-    setKeyMessage(key ? "Your key is saved in this browser." : "Your personal key was removed.");
+    setKeyMessage(key ? (rememberApiKey ? "Your key is saved in this browser." : "Your key will be used until you close or reload this page.") : "Your personal key was removed.");
     setError("");
     setItems([]);
     setOffset(0);
@@ -185,6 +187,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
           <form className="gif-key-form" onSubmit={saveApiKey}>
             <input type="password" value={apiKeyDraft} maxLength={128} autoComplete="off" spellCheck={false} onChange={(event) => { setApiKeyDraft(event.target.value); setKeyMessage(""); }} placeholder="Paste your GIPHY API key" aria-label="Your GIPHY API key" />
             <button type="submit">Save key</button>
+            <label className="gif-remember-key"><input type="checkbox" checked={rememberApiKey} onChange={(event) => setRememberApiKey(event.target.checked)} /> Remember key on this device</label>
           </form>
           {keyMessage && <small className="gif-key-message" role="status">{keyMessage}</small>}
           <small className="gif-key-links"><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">Get a GIPHY API key ↗</a> · <a href="https://developers.giphy.com/docs/api/" target="_blank" rel="noreferrer">GIPHY API guide</a></small>
