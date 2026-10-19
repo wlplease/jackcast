@@ -92,7 +92,12 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         const player = playerFor(e);
         if (isAudio(e)) return <AudioEmbed key={i} url={e.url} title={e.metadata?.html?.ogTitle} />;
         if (player) return <Player key={i} spec={player} />;
-        if (isVideo(e)) return <VideoEmbed key={i} url={e.url} ratio={videoRatio(e)} duration={e.metadata?.video?.duration_s} />;
+        if (isVideo(e)) {
+          const preview = e.metadata?.html?.ogImage?.map((image) => image.url ?? "").find((url) => {
+            try { return new URL(url).protocol === "https:"; } catch { return false; }
+          });
+          return <VideoEmbed key={i} url={e.url} ratio={videoRatio(e)} duration={e.metadata?.video?.duration_s} preview={preview} />;
+        }
         if (isImage(e)) {
           const src = viaProxy(e.url);
           return (

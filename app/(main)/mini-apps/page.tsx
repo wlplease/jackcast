@@ -8,7 +8,7 @@ export default async function MiniAppsPage() {
   const viewer = await requireViewer();
   try {
     const [overview, prefs] = await Promise.all([miniAppsOverview(viewer.fid), getPrefs()]);
-    return <MiniAppsHub {...overview} initialSaved={prefs.savedMiniApps} />;
+    return <MiniAppsHub {...overview} initialSaved={prefs.savedMiniApps} feedTitle={prefs.feedNames.miniApps} />;
   } catch (error) {
     return <SetupBanner error={error} />;
   }

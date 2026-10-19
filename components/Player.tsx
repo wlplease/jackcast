@@ -3,17 +3,19 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import type { PlayerSpec } from "@/lib/players";
+import { pauseBackgroundAudio } from "@/lib/audio-focus";
 
 const ALLOW = "autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture";
 
 export function Player({ spec }: { spec: PlayerSpec }) {
   const [on, setOn] = useState(false);
+  const [youtubeThumbFallback, setYoutubeThumbFallback] = useState(false);
 
   if (spec.kind === "youtube") {
     if (!on) {
       return (
-        <button type="button" className="player yt-facade" onClick={() => setOn(true)} aria-label="Play video">
-          <img src={`https://i.ytimg.com/vi/${spec.id}/hqdefault.jpg`} alt="" loading="lazy" />
+        <button type="button" className="player yt-facade" onClick={() => { pauseBackgroundAudio(); setOn(true); }} aria-label="Play video">
+          <img src={`https://i.ytimg.com/vi/${spec.id}/${youtubeThumbFallback ? "hqdefault" : "maxresdefault"}.jpg`} alt="" loading="lazy" onError={() => { if (!youtubeThumbFallback) setYoutubeThumbFallback(true); }} />
           <span className="yt-play" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
           </span>

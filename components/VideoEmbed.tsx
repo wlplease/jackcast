@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
+import { pauseBackgroundAudio } from "@/lib/audio-focus";
 
 /** Farcaster's own videos are HLS (.m3u8) with a thumbnail.jpg next to the playlist. */
 export function thumbFor(url: string): string | null {
@@ -20,13 +21,15 @@ export function thumbFor(url: string): string | null {
  * Shows a poster until you tap, then plays. Safari plays HLS on its own; everywhere else
  * hls.js loads on the first tap, so a feed full of videos costs nothing until you press play.
  */
-export function VideoEmbed({ url, ratio, duration }: { url: string; ratio?: number; duration?: number }) {
+export function VideoEmbed({ url, ratio, duration, preview }: { url: string; ratio?: number; duration?: number; preview?: string }) {
   const hls = url.split("?")[0].endsWith(".m3u8");
-  const poster = hls ? thumbFor(url) : null;
+  const nativePoster = hls ? thumbFor(url) : null;
+  const posters = [preview, nativePoster].filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
   const [on, setOn] = useState(false);
-  const [posterOk, setPosterOk] = useState(true);
+  const [posterIndex, setPosterIndex] = useState(0);
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
+  const poster = posters[posterIndex];
   const style = { aspectRatio: ratio && ratio > 0.3 && ratio < 4 ? String(ratio) : "16 / 9", ...(ratio && ratio < 0.9 ? { maxHeight: "min(70dvh, 620px)" } : {}) };
 
   useEffect(() => {
@@ -69,12 +72,12 @@ export function VideoEmbed({ url, ratio, duration }: { url: string; ratio?: numb
 
   if (!on) {
     return (
-      <button type="button" className="player video-facade" style={style} onClick={() => setOn(true)} aria-label="Play video">
-        {poster && posterOk ? (
-          <img src={poster} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setPosterOk(false)} />
+      <button type="button" className="player video-facade" style={style} onClick={() => { pauseBackgroundAudio(); setOn(true); }} aria-label="Play video">
+        {poster ? (
+          <img src={poster} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setPosterIndex((index) => index + 1)} />
         ) : !hls ? (
-          <video src={`${url}#t=0.1`} preload="metadata" muted playsInline tabIndex={-1} />
-        ) : null}
+          <video src={`${url}#t=0.1`} preload="metadata" muted playsInline tabIndex={-1} onLoadedData={(event) => { try { event.currentTarget.currentTime = 0.1; } catch {} }} />
+        ) : <span className="video-facade-fallback">Video preview unavailable · tap to play</span>}
         <span className="video-playback-badge"><span className="yt-play" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" fill="currentColor" />

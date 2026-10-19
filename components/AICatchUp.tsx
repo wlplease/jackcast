@@ -161,10 +161,10 @@ export function AICatchUp({ casts, audioEnabled = false, digestEnabled = false }
           <p>Story, source posts, and activity signals from the feed you loaded.</p>
         </div>
         <div className="ai-catchup-actions">
-          <button type="button" onClick={summarize} disabled={busy || eligibleCasts.length === 0 || Boolean(digest) || !digestEnabled}>
-            {busy ? "Analyzing…" : digest ? "Digest ready" : digestEnabled ? `Analyze ${eligibleCasts.length} posts` : "AI not enabled"}
+          <button type="button" onClick={summarize} disabled={busy || eligibleCasts.length === 0 || !digestEnabled}>
+            {busy ? "Analyzing…" : digest ? "Redo digest" : digestEnabled ? `Analyze ${eligibleCasts.length} posts` : "AI not enabled"}
           </button>
-          {digest && <details className="ai-catchup-menu"><summary aria-label="Digest options" title="Digest options">⋯</summary><div className="ai-catchup-menu-popover"><button type="button" onClick={summarize} disabled={busy}>Redo digest</button><button type="button" onClick={clearDigest} disabled={busy || audioBusy}>Clear digest</button></div></details>}
+          {digest && <details className="ai-catchup-menu"><summary aria-label="Digest options" title="Digest options">⋯</summary><div className="ai-catchup-menu-popover"><button type="button" onClick={clearDigest} disabled={busy || audioBusy}>Clear digest</button></div></details>}
         </div>
       </div>
       <div className="digest-scope" role="group" aria-label="Digest post range">

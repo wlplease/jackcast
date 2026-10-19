@@ -15,12 +15,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/jackcaster-icon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/jackcaster-icon.svg?v=3", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
+      { url: "/favicon-32.png?v=3", type: "image/png", sizes: "32x32" },
+      { url: "/icon-192.png?v=3", type: "image/png", sizes: "192x192" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/apple-touch-icon.png?v=3",
   },
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "default" },
   robots: { index: false, follow: false },

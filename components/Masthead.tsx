@@ -7,6 +7,7 @@ import { logout } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
 import { NotificationLink } from "@/components/NotificationLink";
 import { ListeningDock } from "@/components/ListeningDock";
+import { DEFAULT_FEED_NAMES, type FeedNames } from "@/lib/prefs-shared";
 
 const I = {
   search: (
@@ -43,7 +44,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, customName, audioTracks = [] }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; aiEnabled?: boolean }) {
+export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; aiEnabled?: boolean }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
@@ -77,13 +78,13 @@ export function Masthead({ channels, customName, audioTracks = [] }: { channels:
         </nav>
       </div>
       <nav className="tabs" aria-label="Feeds">
-        {tab("/", "Following")}
-        {tab("/media", "Media")}
-        {tab("/friends", "Top Friends")}
-        {tab("/top", "Top Accounts")}
-        {tab("/recasts", "Recasts")}
-        {tab("/mini-apps", "Mini Apps")}
+        {tab("/", feedNames.following)}
+        {tab("/friends", feedNames.friends)}
+        {tab("/top", feedNames.leaders)}
+        {tab("/recasts", feedNames.recasts)}
+        {tab("/mini-apps", feedNames.miniApps)}
         {tab("/circle", customName)}
+        {tab("/media", feedNames.media)}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
       {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>

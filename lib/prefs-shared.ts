@@ -2,6 +2,8 @@
 import type { Mode, ThemeId } from "./themes";
 
 export type Prefs = {
+  /** Personal labels for the built-in feed tabs. */
+  feedNames: FeedNames;
   /** Words, phrases, $tickers, #tags or @handles to hide. Lowercased. */
   mutes: string[];
   /** Minimum Neynar user score to show (0 to 1). null means use MIN_USER_SCORE from env. */
@@ -38,7 +40,11 @@ export type Prefs = {
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], audioTracks: [], theme: "selfcaster", mode: "auto" };
+export type FeedNameKey = "following" | "friends" | "leaders" | "recasts" | "miniApps" | "media";
+export type FeedNames = Record<FeedNameKey, string>;
+export const DEFAULT_FEED_NAMES: FeedNames = { following: "Following", friends: "Friends", leaders: "Leaders", recasts: "Recasts", miniApps: "Mini Apps", media: "Media" };
+
+export const DEFAULT_PREFS: Prefs = { feedNames: DEFAULT_FEED_NAMES, mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], audioTracks: [], theme: "jackcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 50;

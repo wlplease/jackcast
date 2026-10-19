@@ -12,7 +12,7 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
   if (!prefs.friends.length) {
     return (
       <>
-        <div className="section-head"><h1>Top Friends</h1></div>
+        <div className="section-head"><h1>{prefs.feedNames.friends}</h1></div>
         <div className="empty">
           <h2>Make this feed yours</h2>
           <p>Add your top 20 active accounts, 20 curated Farcaster accounts, or choose people yourself. Their newest posts will show up here.</p>
@@ -27,9 +27,9 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <div className="section-head">
-          <h1>Top Friends</h1>
+          <h1>{prefs.feedNames.friends}</h1>
           <span className="meta">{prefs.friends.length} people · newest first</span>
-          <Link className="btn ghost sm" href="/me#friends">Manage Top Friends</Link>
+          <Link className="btn ghost sm" href="/me#friends">Manage friends</Link>
         </div>
         <Feed page={page} basePath="/friends" canWrite={viewer.canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "friends"} emptyTitle="Nothing new from your people" emptyBody="Their next casts will show up here." />
       </>

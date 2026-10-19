@@ -1,6 +1,6 @@
 // Color themes. Shared by the server (renders the chosen theme's tokens into <head>, so there's
-// no flash) and the browser (previews a theme the moment you tap it on the You page).
-// Selfcaster is the default and lives in app/globals.css too; the rest override its tokens.
+// no flash) and the browser (previews the theme immediately in Settings).
+// Jackcaster is the default and lives in app/globals.css too.
 // Add your own: copy an entry, give it an id in THEME_IDS, and run `npm run check:themes`.
 // Every pairing is contrast-checked by scripts/check-themes.ts. Run it after changing a color.
 
@@ -23,16 +23,31 @@ export type Tokens = {
 
 export type Theme = { id: ThemeId; label: string; note: string; light: Tokens; dark: Tokens };
 
-export const THEME_IDS = ["selfcaster", "orange", "stone", "farcaster", "higher", "twitter", "x"] as const;
+export const THEME_IDS = ["jackcaster", "selfcaster", "orange", "stone", "farcaster", "higher", "twitter", "x"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 export const MODES = ["auto", "light", "dark"] as const;
 export type Mode = (typeof MODES)[number];
 
 export const THEMES: Theme[] = [
   {
+    id: "jackcaster",
+    label: "Jackcaster",
+    note: "Cool teal, mint, and a bright pink spark.",
+    light: {
+      paper: "#f5f8f6", card: "#eaf1ed", ink: "#14221e", ink2: "#405850", ink3: "#61766e",
+      rule: "#dce7e1", ruleStrong: "#bfd0c6", brand: "#08786e", onBrand: "#ffffff",
+      accent: "#00665e", accentSoft: "#dcf2eb", like: "#bf376e", recast: "#08786e", chart: "#08786e",
+    },
+    dark: {
+      paper: "#0b1714", card: "#12251f", ink: "#edf7f1", ink2: "#b0c9bf", ink3: "#89a499",
+      rule: "#213a32", ruleStrong: "#35564a", brand: "#91e4c8", onBrand: "#092119",
+      accent: "#9be8ce", accentSoft: "#183a30", like: "#ff9fc5", recast: "#9be8ce", chart: "#58dcb3",
+    },
+  },
+  {
     id: "selfcaster",
     label: "Selfcaster",
-    note: "Deep green with poppy pink and lemon.",
+    note: "The original deep green, pink, and lemon palette.",
     light: {
       paper: "#f7f3ef", card: "#f0e8e2", ink: "#0d1f1c", ink2: "#3f5651", ink3: "#677b76",
       rule: "#e6ddd6", ruleStrong: "#d1c6be", brand: "#0d3733", onBrand: "#ffffff",

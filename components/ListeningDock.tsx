@@ -17,6 +17,14 @@ export function ListeningDock({ personalTracks = [] }: { personalTracks?: AudioT
 
   useEffect(() => { if (audio.current) audio.current.volume = volume; }, [volume]);
   useEffect(() => { if (audio.current) audio.current.loop = repeat; }, [repeat]);
+  useEffect(() => {
+    const pauseForOtherMedia = () => {
+      if (!audio.current || audio.current.paused) return;
+      audio.current.pause();
+    };
+    window.addEventListener("jackcaster:pause-background-audio", pauseForOtherMedia);
+    return () => window.removeEventListener("jackcaster:pause-background-audio", pauseForOtherMedia);
+  }, []);
 
   async function choose(track: AudioTrack, autoplay = true) {
     const player = audio.current;
