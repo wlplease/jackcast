@@ -24,6 +24,7 @@ export default function LoginLanding() {
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
             Quick deploy to Vercel <span aria-hidden="true">↗</span>
           </a>
+          <p className="login-prereq"><strong>Before you start:</strong> have a <a href="https://neynar.com" target="_blank" rel="noreferrer">Neynar API key</a> ready. You’ll choose a private app password during setup. A Farcaster signer is only needed if you want to post.</p>
           <LandingWalkthrough />
           <section className="login-what" aria-labelledby="login-what-title">
             <div className="login-what-heading"><span className="login-eyebrow">MADE TO FIT YOUR FLOW</span><h3 id="login-what-title">Your feed, your rhythm.</h3></div>
