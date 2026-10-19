@@ -163,6 +163,13 @@ main { flex: 1; width: min(100%, 760px); min-width: 0; margin: 0 auto; }
 .tab { flex: none; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-2); white-space: nowrap; }
 .tab:hover { color: var(--ink); border-color: var(--ink-3); }
 .tab[aria-current="page"] { background: var(--brand); color: var(--on-brand); border-color: var(--brand); font-weight: 500; }
+.tabs-more { position: relative; flex: none; }
+.tabs-more-button { font: inherit; cursor: pointer; }
+.tabs-more-button span { margin-left: 3px; }
+.tabs-more-menu { position: fixed; top: calc(env(safe-area-inset-top) + 104px); right: max(12px, calc((100vw - 760px) / 2)); z-index: 20; display: grid; min-width: 170px; gap: 3px; padding: 6px; border: 1px solid var(--rule-strong); border-radius: 12px; background: var(--paper); box-shadow: 0 12px 32px rgb(0 0 0 / 18%); }
+.tabs-more-link, .tabs-more-manage { padding: 9px 10px; border-radius: 8px; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.tabs-more-link:hover, .tabs-more-link[aria-current="page"], .tabs-more-manage:hover { color: var(--ink); background: var(--card); }
+.tabs-more-manage { margin-top: 3px; border-top: 1px solid var(--rule); border-radius: 0 0 8px 8px; color: var(--accent); }
 
 /* Section header */
 .section-head { padding: 18px 18px 6px; display: flex; align-items: baseline; gap: 10px; }

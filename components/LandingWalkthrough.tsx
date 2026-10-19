@@ -44,7 +44,7 @@ export function LandingWalkthrough() {
     <section className="landing-tour" aria-label="Jackcaster product walkthrough">
       <header className="landing-tour-heading">
         <div><span className="landing-tour-kicker">A QUICK LOOK</span><h3>Made for the way you follow</h3></div>
-        <span className="landing-tour-sample">Sample feed</span>
+        <span className="landing-tour-sample">Illustrative sample · not a live feed</span>
       </header>
       <div className="landing-tour-stage">
         <div className="landing-tour-screen" role="img" aria-label={`${slide.tab} illustrative sample screen`}>

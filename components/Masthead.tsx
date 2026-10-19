@@ -49,6 +49,12 @@ const I = {
 export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES, feedOrder = BUILTIN_FEED_ORDER, hiddenFeeds = [] }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; feedOrder?: BuiltinFeedKey[]; hiddenFeeds?: BuiltinFeedKey[] }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [showMoreFeeds, setShowMoreFeeds] = useState(false);
+  const feedLinks: Record<BuiltinFeedKey, [string, string]> = {
+    following: ["/", feedNames.following], friends: ["/friends", feedNames.friends], leaders: ["/top", feedNames.leaders],
+    recasts: ["/recasts", feedNames.recasts], sent: ["/sent", "Sent"], miniApps: ["/mini-apps", feedNames.miniApps],
+    media: ["/media", feedNames.media], custom: ["/circle", customName],
+  };
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined} onClick={() => {
       const feed = href === "/" ? "following" : href === "/friends" ? "friends" : href === "/top" ? "leaders" : href === "/recasts" ? "recasts" : href === "/sent" ? "sent" : href === "/mini-apps" ? "mini_apps" : href === "/media" ? "media" : href === "/circle" ? "custom" : "channel";
@@ -84,14 +90,16 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
       </div>
       <nav className="tabs" aria-label="Feeds">
         {feedOrder.filter((key) => !hiddenFeeds.includes(key)).map((key) => {
-          const tabs: Record<BuiltinFeedKey, [string, string]> = {
-            following: ["/", feedNames.following], friends: ["/friends", feedNames.friends], leaders: ["/top", feedNames.leaders],
-            recasts: ["/recasts", feedNames.recasts], sent: ["/sent", "Sent"], miniApps: ["/mini-apps", feedNames.miniApps],
-            media: ["/media", feedNames.media], custom: ["/circle", customName],
-          };
-          const [href, label] = tabs[key];
+          const [href, label] = feedLinks[key];
           return tab(href, label);
         })}
+        {hiddenFeeds.length > 0 && <div className="tabs-more">
+          <button type="button" className="tab tabs-more-button" aria-expanded={showMoreFeeds} onClick={() => setShowMoreFeeds((open) => !open)}>More <span aria-hidden="true">⌄</span></button>
+          {showMoreFeeds && <div className="tabs-more-menu" aria-label="Hidden feeds">{hiddenFeeds.map((key) => {
+            const [href, label] = feedLinks[key];
+            return <Link key={key} href={href} className="tabs-more-link" aria-current={path === href ? "page" : undefined} onClick={() => setShowMoreFeeds(false)}>{label}</Link>;
+          })}<Link href="/me#feed-navigation" className="tabs-more-manage" onClick={() => setShowMoreFeeds(false)}>Manage feeds…</Link></div>}
+        </div>}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
       {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>

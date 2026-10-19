@@ -20,11 +20,11 @@ export default function LoginPage() {
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
           <span className="login-eyebrow">A PERSONAL FARCASTER CLIENT</span>
           <h2 id="login-deploy-title">Make room for the parts of Farcaster you care about.</h2>
-          <p className="login-deploy-intro"><span>Jackcaster is an open-source, single-owner client built on GenuineJack&apos;s Selfcaster. Shape your timelines, follow conversations, and find Mini Apps and media in one place. This is the maintainer&apos;s private instance; deploy your own copy to connect your account.</span></p>
+          <p className="login-deploy-intro"><span>Jackcaster is an open-source Farcaster client for one owner, built on GenuineJack&apos;s Selfcaster. Follow a chronological timeline, organize feeds around people and topics, review posts sent from Jackcaster, and explore conversations, media, and Mini Apps. This is the maintainer&apos;s private instance; deploy your own copy to connect your account.</span></p>
           <LandingWalkthrough />
           <section className="login-what" aria-labelledby="login-what-title">
             <div className="login-what-heading"><span className="login-eyebrow">THE CLIENT, AT A GLANCE</span><h3 id="login-what-title">A more personal way to follow the network</h3></div>
-            <article><span aria-hidden="true">↕</span><div><h4>Feeds with a purpose</h4><p>Keep Following chronological. Give Friends, custom lists, Top Accounts, channels, and Recasts their own views.</p></div></article>
+            <article><span aria-hidden="true">↕</span><div><h4>Feeds with a purpose</h4><p>Keep Following chronological. Give Friends, custom lists, Top Accounts, channels, Recasts, and your Jackcaster-sent posts their own views. Reorder tabs and tuck away feeds you rarely use.</p></div></article>
             <article><span aria-hidden="true">✎</span><div><h4>Read, reply, and create</h4><p>Compose posts, replies, quotes, and threads; keep drafts on your device and browse posts, profiles, and media.</p></div></article>
             <article><span aria-hidden="true">▣</span><div><h4>Explore beyond the feed</h4><p>Discover Mini Apps, play supported media inline, review profile activity, and choose a soundtrack while you browse.</p></div></article>
             <article><span aria-hidden="true">⚙</span><div><h4>Your copy, your choices</h4><p>Each deployment is for one owner. Feed preferences stay in that browser. Gemini catch-up, audio, GIF search, the map, and paid profile artwork are optional and may use separate services or incur costs.</p></div></article>
