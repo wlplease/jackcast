@@ -20,6 +20,10 @@ export default function LoginLanding() {
           <span className="login-eyebrow">YOUR FARCASTER, YOUR WAY</span>
           <h2 id="login-deploy-title">A calmer home for your Farcaster conversations.</h2>
           <p className="login-deploy-intro"><span>An open-source Farcaster client for chronological feeds, focused lists, conversations, and Mini Apps. This is a private demo; deploy your own copy to use Jackcaster.</span></p>
+          <a className="login-deploy-button login-deploy-button-top" href={DEPLOY_URL} target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
+            Quick deploy to Vercel <span aria-hidden="true">↗</span>
+          </a>
           <LandingWalkthrough />
           <section className="login-what" aria-labelledby="login-what-title">
             <div className="login-what-heading"><span className="login-eyebrow">MADE TO FIT YOUR FLOW</span><h3 id="login-what-title">Your feed, your rhythm.</h3></div>
