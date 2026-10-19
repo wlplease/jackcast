@@ -852,20 +852,6 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .grok-maker-notice span, .grok-maker-pending .field-hint { margin: 0; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
 .grok-maker-pending > div { display: grid; gap: 3px; min-width: 0; }
 .grok-maker-pending .btn { flex: none; }
-.grok-style-picker { display: grid; gap: 9px; min-width: 0; margin: 0; padding: 0; border: 0; }
-.grok-style-picker legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin-bottom: 8px; color: var(--ink); font-size: 13px; font-weight: 750; }
-.grok-style-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.grok-style-card { display: flex; align-items: center; gap: 9px; min-width: 0; min-height: 62px; padding: 9px; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); color: var(--ink-2); font: inherit; text-align: left; cursor: pointer; transition: border-color .16s, background .16s, transform .16s, box-shadow .16s; }
-.grok-style-card:hover { border-color: color-mix(in srgb, var(--brand) 52%, var(--rule)); transform: translateY(-1px); }
-.grok-style-card.selected { border-color: var(--brand); background: color-mix(in srgb, var(--accent-soft) 72%, var(--paper)); box-shadow: inset 0 0 0 1px var(--brand), 0 4px 14px color-mix(in srgb, var(--brand) 12%, transparent); color: var(--ink); }
-.grok-style-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.grok-style-icon { display: grid; flex: none; width: 30px; height: 30px; place-items: center; border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--rule)); border-radius: 9px; background: var(--card); color: var(--brand); font-size: 17px; }
-.grok-style-card > span:last-child { display: grid; gap: 3px; min-width: 0; }
-.grok-style-card strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.grok-style-card small { display: -webkit-box; overflow: hidden; color: var(--ink-3); font-size: 10px; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.grok-flow-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
-.grok-flow-steps > span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-2); background: var(--paper); font-size: 10px; }
-.grok-flow-steps b { display: grid; width: 17px; height: 17px; place-items: center; border-radius: 50%; color: var(--accent-ink); background: var(--accent); font-size: 9px; }
 .grok-maker-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .grok-maker-status { overflow-wrap: anywhere; }
 .grok-maker-result { display: grid; grid-template-columns: 156px minmax(0, 1fr); align-items: center; gap: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--rule)); border-radius: 16px; background: radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent 58%), var(--paper); }
@@ -881,7 +867,6 @@ html[data-previews="off"] .cast .embeds { display: none; }
 @media (max-width: 560px) {
   .grok-maker { padding: 12px; }
   .grok-maker-heading { display: grid; }
-  .grok-style-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grok-maker-actions { display: grid; grid-template-columns: 1fr; }
   .grok-maker-actions .btn { width: 100%; }
   .grok-maker-pending { align-items: stretch; flex-direction: column; }
@@ -1293,7 +1278,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .login-deploy-note { display: block; margin-top: 14px; color: var(--ink-3); font-size: 9px; line-height: 1.45; }
 .login-portal-footer { grid-area: footer; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 11px 5px 1px; border-top: 1px solid var(--rule); color: var(--ink-3); font: 8px var(--mono); letter-spacing: .07em; }
 .login-portal-footer b { color: var(--accent); font-size: 12px; }
-@media (max-width: 900px) { .login-portal { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "login" "deploy" "footer"; width: min(100%, 720px); min-height: 0; } .login-card { max-width: none; min-height: 0; } }
+@media (max-width: 900px) { .login-portal { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "deploy" "login" "footer"; width: min(100%, 720px); min-height: 0; } .login-card { max-width: none; min-height: 0; } }
 @media (max-width: 620px) { .app-content:has(> .login) { width: 100%; } .login { min-height: 100dvh; align-content: start; padding: 14px 10px 96px; } .login-portal { gap: 10px; padding: 10px; border-radius: 20px; grid-template-areas: "bar" "deploy" "login" "footer"; } .login-portal-bar { padding-inline: 2px; } .login-layout { gap: 10px; } .login-card, .login-deploy { padding: 22px; border-radius: 15px; } .login-card { min-height: 0; } .login-card .wordmark { margin-bottom: 20px; font-size: clamp(34px, 10vw, 44px); } .login-card-kicker { margin-bottom: 7px; } .login-deploy > p { margin-bottom: 13px; } .login-feature-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); } }
 @media (max-width: 380px) { .login-portal-bar { font-size: 8px; } .login-portal-status { padding: 5px 6px; font-size: 8px; } .login-card, .login-deploy { padding: 18px; } .login-feature-grid { grid-template-columns: minmax(0, 1fr); } .login-portal-footer { display: grid; grid-template-columns: 1fr auto; } .login-portal-footer span:last-child { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .login-portal-status i, .login-feature-grid > span, .login-deploy-button { animation: none; transition: none; } }
