@@ -17,9 +17,9 @@ function firebaseConfig(): FirebaseWebConfig | null {
   return apiKey && authDomain && projectId && appId ? { apiKey, authDomain, projectId, appId } : null;
 }
 
-export async function firebaseAnonymousIdToken(appName = "jackcaster-giphy"): Promise<string> {
+export async function firebaseAnonymousIdToken(appName = "jackcaster-shared"): Promise<string> {
   const config = firebaseConfig();
-  if (!config) throw new Error("Shared GIF search is not configured yet.");
+  if (!config) throw new Error("This shared feature is not configured yet.");
   const [{ initializeApp, getApps }, { getAuth, signInAnonymously }] = await Promise.all([import("firebase/app"), import("firebase/auth")]);
   const app = getApps().find((entry) => entry.name === appName) ?? initializeApp(config, appName);
   const auth = getAuth(app);
@@ -30,7 +30,7 @@ export async function firebaseAnonymousIdToken(appName = "jackcaster-giphy"): Pr
     } catch (error) {
       const code = (error as { code?: string })?.code;
       if (code === "auth/admin-restricted-operation" || code === "auth/operation-not-allowed") {
-        throw new Error("Firebase Anonymous sign-in is disabled for this project. In Firebase Console, open Authentication → Sign-in method, enable Anonymous, and save. Jackcaster uses Firebase Web Auth and Firestore rules; it does not use Firebase Admin.");
+        throw new Error("Firebase Anonymous sign-in is disabled for this project. In Firebase Console, open Authentication → Sign-in method, enable Anonymous, and save.");
       }
       throw new Error("Firebase could not start an anonymous session. Check that the Firebase web config matches the project and Anonymous sign-in is enabled.");
     }

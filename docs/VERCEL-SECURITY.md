@@ -16,9 +16,9 @@ Challenge behavior is controlled in the Vercel dashboard, not by this repository
 ## Keep the shared client safe
 
 - Use a long, unique `APP_PASSWORD` and share it only with people trusted to use the connected Farcaster signer. Every person admitted by this single-owner password gate can access the same account and posting capabilities.
-- Keep `NEYNAR_API_KEY`, `SIGNER_UUID`, `GIPHY_APP`, and AI provider keys in Vercel's server-side Environment Variables. Never expose them with a `NEXT_PUBLIC_` prefix or in a cast.
-- Keep the Firebase Web config public by design, but merge only the narrow rules in [FIREBASE-SHARED-RULES.md](./FIREBASE-SHARED-RULES.md). Anonymous Auth is not a user identity system. The shared GIF claim is atomic, one global search every 45 seconds, plus a five-minute cooldown per persistent anonymous browser identity. Clearing browser data or creating another anonymous identity can bypass the per-browser fairness window; Vercel's edge bot challenge is the additional abuse control.
-- The shared GIF route validates same-origin requests, Firebase ID tokens, input size, query length, result offsets, and GIPHY media hosts. It fails closed if the shared cooldown cannot be read or committed.
+- Keep `NEYNAR_API_KEY`, `SIGNER_UUID`, `GIPHY_APP`, Upstash Redis credentials, and AI provider keys in Vercel's server-side Environment Variables. Never expose them with a `NEXT_PUBLIC_` prefix or in a cast.
+- Keep the Firebase Web config public by design, but merge only the narrow rules in [FIREBASE-SHARED-RULES.md](./FIREBASE-SHARED-RULES.md). Anonymous Auth is used only for the optional map and arcade features, not GIF search.
+- The shared GIF route validates same-origin requests, a signed HttpOnly browser-session cookie, input size, query length, result offsets, and GIPHY media hosts. Upstash Redis atomically enforces the global 45-second limit across Vercel instances plus a five-minute per-session cooldown. The route fails closed if Redis is unavailable; Firebase sign-in is not used for GIFs.
 - Optional personal GIPHY keys are saved in browser local storage and sent directly to GIPHY. Jackcaster's server does not receive them. Do not save a personal key on a device other people use.
 - Do not rely on notices or hidden text to confuse bots. They do not stop automated requests and can make the interface harder for people and assistive technology.
 

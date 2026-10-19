@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const ProfileIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20c1.3-3.6 4.2-5.4 7.5-5.4s6.2 1.8 7.5 5.4" /></svg>;
 
 export function ProfileQuickMenu({ animatedProfilesEnabled }: { animatedProfilesEnabled: boolean }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -21,7 +25,7 @@ export function ProfileQuickMenu({ animatedProfilesEnabled }: { animatedProfiles
     <button type="button" className="icon-btn" aria-label="Your profile options" title="Your profile" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
       <ProfileIcon />
     </button>
-    {open && <div className="profile-quick-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+    {mounted && open && createPortal(<div className="profile-quick-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section className="profile-quick-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-quick-title" aria-describedby="profile-quick-description">
         <button type="button" className="profile-quick-close" aria-label="Close profile options" onClick={() => setOpen(false)}>×</button>
         <span className="profile-quick-icon"><ProfileIcon /></span>
@@ -37,6 +41,6 @@ export function ProfileQuickMenu({ animatedProfilesEnabled }: { animatedProfiles
         </nav>
         <p className="profile-quick-credit-note">Credits stay with your Base wallet. No purchase until you approve it.</p>
       </section>
-    </div>}
+    </div>, document.body)}
   </>;
 }
