@@ -173,7 +173,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
       <div className="ai-overlay-panel" ref={aiDialog}><button ref={aiClose} className="ai-overlay-x" type="button" onClick={closeAi} aria-label="Close AI catch-up">×</button>
         {digestLoading && <p className="field-hint" role="status">Loading recent Following posts for the seven-day catch-up…</p>}
         {digestLoadError && <p className="form-error" role="alert">{digestLoadError} <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Retry</button></p>}
-        {digestLoadMore && !digestLoading && <p className="field-hint">More recent posts may be available. <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Load more recent posts</button></p>}
+        {digestLoadMore && !digestLoading && <p className="field-hint">The seven-day scan reached its page limit before confirming the full date range. The digest uses the recent posts loaded so far. <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Load more recent posts</button></p>}
         <AIDigestMount casts={casts.slice(0, 40)} viewerFid={viewerFid} audioEnabled={audioEnabled} digestEnabled={digestEnabled} />
       </div>
     </div>}

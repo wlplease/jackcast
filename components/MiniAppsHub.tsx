@@ -11,8 +11,8 @@ import type { Prefs } from "@/lib/prefs-shared";
 const RECENT_KEY = "jackcaster:recent-mini-apps:v1";
 type RecentApp = { url: string; title: string };
 
-function AppGrid({ apps, saved, onSaved, onLaunch }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void; onLaunch: (app: RecentApp) => void }) {
-  if (!apps.length) return <p className="field-hint">No mini apps found in this section yet.</p>;
+function AppGrid({ apps, saved, onSaved, onLaunch, emptyMessage = "No apps are listed here yet." }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void; onLaunch: (app: RecentApp) => void; emptyMessage?: string }) {
+  if (!apps.length) return <div className="miniapp-empty"><strong>Nothing to show yet</strong><p>{emptyMessage}</p></div>;
   return <div className="miniapp-grid">{apps.map((app) => <article key={app.url} className="miniapp-card">
     <MiniAppIcon src={app.image} />
     <span className="miniapp-card-copy"><b>{app.title}</b>{app.author && <small>by {app.author}</small>}{app.description && <span>{app.description}</span>}</span>
@@ -52,15 +52,18 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved, feedT
   async function search(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (query.trim().length < 2) return;
+    await runSearch(query.trim());
+  }
+
+  async function runSearch(term: string) {
     setSearching(true);
     setError("");
     try {
-      const result = await loadMiniAppSearch(query);
-      if (!result.ok) { setError(result.error); setResults(null); }
+      const result = await loadMiniAppSearch(term);
+      if (!result.ok) setError(result.error);
       else setResults(result.apps);
     } catch {
       setError("Mini app search is unavailable right now. Try again shortly.");
-      setResults(null);
     } finally { setSearching(false); }
   }
 
@@ -74,11 +77,11 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved, feedT
       <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mini apps" aria-label="Search mini apps" maxLength={80} />
       <button className="btn ghost sm" disabled={searching || query.trim().length < 2}>{searching ? "Searching…" : "Search"}</button>
     </form>
-    {error && <p className="form-error miniapp-error" role="status">{error}</p>}
+    {error && <p className="form-error miniapp-error" role="status">{error} <button type="button" className="linkish" disabled={searching || query.trim().length < 2} onClick={() => void runSearch(query.trim())}>{searching ? "Searching…" : "Try again"}</button></p>}
     {recentApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Recently opened</h2><button type="button" className="linkish" onClick={() => { setRecentApps([]); try { localStorage.removeItem(RECENT_KEY); } catch {} }}>Clear</button></div><AppGrid apps={recentApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
     {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Favorites</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
-    {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
-    <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button key={value} className={category === value ? "active" : ""} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>
-    <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>
+    {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage="No matches. Try a different name or search term." /></section>}
+    <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button type="button" key={value} className={category === value ? "active" : ""} aria-pressed={category === value} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage={weekly.length ? "No apps match this category. Choose another category or search the catalog." : "The weekly catalog is empty right now. Try refreshing or search for an app by name."} /></section>
+    <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage="There are no personalized suggestions yet. Search the catalog or check back later." /></section>
   </>;
 }

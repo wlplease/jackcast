@@ -14,6 +14,11 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   const [pending, start] = useTransition();
   const last = useRef(0);
 
+  function refreshFeed() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    start(() => router.refresh());
+  }
+
   useEffect(() => {
     setCount(0);
     setCheckError("");
@@ -65,23 +70,14 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
 
   return (
     <>
-    {checkError && <div className="feed-poll-status" role="status">{checkError}</div>}
-    {count > 0 && <div className="pill-wrap">
-      <button
-        className="pill"
-        onClick={() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          start(() => router.refresh());
-        }}
-        disabled={pending}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 19V5" />
-          <path d="M5 12l7-7 7 7" />
-        </svg>
+    {checkError && <div className="feed-poll-status" role="status">{checkError} <button type="button" onClick={refreshFeed} disabled={pending}>Refresh feed</button></div>}
+    <div className="pill-wrap feed-quick-actions">
+      {count > 0 ? <button className="pill" onClick={refreshFeed} disabled={pending}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
         {pending ? "Loading…" : `${capped ? `${count}+` : count} new ${count === 1 ? "cast" : "casts"}`}
-      </button>
-    </div>}
+      </button> : <button className="pill feed-refresh-button" onClick={refreshFeed} disabled={pending} aria-label="Refresh feed and return to the top">{pending ? "Refreshing…" : "↻ Refresh feed"}</button>}
+      <button className="pill feed-top-button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Back to top">↑ Top</button>
+    </div>
     </>
   );
 }

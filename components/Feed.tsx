@@ -41,6 +41,7 @@ export async function Feed({
     return (
       <>
         <ActiveFeedFilters prefs={prefs} />
+        {live && <NewCastsPill feed={live} newest={null} />}
         <div className="empty">
           <h2>{emptyTitle}</h2>
           <p>{emptyBody}</p>

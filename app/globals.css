@@ -413,6 +413,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .more { display: block; text-align: center; padding: 18px; font-family: var(--mono); font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--rule); }
 .more:hover { color: var(--accent); background: var(--accent-soft); }
 .feed-poll-status { margin: 8px 18px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--card); color: var(--ink-2); font-size: 12px; }
+.feed-poll-status button { margin-left: 6px; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .empty { padding: 48px 24px; text-align: center; color: var(--ink-3); }
 .empty h2 { font-family: var(--display); font-weight: var(--display-weight); font-variation-settings: var(--display-fvs); font-size: 24px; color: var(--ink-2); margin: 0 0 6px; }
 .banner { margin: 12px 18px; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); font-size: 13.5px; color: var(--ink-2); background: var(--card); }
@@ -724,6 +725,9 @@ html[data-previews="off"] .cast .embeds { display: none; }
 /* Takes real space at the top of the feed so it never covers a cast at rest, then sticks under the header. */
 .pill-wrap { position: sticky; top: 100px; z-index: 9; display: flex; justify-content: center; padding: 10px 0 0; margin-bottom: -2px; pointer-events: none; }
 .pill-wrap .pill { pointer-events: auto; }
+.feed-quick-actions { gap: 8px; }
+.feed-top-button { background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+.pill:disabled { opacity: .7; cursor: wait; }
 .pill { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 7px 14px; border-radius: 999px; border: 0; background: var(--brand); color: var(--on-brand); font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
 .pill svg { width: 15px; height: 15px; }
 .hidden-note { padding: 12px 18px; font-size: 12.5px; color: var(--ink-3); border-bottom: 1px solid var(--rule); text-align: center; }
@@ -1047,7 +1051,34 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .settings-placeholder { display: grid; gap: 7px; padding: 12px 16px; color: var(--ink-2); font-size: 13px; }
 .settings-placeholder p { margin: 0; }
 .settings-placeholder a { width: fit-content; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-.miniapp-empty { padding: 24px 12px; }
+.miniapp-empty { display: grid; gap: 3px; margin: 6px 16px; padding: 18px 14px; border: 1px dashed var(--rule-strong); border-radius: 12px; background: var(--card); }
+.miniapp-empty strong { font-size: 13px; }
+.miniapp-empty p { margin: 0; color: var(--ink-2); font-size: 12px; }
+.miniapps-loading { padding: 8px 0; }
+.miniapps-loading > p { margin: 8px 16px; color: var(--ink-2); font-size: 13px; }
+.miniapps-loading-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; padding: 0 16px; }
+.miniapps-loading-card { display: grid; grid-template-columns: 56px minmax(0, 1fr) 54px; align-items: center; gap: 10px; min-height: 82px; padding: 10px; border: 1px solid var(--rule); border-radius: 14px; background: var(--card); }
+.miniapps-loading-card i, .miniapps-loading-card b, .miniapps-loading-card small, .miniapps-loading-card em { display: block; border-radius: 7px; background: var(--rule); animation: miniapp-loading-pulse 1.3s ease-in-out infinite alternate; }
+.miniapps-loading-card i { width: 56px; height: 56px; border-radius: 13px; }
+.miniapps-loading-card span { display: grid; gap: 8px; }
+.miniapps-loading-card b { width: min(70%, 150px); height: 12px; }
+.miniapps-loading-card small { width: 92%; height: 10px; }
+.miniapps-loading-card em { width: 54px; height: 26px; }
+@keyframes miniapp-loading-pulse { to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .miniapps-loading-card i, .miniapps-loading-card b, .miniapps-loading-card small, .miniapps-loading-card em { animation: none; } }
+.service-status-list { display: grid; gap: 8px; }
+.service-status-list article { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid var(--rule); border-radius: 11px; background: var(--card); }
+.service-status-list article > div { display: grid; gap: 2px; }
+.service-status-list strong { font-size: 13px; }
+.service-status-list small { color: var(--ink-2); font-size: 11px; }
+.service-status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); }
+.service-status-dot.ready { background: var(--accent); }
+.service-status-label { font-size: 11px; font-weight: 650; white-space: nowrap; }
+.service-status-label.ready { color: var(--accent); }
+.service-status-label.off { color: var(--ink-3); }
+.copy-intro-link { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.copy-intro-link small { color: var(--ink-2); font-size: 12px; }
+.login-share-actions { display: grid; gap: 10px; }
 .miniapp-developer-link { margin: 2px 16px; }
 .search-miniapps-link { margin: 8px 16px; }
 .search-miniapps-link a { color: var(--accent); text-underline-offset: 2px; }

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { login } from "@/app/actions";
 import { LandingWalkthrough } from "@/components/LandingWalkthrough";
 import { ShareJackcasterButton } from "@/components/ShareJackcasterButton";
+import { CopyIntroLinkButton } from "@/components/CopyIntroLinkButton";
 
 const DEPLOY_URL = "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup";
 
@@ -31,7 +32,7 @@ export default function LoginPage() {
           </section>
           <section className="login-share" aria-labelledby="login-share-title">
             <div><span className="login-eyebrow">PASS IT ALONG</span><h3 id="login-share-title">Tell your corner of Farcaster</h3><p>Choose an intro, make it sound like you, then share it with the Jackcaster link attached.</p></div>
-            <ShareJackcasterButton full />
+            <div className="login-share-actions"><ShareJackcasterButton full /><CopyIntroLinkButton /></div>
           </section>
           <div className="login-deploy-divider"><span>YOUR OWN COPY · 3 STEPS</span><i aria-hidden="true" /></div>
           <ol>
