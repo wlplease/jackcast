@@ -24,7 +24,7 @@ Prioritize reliability and user control before adding another large feed:
 | Improve long-session feed memory | Many loaded cards can increase browser memory use, especially on phones. | Must preserve scroll position, duplicate-link expansion, and digest source posts. |
 | Better Mini App registry coverage | Neynar creator indexing may omit published apps. | Improve creator attribution when official data is available and make clear that Neynar search is not complete. |
 | Optional cross-device preference sync | Device cookies do not follow the owner across browsers. | Requires durable storage, clear account ownership, and a deliberate security model; the app is currently single-owner, not multi-tenant. |
-| Durable login throttling | The current five-failure block is process-local and does not span serverless instances. | Needs host-level or shared storage rate limiting; do not claim the local limiter is comprehensive. |
+| Edge-wide login protection | Upstash coordinates the five-failure block when configured; the fallback is process-local. | Add and verify Vercel Firewall limits in each deployment; this cannot be completed in source alone. |
 | Spaces discovery | Live conversations could complement cast feeds. | First verify reliable discovery data and native Farcaster join support. If only external links are supported, label and open them as such. |
 | Saved post collections | Saved casts are useful, but one flat reading list can become hard to browse. | Keep collections private and device-local unless sync is deliberately designed. |
 

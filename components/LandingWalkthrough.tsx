@@ -43,11 +43,11 @@ export function LandingWalkthrough() {
   return (
     <section className="landing-tour" aria-label="Jackcaster product walkthrough">
       <header className="landing-tour-heading">
-        <div><span className="landing-tour-kicker">A 20-SECOND TOUR</span><h3>Made for the way you follow</h3></div>
-        <span className="landing-tour-sample">Preview</span>
+        <div><span className="landing-tour-kicker">A QUICK LOOK</span><h3>Made for the way you follow</h3></div>
+        <span className="landing-tour-sample">Sample feed</span>
       </header>
       <div className="landing-tour-stage">
-        <div className="landing-tour-screen" aria-label={`${slide.tab} example screen`}>
+        <div className="landing-tour-screen" role="img" aria-label={`${slide.tab} illustrative sample screen`}>
           <div className="tour-window-bar"><span className="tour-window-brand"><i aria-hidden="true">↟</i> jackcaster</span><span className="tour-window-icons"><i>⌕</i><i>✦</i><i>♙</i></span></div>
           <div className="tour-window-tabs">{["Following", "Friends", "Top", "Recasts", "Mini Apps", "Media"].map((tab) => <span key={tab} className={slide.tab.startsWith(tab) ? "selected" : ""}>{tab}</span>)}</div>
           {active < 2 ? <div className="tour-posts">{slide.posts.map((post) => <article className="tour-post" key={post.handle}>

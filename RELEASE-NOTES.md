@@ -14,7 +14,7 @@ This document summarizes the current repository source. It is not a versioned re
 - Optional, user-triggered Gemini digest with storyline, source-linked topics, and activity insights; optional ElevenLabs read-aloud.
 - Optional Base donations to the original Selfcaster developer or Jackcaster using USDC or an approximate ETH amount, with wallet approval.
 - Centralized settings, search suggestions, notification controls, sign-out confirmation, and explicit links to Selfcaster, Jackcaster, and the original creator.
-- Baseline security headers, bounded request bodies and uploads, sanitized provider errors, and best-effort process-local login throttling.
+- Baseline security headers, bounded request bodies and uploads, sanitized provider errors, and login throttling coordinated through Upstash when configured (with a process-local fallback).
 
 ## Fork identity
 
@@ -27,7 +27,7 @@ Jackcaster is the personal open-source fork in [wlplease/jackcast](https://githu
 - The 90-day account activity rankings use bounded scans; a ranking may be incomplete when the scan cap is reached.
 - Neynar feed filters accept at most 10 FIDs per request. Larger lists are supported through multiple bounded requests.
 - Mini App browser previews do not have Farcaster-host wallet or native action access.
-- Login throttling is process-local. A shared edge-level limiter remains a separate hardening opportunity.
+- Login throttling uses a shared Upstash counter when configured, then falls back to a process-local counter. Vercel Firewall protection remains a deployment-level hardening step.
 - Gemini and ElevenLabs have separate provider terms, quotas, and possible costs. Review [`SECURITY.md`](./SECURITY.md) and `README.md` before enabling them.
 
 ## Local verification

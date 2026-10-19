@@ -70,13 +70,16 @@ public/                     icons (favicon, PWA, maskable), manifest, brand imag
 | `MY_FID` | optional read-only account context |
 | `PINNED_CHANNELS` | default favorites until the user picks; comma separated, no slashes |
 | `MIN_USER_SCORE` | default for the quality dial (0 to 1); the dial overrides it per device |
-| `GOOGLE_AI_API_KEY` | optional; enables the manually requested Gemini digest |
+| `GOOGLE_AI_API_KEY` | optional; enables the manually requested Gemini digest and still profile artwork (with Vercel Blob) |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | optional; enables read-aloud for a generated digest |
 | `ELEVELN_LAB_API_KEY` | legacy misspelled ElevenLabs key alias accepted by the speech route; prefer `ELEVENLABS_API_KEY` |
-| `NEXT_PUBLIC_GIPHY_API_KEY` | optional public GIPHY web key for GIF search; restrict it in the GIPHY dashboard |
+| `GIPHY_APP` | optional server-only shared GIPHY key; shared search also requires Upstash Redis and a session-signing secret |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | optional pair; atomic shared GIF cooldown and cross-instance login attempt counter |
+| `GIPHY_RATE_LIMIT_SECRET` | optional dedicated server-only key for signing GIF browser sessions; defaults to `APP_PASSWORD` |
+| `NEXT_PUBLIC_FIREBASE_CONFIG` or four `NEXT_PUBLIC_FIREBASE_*` fields | optional public Firebase Web config for the community map and arcade leaderboard; requires Anonymous Auth and the isolated rules in `docs/FIREBASE-SHARED-RULES.md` |
 | `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` | added by Vercel for newer Blob stores; photos use the presigned flow with the project's OIDC token |
 | `BLOB_READ_WRITE_TOKEN` | older Blob stores; photos use the client-token flow |
-| `NEYNAR_API_BASE` | local testing only, points the SDK at a mock API |
+| `NEYNAR_API_BASE` | advanced optional Neynar endpoint override; leave unset for the standard API |
 
 The Deploy button in the README asks for `NEYNAR_API_KEY` and `APP_PASSWORD` and creates a **public** Blob store (`stores=[{"type":"blob","access":"public"}]`). If you add a required env var, add it to that URL too.
 

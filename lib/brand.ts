@@ -2,5 +2,5 @@
 export const BRAND = {
   name: "Jackcaster",
   wordmark: { first: "jack", second: "caster" },
-  description: "Farcaster, on your terms. A personal client with chronological feeds and useful tools.",
+  description: "Your feed, your way. A personal Farcaster client with chronological feeds and useful tools.",
 };

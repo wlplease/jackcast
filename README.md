@@ -2,7 +2,7 @@
 
 <h1 align="center">Jackcaster</h1>
 
-<p align="center"><strong>Farcaster, on your terms.</strong><br>A personal client built on Selfcaster, with chronological feeds and useful tools.</p>
+<p align="center"><strong>Your feed, your way.</strong><br>A personal Farcaster client built on the open-source Selfcaster project.</p>
 
 <p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup"><img src="https://vercel.com/button" alt="Deploy your own Jackcaster with Vercel"></a></p>
 
@@ -12,11 +12,7 @@ This live site is the maintainer's private instance. To use Jackcaster with your
 
 **Jump to:** [Setup](#setup) · [Keys](#environment-variables-required-and-optional) · [Everyday how-tos](#everyday-how-tos) · [GIPHY setup](#gifs-and-memes-in-the-composer) · [Paid profile art](#paid-profile-art-and-credits) · [FAQ](#faq) · [Security](./SECURITY.md)
 
-<p align="center">
-  <img src="./docs/screenshot-light.png" width="300" alt="Jackcast feed, light">
-  &nbsp;
-  <img src="./docs/screenshot-dark.png" width="300" alt="Jackcast feed, dark">
-</p>
+The landing page includes an interactive product preview with sample posts. It is illustrative rather than a recording of a signed-in user's feed.
 
 ## How Jackcaster relates to Selfcaster
 

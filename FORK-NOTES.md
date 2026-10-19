@@ -13,7 +13,7 @@ Jackcaster is an open-source personal customization of [Selfcaster by GenuineJac
 - **Profiles and analytics:** profile posts/media views, 7/30/90-day posting metrics, a device-local pinned cast, and optional Neynar Pro profile cover editing.
 - **Optional AI:** a manual Gemini digest with a storyline, cited topic sections, and activity insights; optional ElevenLabs read-aloud. Provider keys stay server-side, and the digest is kept separate from the normal feed.
 - **Support options:** optional direct USDC or ETH donations to the original Selfcaster developer or Jackcaster on Base, available in Settings and Dev.
-- **Navigation and safety:** settings in one place, a sign-out confirmation, upstream and fork attribution in the footer and Dev section, baseline response headers, bounded uploads, and best-effort process-local login throttling.
+- **Navigation and safety:** settings in one place, a sign-out confirmation, upstream and fork attribution in the footer and Dev section, baseline response headers, bounded uploads, and Upstash-coordinated login throttling when configured (with a process-local fallback).
 
 ## What remains upstream
 
