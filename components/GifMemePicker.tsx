@@ -54,12 +54,14 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [checkingGate, setCheckingGate] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
   const [cooldownScope, setCooldownScope] = useState<"global" | "personal" | null>(null);
+  const [gateAttempt, setGateAttempt] = useState(0);
   const [error, setError] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [topText, setTopText] = useState("");
   const [bottomText, setBottomText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const personalKeyDetailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     try {
@@ -86,11 +88,15 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
         if (!response.ok) throw new Error(data.error || "Shared GIF search is not available.");
         if (active) { setCooldownMs(data.retryAfterMs || 0); setCooldownScope(data.scope ?? null); }
       } catch (reason) {
-        if (active) setError((reason as Error).message || "Shared GIF search is not available.");
+        if (active) {
+          const message = (reason as Error).message || "Shared GIF search is not available.";
+          setError(message);
+          if (/Firebase Anonymous sign-in is disabled/i.test(message)) personalKeyDetailsRef.current?.setAttribute("open", "");
+        }
       } finally { if (active) setCheckingGate(false); }
     })();
     return () => { active = false; };
-  }, [open, tab, personalKey]);
+  }, [open, tab, personalKey, gateAttempt]);
 
   useEffect(() => {
     if (!cooldownMs) return;
@@ -233,13 +239,13 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       <div className="gif-picker-head"><strong>Add a GIF or meme</strong><button type="button" aria-label="Close GIF picker" onClick={() => setOpen(false)}>×</button></div>
       <div className="gif-picker-tabs"><button type="button" className={tab === "gifs" ? "active" : ""} onClick={() => setTab("gifs")}>Find a GIF</button><button type="button" className={tab === "meme" ? "active" : ""} onClick={() => setTab("meme")}>Make a meme</button></div>
       {tab === "gifs" ? <>
-        <details className="gif-personal-key"><summary>{personalKey ? "Using your personal GIPHY key" : "Use your own GIPHY key (optional)"}</summary><p>Your key is saved in this browser&apos;s local storage and sent directly to GIPHY; Jackcaster&apos;s server never receives it. Local storage is available to scripts running on this site, so use a key you control and remove it before using a shared device. Get a key from the <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">GIPHY developer dashboard</a>. Without a personal key, everyone shares the free search: one search globally every 45 seconds, and one shared search per browser session every five minutes so one user cannot keep winning.</p><label htmlFor="giphy-personal-key">GIPHY API key</label><input id="giphy-personal-key" type="password" autoComplete="off" value={keyDraft} maxLength={256} onChange={(event) => setKeyDraft(event.target.value)} placeholder="Paste your personal GIPHY key" /><div className="gif-personal-key-actions"><button type="button" className="btn sm" disabled={!keyDraft.trim() && !personalKey} onClick={savePersonalKey}>{keySaved ? "Saved on this device" : keyDraft.trim() ? "Save key on this device" : "Remove saved key"}</button>{personalKey && <span>Personal searches follow your GIPHY key&apos;s own quota.</span>}</div></details>
+        <details ref={personalKeyDetailsRef} className="gif-personal-key"><summary>{personalKey ? "Using your personal GIPHY key" : "Use your own GIPHY key (optional)"}</summary><p>Your key is saved in this browser&apos;s local storage and sent directly to GIPHY; Jackcaster&apos;s server never receives it. Local storage is available to scripts running on this site, so use a key you control and remove it before using a shared device. Get a key from the <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">GIPHY developer dashboard</a>. Without a personal key, everyone shares the free search: one search globally every 45 seconds, and one shared search per browser session every five minutes so one user cannot keep winning.</p><label htmlFor="giphy-personal-key">GIPHY API key</label><input id="giphy-personal-key" type="password" autoComplete="off" value={keyDraft} maxLength={256} onChange={(event) => setKeyDraft(event.target.value)} placeholder="Paste your personal GIPHY key" /><div className="gif-personal-key-actions"><button type="button" className="btn sm" disabled={!keyDraft.trim() && !personalKey} onClick={savePersonalKey}>{keySaved ? "Saved on this device" : keyDraft.trim() ? "Save key on this device" : "Remove saved key"}</button>{personalKey && <span>Personal searches follow your GIPHY key&apos;s own quota.</span>}</div></details>
         <p className="gif-shared-note">{personalKey ? "Searching GIPHY with your personal key · direct from this browser" : "Free shared GIPHY search · one request globally every 45 seconds"}</p>
         <form className="gif-search" onSubmit={(event) => { event.preventDefault(); setCategory(""); void search(query); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reactions, moments…" aria-label="Search GIFs" /><button type="submit" disabled={loading || checkingGate || coolingDown}>{loading || checkingGate ? "…" : coolingDown ? `${secondsLeft}s` : "Search"}</button></form>
         <div className="gif-categories" role="group" aria-label="GIF categories">{GIF_CATEGORIES.map((item) => <button key={item.label} type="button" className={category === item.label ? "active" : ""} disabled={loading || checkingGate || coolingDown} onClick={() => { setCategory(item.label); setQuery(item.query); void search(item.query); }}>{item.label}</button>)}</div>
         {coolingDown && <div className="gif-picker-cooldown" role="status">{cooldownScope === "personal" ? "Your shared-search turn opens in" : "The next free shared search opens in"} <strong>{secondsLeft}s</strong>. {cooldownScope === "personal" ? "This session gets one free search every five minutes to give others a fair turn." : "The shared library is first-come-first-served, once every 45 seconds."}</div>}
         {checkingGate && <div className="gif-picker-message" role="status">Checking shared search window…</div>}
-        {error && <div className="gif-picker-message">{error}</div>}
+        {error && <div className="gif-picker-message" role="alert">{error}{/Firebase Anonymous sign-in is disabled/i.test(error) && <><span> Shared search will work again after Anonymous is enabled in Firebase Console → Authentication → Sign-in method. The Vercel <code>GIPHY_APP</code> key provides GIPHY access but cannot enable Firebase sign-in. Add a personal GIPHY key above to search now; making a photo meme still works without Firebase.</span><button type="button" className="btn ghost sm" disabled={checkingGate} onClick={() => setGateAttempt((value) => value + 1)}>{checkingGate ? "Checking…" : "Check Firebase again"}</button></>}</div>}
         {!error && <div className="gif-picker-grid">{items.map((item) => <div className="gif-picker-item" key={item.id}>
           <button type="button" className="gif-picker-select" title={`Add ${item.title}`} onClick={() => { onSelect({ url: item.url, preview: item.preview, title: item.title, sourceUrl: item.sourceUrl }); setOpen(false); }}><img src={item.preview} alt={item.title} loading="lazy" /></button>
           {item.sourceUrl && <a className="gif-picker-open" href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open ${item.title} on GIPHY`} title="Open on GIPHY">↗</a>}

@@ -69,6 +69,13 @@ export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { 
     });
   }
 
+  function useGeneratedMedia(url: string) {
+    setPfp(url);
+    setPreview(null);
+    setError(null);
+    window.setTimeout(() => document.getElementById("save-profile-button")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  }
+
   return (
     <div className="edit-profile">
       <div className="pfp-edit">
@@ -92,7 +99,7 @@ export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { 
         </div>
       </div>
 
-      {grokEnabled && <GrokProfileMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
+      {grokEnabled && <GrokProfileMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
 
       <label className="field">
         <span className="field-label">
@@ -120,8 +127,8 @@ export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { 
         <Link href="/me" className="btn ghost">
           Cancel
         </Link>
-        <button className="btn" onClick={save} disabled={!changed || pending || uploading || bioBytes > 256 || nameBytes > 32 || !displayName.trim()}>
-          {pending ? "Saving…" : "Save"}
+        <button id="save-profile-button" className="btn" onClick={save} disabled={!changed || pending || uploading || bioBytes > 256 || nameBytes > 32 || !displayName.trim()}>
+          {pending ? "Saving…" : "Save profile changes"}
         </button>
       </div>
     </div>

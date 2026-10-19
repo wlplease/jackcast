@@ -30,7 +30,7 @@ export async function firebaseAnonymousIdToken(appName = "jackcaster-giphy"): Pr
     } catch (error) {
       const code = (error as { code?: string })?.code;
       if (code === "auth/admin-restricted-operation" || code === "auth/operation-not-allowed") {
-        throw new Error("Firebase Anonymous sign-in is disabled. Enable Authentication → Sign-in method → Anonymous in your Firebase project; Jackcaster does not use Firebase Admin.");
+        throw new Error("Firebase Anonymous sign-in is disabled for this project. In Firebase Console, open Authentication → Sign-in method, enable Anonymous, and save. Jackcaster uses Firebase Web Auth and Firestore rules; it does not use Firebase Admin.");
       }
       throw new Error("Firebase could not start an anonymous session. Check that the Firebase web config matches the project and Anonymous sign-in is enabled.");
     }

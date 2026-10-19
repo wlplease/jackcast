@@ -42,6 +42,13 @@ export function CastCard({
           <time dateTime={cast.timestamp} title={new Date(cast.timestamp).toLocaleString()}>
             {timeAgo(cast.timestamp)}
           </time>
+          {cast.app && (cast.app.display_name || cast.app.username) && (
+            <span className="cast-client" title="Posting client">
+              via {cast.app.username
+                ? <Link href={`/u/${cast.app.username}`}>{cast.app.display_name || `@${cast.app.username}`}</Link>
+                : cast.app.display_name}
+            </span>
+          )}
           {cast.channel?.id && (
             <Link className="chan" href={`/c/${cast.channel.id}`}>
               /{cast.channel.id}

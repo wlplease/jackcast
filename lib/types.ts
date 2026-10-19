@@ -9,6 +9,12 @@ export type Author = {
   score?: number;
 };
 
+export type CastClient = {
+  fid: number;
+  username?: string;
+  display_name?: string | null;
+};
+
 export type EmbedView = {
   url?: string;
   metadata?: {
@@ -33,6 +39,8 @@ export type CastView = {
   text: string;
   timestamp: string;
   author: Author;
+  /** Farcaster client/app attribution returned by Neynar when available. */
+  app?: CastClient | null;
   embeds: EmbedView[];
   channel?: { id: string; name?: string } | null;
   parent_hash: string | null;

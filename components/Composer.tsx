@@ -15,7 +15,7 @@ import { GifMemePicker } from "./GifMemePicker";
 const MAX_EMBEDS = 2;
 
 type Photo = { id: string; preview: string; status: "uploading" | "done" | "error"; url?: string; error?: string };
-type GifSelection = { url: string; preview: string; title: string; sourceUrl?: string };
+type GifSelection = { url: string; preview: string; title: string };
 export type QuoteTarget = { hash: string; fid: number; author: Author; text: string };
 
 function uploadError(e: unknown): string {
@@ -273,7 +273,7 @@ export function Composer({
           </div>
         )}
 
-        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}{gif.sourceUrl && <a href={gif.sourceUrl} target="_blank" rel="noreferrer">Open GIF ↗</a>}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
+        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
 
 
         {quoted && (
