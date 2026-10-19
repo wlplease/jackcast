@@ -15,22 +15,6 @@ export default function LoginPage() {
           <span className="login-portal-system"><i aria-hidden="true">↟</i><span>JACKCASTER <b>/</b> PERSONAL CLIENT</span></span>
           <span className="login-portal-status"><i aria-hidden="true" />PRIVATE INSTANCE</span>
         </header>
-        <div className="login-layout">
-          <section className="login-card" aria-labelledby="login-title">
-            <div className="login-card-terminalbar"><span><i aria-hidden="true" />SECURE ACCESS TERMINAL</span><small>GATE 01</small></div>
-            <div className="wordmark"><Wordmark /></div>
-            <span className="login-card-kicker">MEMBER ACCESS <b>•</b> 01</span>
-            <h1 id="login-title">Welcome back</h1>
-            <p className="login-intro">Sign in to your private Jackcaster portal.</p>
-            <form action={action}>
-              <label className="sr-only" htmlFor="password">Password</label>
-              <input id="password" name="password" type="password" placeholder="Your password" autoComplete="current-password" required />
-              <button className="btn" type="submit" disabled={pending}>{pending ? "Signing in…" : "Enter Jackcaster"}<span aria-hidden="true">↗</span></button>
-              {error && <div className="form-error" role="alert" style={{ textAlign: "center" }}>{error}</div>}
-            </form>
-            <small className="login-card-note">Private access · Your password stays on this deployment</small>
-          </section>
-        </div>
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
           <span className="login-eyebrow">OPEN SOURCE · YOUR OWN RULES</span>
           <h2 id="login-deploy-title">Want your own Jackcaster?</h2>
@@ -40,22 +24,37 @@ export default function LoginPage() {
             <span><i className="login-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" /><path d="M3.5 19c.5-3 2.3-4.5 5.5-4.5s5 1.5 5.5 4.5M17 5.5a3 3 0 0 1 0 5.8M17 15c2.1.5 3.2 1.8 3.5 4" /></svg></i><b>02 / PEOPLE</b><strong>Your circles</strong><small>Friends and custom feeds</small></span>
             <span><i className="login-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5" /><rect x="14" y="4" width="6" height="6" rx="1.5" /><rect x="4" y="14" width="6" height="6" rx="1.5" /><path d="M14 17h6M17 14v6" /></svg></i><b>03 / DISCOVER</b><strong>More to explore</strong><small>Mini Apps, media, and tools</small></span>
           </div>
-          <div className="login-deploy-divider"><span>LAUNCH YOUR OWN PORTAL</span><i aria-hidden="true" /></div>
+          <div className="login-deploy-divider"><span>YOUR OWN COPY · 3 STEPS</span><i aria-hidden="true" /></div>
           <ol>
-            <li><span>1</span><div><strong>Set up your Vercel copy</strong><small>Add your Neynar API key and private app password, scroll down, then choose Deploy.</small></div></li>
-            <li><span>2</span><div><strong>Connect Farcaster after launch</strong><small>In your own app&apos;s setup, approve a Farcaster app signer. The recovery phrase is used in your browser for Farcaster approval; it is not an EVM wallet connection. Never paste it into Vercel.</small></div></li>
-            <li><span>3</span><div><strong>Add extras when you want</strong><small>Google AI and GIPHY keys are optional. Add them later in Vercel and redeploy.</small></div></li>
+            <li><span>1</span><div><strong>Deploy your copy</strong><small>Scroll to the Vercel button below and click it. Add your Neynar API key and a private app password, scroll down, then select <b>Deploy</b>.</small></div></li>
+            <li><span>2</span><div><strong>Connect Farcaster</strong><small>After launch, open your app&apos;s Setup and approve its Farcaster signer. Your recovery phrase signs that approval in your browser; this is separate from connecting an EVM wallet. Never enter the phrase in Vercel.</small></div></li>
+            <li><span>3</span><div><strong>Add optional keys later</strong><small>Add <code>GOOGLE_AI_API_KEY</code> for the AI digest or <code>GIPHY_APP</code> for shared GIF search in Vercel, then redeploy.</small></div></li>
           </ol>
           <a className="login-deploy-button" href={DEPLOY_URL} target="_blank" rel="noreferrer">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
-            Deploy your own on Vercel <span aria-hidden="true">↗</span>
+            Deploy to Vercel <span aria-hidden="true">↗</span>
           </a>
           <div className="login-source-links">
             <a href="https://github.com/wlplease/jackcast" target="_blank" rel="noreferrer">Jackcaster source <span aria-hidden="true">↗</span></a>
             <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noreferrer">Selfcaster original <span aria-hidden="true">↗</span></a>
           </div>
-          <small className="login-deploy-note">The recovery phrase is sensitive. Use it only on the Jackcaster deployment you control; never enter it on the Vercel form or an unfamiliar site.</small>
+          <small className="login-deploy-note">Only enter your recovery phrase on the Jackcaster deployment you control—not on the Vercel form or an unfamiliar site.</small>
         </aside>
+        <div className="login-layout">
+          <section className="login-card" aria-labelledby="login-title">
+            <div className="login-card-terminalbar"><span><i aria-hidden="true" />INSTANCE OWNER</span><small>PRIVATE</small></div>
+            <span className="login-card-kicker">OWNER SIGN-IN · NOT FOR DEPLOYERS</span>
+            <h1 id="login-title">Owner sign-in</h1>
+            <p className="login-intro">This sign-in is only for the owner of this Jackcaster instance.</p>
+            <form action={action}>
+              <label className="sr-only" htmlFor="password">Password</label>
+              <input id="password" name="password" type="password" placeholder="Your password" autoComplete="current-password" required />
+              <button className="btn" type="submit" disabled={pending}>{pending ? "Signing in…" : "Enter Jackcaster"}<span aria-hidden="true">↗</span></button>
+              {error && <div className="form-error" role="alert" style={{ textAlign: "center" }}>{error}</div>}
+            </form>
+            <small className="login-card-note">Private access · Your password stays on this deployment</small>
+          </section>
+        </div>
         <footer className="login-portal-footer"><span>JACKCASTER PORTAL</span><span>BUILT ON OPEN-SOURCE SELFCASTER <b>↟</b></span><span>YOUR FEED. YOUR RULES.</span></footer>
       </section>
     </main>
