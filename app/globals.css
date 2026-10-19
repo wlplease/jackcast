@@ -804,6 +804,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .grok-maker-status { overflow-wrap: anywhere; }
 .grok-maker-result { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); }
 .grok-maker-result img { width: 88px; height: 88px; flex: none; border-radius: 50%; object-fit: cover; background: var(--rule); }
+.grok-maker-result video { width: 88px; height: 88px; flex: none; border-radius: 50%; object-fit: cover; background: var(--rule); }
 .grok-maker-result > div { display: grid; justify-items: start; gap: 7px; min-width: 0; }
 @media (max-width: 560px) {
   .grok-maker { padding: 12px; }

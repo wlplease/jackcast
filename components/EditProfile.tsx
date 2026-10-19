@@ -72,7 +72,7 @@ export function EditProfile({ initial, fid, grokEnabled }: { initial: { displayN
   return (
     <div className="edit-profile">
       <div className="pfp-edit">
-        <img className="avatar xl" src={preview ?? pfp ?? ""} alt="" />
+        {/\.(?:mp4|webm)(?:[?#]|$)/i.test(preview ?? pfp) ? <video className="avatar xl avatar-motion" src={preview ?? pfp} autoPlay muted loop playsInline controls aria-label="Current animated profile image" /> : <img className="avatar xl" src={preview ?? pfp ?? ""} alt="" />}
         <div>
           <input
             ref={fileRef}
@@ -92,7 +92,7 @@ export function EditProfile({ initial, fid, grokEnabled }: { initial: { displayN
         </div>
       </div>
 
-      {grokEnabled && <GrokProfileMaker fid={fid} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
+      {grokEnabled && <GrokProfileMaker fid={fid} currentPfpUrl={initial.pfpUrl} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
 
       <label className="field">
         <span className="field-label">

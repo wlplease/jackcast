@@ -3,11 +3,11 @@ import type { NextRequest } from "next/server";
 
 // Public, cacheable copies of photos you uploaded to a *private* Vercel Blob store.
 // Other Farcaster clients can't open private-store links, so casts point here instead.
-// Only casts/ and pfp/ (things you've already posted publicly) are served. The middleware
+// Only casts/ and pfp/ (things you've chosen to publish) are served. The middleware
 // leaves /i/ outside the password gate on purpose.
 
 const PATH = /^(casts|pfp)\/[\w.-]{1,200}$/;
-const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp" };
+const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", mp4: "video/mp4", webm: "video/webm" };
 
 async function serve(req: NextRequest, path: string[], head: boolean) {
   const pathname = path.join("/");
