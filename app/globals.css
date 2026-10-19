@@ -153,8 +153,6 @@ main { flex: 1; min-width: 0; }
 .tab { flex: none; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-2); white-space: nowrap; }
 .tab:hover { color: var(--ink); border-color: var(--ink-3); }
 .tab[aria-current="page"] { background: var(--brand); color: var(--on-brand); border-color: var(--brand); font-weight: 500; }
-.tab.cast-tab { display: inline-flex; align-items: center; gap: 4px; border-color: var(--brand); color: var(--on-brand); background: var(--brand); font-weight: 700; }
-.tab.cast-tab span { font-size: 16px; line-height: 1; }
 
 /* Section header */
 .section-head { padding: 18px 18px 6px; display: flex; align-items: baseline; gap: 10px; }

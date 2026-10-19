@@ -78,7 +78,6 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
         </nav>
       </div>
       <nav className="tabs" aria-label="Feeds">
-        <Link href="/compose" className="tab cast-tab" aria-label="Write a cast"><span aria-hidden="true">＋</span> Cast</Link>
         {tab("/", feedNames.following)}
         {tab("/friends", feedNames.friends)}
         {tab("/top", feedNames.leaders)}
