@@ -2,6 +2,12 @@
 
 Jackcaster already gates app pages and API routes behind `APP_PASSWORD`, uses secure HTTP-only session cookies, applies baseline security headers, and keeps Neynar and the shared GIPHY key on the server. The app is also marked `noindex`. Search-engine instructions and legal notices are not security controls; actual access checks, rate limits, and edge challenges are.
 
+## Challenge login traffic
+
+The repository's [`vercel.json`](../vercel.json) applies Vercel's browser challenge to `/login` requests. This adds an edge check before the password form and login action reach the app. It does not affect other paths, and it does not replace the password or login attempt limit. After deploying, test sign-in from your normal browser and from the Farcaster in-app browser; a browser challenge may add a one-time checkpoint.
+
+Vercel also offers Bot Protection as a managed ruleset. If you enable it for the whole project, start in **Log** mode, inspect normal browser and Farcaster traffic, then switch to **Challenge** if legitimate traffic is handled cleanly. The path-specific `vercel.json` challenge remains focused on `/login`.
+
 ## Turn on Vercel's bot challenge
 
 The Vercel Bot Protection managed rule is off by default and is available on all plans. It challenges traffic that does not behave like a normal browser. Configure it in the Vercel dashboard for the Jackcaster project:
@@ -24,4 +30,4 @@ Challenge behavior is controlled in the Vercel dashboard, not by this repository
 
 ## Know the limits
 
-Login uses an atomic Upstash counter across serverless instances when the Upstash REST URL and token are configured. If Redis is absent or unavailable, it falls back to a process-local counter, so keep the Vercel edge challenge and add an edge rate limit on `/login` when your plan supports it. Rotate the app password and provider keys if you suspect they were exposed.
+Login uses an atomic Upstash counter across serverless instances when the Upstash REST URL and token are configured. If Redis is absent or unavailable, it falls back to a process-local counter, so keep the Vercel edge challenge and consider a dashboard WAF rate-limit rule for `/login` as an additional control. Rotate the app password and provider keys if you suspect they were exposed.
