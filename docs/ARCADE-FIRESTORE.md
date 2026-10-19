@@ -1,20 +1,62 @@
-# Arcade leaderboard: Firebase setup
+# Jackcaster arcade weekly leaderboard
 
-The Jumping Jacks game currently saves personal bests and a local leaderboard in the player's browser. It does **not** write scores to Firestore. The app signs users in with its own shared app-password cookie and Farcaster signer; that is not Firebase Authentication. Firestore Security Rules cannot verify that Jackcaster session or prove that a submitted FID belongs to the browser user.
+The game uses an isolated Firestore path: `jackcaster_arcade/weeks/{week}/scores/{firebaseUid}`. It does not read or write any other app's collections. Personal bests remain in local storage. When Firebase is configured, the weekly top 20 is shared and each anonymous Firebase account can write only its own score document.
 
-Do not deploy a rule such as `allow write: if true`, and do not put Firebase Admin credentials or service-account JSON in the repo or browser. Both would let anyone forge scores or overwrite another player's row.
+## Firebase setup
 
-## Requirements before enabling shared scores
+1. In Firebase Console, create/select the project and register a Web app.
+2. Under **Authentication → Sign-in method**, enable **Anonymous**.
+3. Under **Firestore Database → Rules**, merge the rule block below into the existing rules. Keep existing app rules intact. Check for any broad wildcard rule that grants writes: matching Firestore `allow` rules are combined with OR, so a permissive catch-all would also grant access to this collection.
+4. In the Jackcaster Vercel project, add these public Firebase Web App values to the app environment (Production and Preview as desired), then redeploy when you choose. These values are public client config, not service-account credentials:
 
-Choose one identity bridge:
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`
 
-1. Add Firebase Authentication (for example, anonymous Firebase Auth) and bind one score document to `request.auth.uid`. This prevents users from changing another user's row but does not prove the Firebase user owns a Farcaster FID. Display a Firebase-generated player name, or add a server-verified link between Firebase UID and Farcaster FID.
-2. Implement a trusted server endpoint that verifies a signed Firebase ID token, derives the FID from a server-verified account link, rate limits submissions, and writes a bounded best score with server credentials held only in server environment variables. If using this option, Firebase rules can deny all client writes.
+   No deploy is triggered by this code change. The game falls back to the personal/device leaderboard until all four values are available.
 
-Only after choosing the identity model should the shared weekly board UI and rules be activated. Rules/indexes depend on the final document schema; avoid pasting a permissive example into production.
+## Rules to merge
 
-## Firebase web config
+Paste this `match` block inside your existing `service cloud.firestore { match /databases/{database}/documents { ... } }`. Do not replace the rest of your shared app rules with this block.
 
-Firebase web config is public and is not an admin credential. If using Firebase Auth later, provide the web app config through `NEXT_PUBLIC_FIREBASE_CONFIG` as a JSON object. Never include a service-account key, private key, or Admin SDK credential in this variable.
+```firestore
+match /jackcaster_arcade/weeks/{week}/scores/{uid} {
+  function signedIn() {
+    return request.auth != null;
+  }
 
-No composite index is needed for the current local-only game. For a future shared board, sort at most 100 records by score descending for a selected week; a collection-group/schema change may require a Firestore composite index. Create the index Firestore requests after the final schema is implemented and verified.
+  function validScore() {
+    return request.resource.data.keys().hasAll(['fid', 'username', 'score', 'playedAt'])
+      && request.resource.data.keys().hasOnly(['fid', 'username', 'score', 'playedAt'])
+      && request.resource.data.fid is int
+      && request.resource.data.fid > 0
+      && request.resource.data.username is string
+      && request.resource.data.username.size() > 0
+      && request.resource.data.username.size() <= 32
+      && request.resource.data.score is int
+      && request.resource.data.score >= 0
+      && request.resource.data.score <= 1000
+      && request.resource.data.playedAt == request.time;
+  }
+
+  allow get, list: if signedIn();
+  allow create: if signedIn()
+    && uid == request.auth.uid
+    && validScore();
+  allow update: if signedIn()
+    && uid == request.auth.uid
+    && validScore()
+    && request.resource.data.fid == resource.data.fid
+    && request.resource.data.username == resource.data.username
+    && request.resource.data.score >= resource.data.score
+    && request.time > resource.data.playedAt + duration.value(10, 's');
+  allow delete: if false;
+}
+```
+
+## Security limits
+
+This protects other users' documents, disallows deletes, limits score/field shapes, preserves a submitted best score, and throttles updates. Anonymous Firebase Auth does **not** prove the row's FID belongs to that person, and client-side game scores cannot be made cheat-proof with Firestore rules. Treat this as a casual, community-reported board, not a verified competition. A verified leaderboard needs a server endpoint that validates Farcaster identity and gameplay/rate limits before writing; never place a Firebase Admin service-account key in client code or `NEXT_PUBLIC_*` variables.
+
+The collection query orders by score descending and limits to 20. It needs no composite index. Keep each app's data under its own named collection path to avoid collisions with the shared project.

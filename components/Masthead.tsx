@@ -83,8 +83,8 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
         {tab("/top", feedNames.leaders)}
         {tab("/recasts", feedNames.recasts)}
         {tab("/mini-apps", feedNames.miniApps)}
-        {tab("/circle", customName)}
         {tab("/media", feedNames.media)}
+        {tab("/circle", customName)}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
       {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>

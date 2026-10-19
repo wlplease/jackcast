@@ -8,12 +8,18 @@ const FALLBACK =
   );
 
 export function Avatar({ user, size }: { user: Author; size?: "sm" }) {
+  const src = user.pfp_url || FALLBACK;
+  const videoPfp = /\.(?:mp4|webm)(?:[?#]|$)/i.test(src);
+  if (videoPfp) {
+    return <video className={`avatar${size === "sm" ? " sm" : ""} avatar-motion`} src={src} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />;
+  }
   return (
     <img
       className={`avatar${size === "sm" ? " sm" : ""}`}
-      src={user.pfp_url || FALLBACK}
+      src={src}
       alt=""
       loading="lazy"
+      decoding="async"
       referrerPolicy="no-referrer"
     />
   );

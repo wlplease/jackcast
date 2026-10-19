@@ -4,7 +4,15 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { markAllNotificationsRead } from "@/app/(main)/notifications/actions";
 
-export function NotificationControls({ count, newestUnseenAt, canMarkRead }: { count: number; newestUnseenAt?: string | null; canMarkRead: boolean }) {
+function countNewerUnread(marker: number) {
+  return [...document.querySelectorAll<HTMLElement>(".note.unseen[data-notification-time]")]
+    .filter((item) => {
+      const timestamp = Date.parse(item.dataset.notificationTime ?? "");
+      return Number.isFinite(timestamp) && timestamp > marker;
+    }).length;
+}
+
+export function NotificationControls({ count, canMarkRead }: { count: number; canMarkRead: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
@@ -19,17 +27,16 @@ export function NotificationControls({ count, newestUnseenAt, canMarkRead }: { c
         const timestamp = Date.parse(item.dataset.notificationTime ?? "");
         if (Number.isFinite(timestamp) && timestamp <= marker) item.classList.remove("unseen");
       });
-      const newest = newestUnseenAt ? Date.parse(newestUnseenAt) : Number.NaN;
-      if (count > 0 && (!Number.isFinite(newest) || newest <= marker)) setVisibleCount(0);
-      else if (newest > marker) clearedAt.current = 0;
+      setVisibleCount(Math.min(count, countNewerUnread(marker)));
     } catch {}
-  }, [count, newestUnseenAt]);
+  }, [count]);
   useEffect(() => {
-    const newest = newestUnseenAt ? Date.parse(newestUnseenAt) : Number.NaN;
-    if (clearedAt.current && count > 0 && (!Number.isFinite(newest) || newest <= clearedAt.current)) return;
-    if (count === 0 || newest > clearedAt.current) clearedAt.current = 0;
+    if (clearedAt.current) {
+      setVisibleCount(Math.min(Math.max(0, count), countNewerUnread(clearedAt.current)));
+      return;
+    }
     setVisibleCount(Math.max(0, count));
-  }, [count, newestUnseenAt]);
+  }, [count]);
   useEffect(() => {
     const onRead = (event: Event) => {
       const timestamp = Number((event as CustomEvent<number>).detail);
@@ -51,11 +58,9 @@ export function NotificationControls({ count, newestUnseenAt, canMarkRead }: { c
   }, []);
   useEffect(() => {
     const onCount = (event: Event) => {
-      const detail = (event as CustomEvent<{ count?: number; newestUnseenAt?: string | null }>).detail;
+      const detail = (event as CustomEvent<{ count?: number }>).detail;
       const next = detail?.count;
-      const newest = detail?.newestUnseenAt ? Date.parse(detail.newestUnseenAt) : Number.NaN;
-      if (!Number.isSafeInteger(next) || (next as number) < 0 || (clearedAt.current && (next as number) > 0 && (!Number.isFinite(newest) || newest <= clearedAt.current))) return;
-      if ((next as number) === 0 || newest > clearedAt.current) clearedAt.current = 0;
+      if (!Number.isSafeInteger(next) || (next as number) < 0) return;
       setVisibleCount(next as number);
     };
     window.addEventListener("jackcaster:notifications-count", onCount);

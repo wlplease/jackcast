@@ -314,8 +314,16 @@ html[data-previews="off"] .cast .embeds { display: none; }
 /* Misc */
 .wordmark-secret-wrap { position: relative; display: inline-flex; align-items: center; min-width: 0; }
 .wordmark-secret-wrap > .wordmark-mark { cursor: pointer; user-select: none; }
-.wordmark-arcade-link { position: absolute; z-index: 30; top: calc(100% + 12px); left: 0; display: flex; align-items: center; gap: 10px; white-space: nowrap; padding: 10px 14px; border-radius: 14px; background: var(--ink); color: var(--paper); box-shadow: 0 12px 36px #0003; font-size: 13px; font-weight: 750; animation: arcade-pop .18s ease-out; }
-.wordmark-arcade-link span { color: color-mix(in srgb, var(--paper) 65%, transparent); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.wordmark-arcade-link { position: absolute; z-index: 30; top: calc(100% + 12px); left: 0; display: grid; gap: 5px; min-width: 240px; max-width: min(320px, calc(100vw - 28px)); padding: 12px 14px; border: 0; border-radius: 14px; background: var(--ink); color: var(--paper); box-shadow: 0 12px 36px #0003; font: inherit; font-size: 13px; font-weight: 750; text-align: left; cursor: pointer; animation: arcade-pop .18s ease-out; }
+.wordmark-arcade-link span { color: color-mix(in srgb, var(--paper) 72%, transparent); font-size: 11px; font-weight: 450; line-height: 1.4; }
+.wordmark-arcade-link b { color: #ade8c9; font-size: 12px; }
+.arcade-discovery { position: fixed; z-index: 90; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(14px, env(safe-area-inset-right, 0px)); display: grid; grid-template-columns: 32px minmax(0, 1fr) auto 24px; align-items: center; gap: 10px; width: min(440px, calc(100vw - 28px)); padding: 12px; border: 1px solid #75bf9b; border-radius: 16px; color: #173d2c; background: #f2ffe9; box-shadow: 0 14px 38px #112b2133; animation: arcade-pop .2s ease-out; }
+.arcade-discovery-star { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; color: #fff8d0; background: #27785e; font-size: 21px; }
+.arcade-discovery > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.arcade-discovery strong { font-size: 13px; }
+.arcade-discovery small { color: #527263; font-size: 11px; line-height: 1.35; }
+.arcade-discovery > a { color: #176349; font-size: 12px; font-weight: 750; white-space: nowrap; }
+.arcade-discovery > button { padding: 2px; border: 0; color: #527263; background: transparent; font-size: 20px; cursor: pointer; }
 @keyframes arcade-pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
 .arcade-page { --arcade-ink: #142723; --arcade-green: #2c8a70; min-height: calc(100dvh - 108px); padding: 28px clamp(16px, 4vw, 52px) 22px; color: var(--arcade-ink); background: radial-gradient(ellipse at 12% 4%, #bce9cf 0, transparent 36%), radial-gradient(ellipse at 91% 60%, #f5d8a2 0, transparent 31%), linear-gradient(150deg, #f7f4e7 0%, #e9f1dc 55%, #d2e8de 100%); }
 .arcade-head { max-width: 1040px; margin: 0 auto 22px; position: relative; }
@@ -346,6 +354,16 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .arcade-jack { position: absolute; z-index: 3; display: grid; place-items: center; width: 66px; height: 66px; padding: 0; border: 2px solid #fff; border-radius: 23px; background: linear-gradient(145deg, #4ab88a, #27785e); color: #f7ffc8; font-family: var(--display); font-weight: 900; line-height: 1; text-shadow: 0 3px 0 #185940; box-shadow: 0 6px 0 #185940, 0 10px 20px #123a2534; cursor: crosshair; touch-action: manipulation; user-select: none; animation: jack-hop .2s ease-out; }
 @keyframes jack-hop { from { opacity: .4; scale: .65; } to { opacity: 1; scale: 1; } }
 .arcade-jack:active { translate: 0 4px; box-shadow: 0 2px 0 #185940, 0 5px 11px #123a2534; }
+.arcade-jack.gold { border-color: #fffbe5; color: #fff8bf; background: linear-gradient(145deg, #f5c84c, #e28a25); text-shadow: 0 3px 0 #a85d17; box-shadow: 0 6px 0 #a85d17, 0 0 22px #ffdb638a, 0 10px 20px #123a2534; animation: gold-glint .7s ease-in-out infinite alternate; }
+@keyframes gold-glint { to { filter: brightness(1.2); scale: 1.07; } }
+.arcade-tools { display: grid; gap: 8px; padding: 0 14px 14px; }
+.arcade-tools .arcade-hint { margin: 0; padding: 0 4px; }
+.arcade-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.arcade-secret-count { color: #71877a; font: 10px var(--mono); }
+.arcade-clues { width: fit-content; max-width: 100%; margin: 0 auto; padding: 8px 11px; border: 1px solid #426f5b24; border-radius: 10px; color: #557464; background: #f8f8ee; font-size: 11px; }
+.arcade-clues summary { cursor: pointer; font-weight: 700; }
+.arcade-clues p { margin: 7px 0 3px; }
+.arcade-clues .linkish { font-size: 11px; }
 .arcade-hint { text-align: center; padding: 0 10px 12px; color: #71877a; font-size: 12px; }
 .arcade-hint kbd { padding: 2px 6px; border: 1px solid #9cae9f; border-radius: 5px; background: #fff; font: 10px var(--mono); }
 .arcade-board { padding: 17px; }

@@ -55,17 +55,12 @@ export default async function NotificationsPage({
   const unseenCount = Number.isSafeInteger(res.unseen_notifications_count) && res.unseen_notifications_count >= 0
     ? res.unseen_notifications_count
     : 0;
-  const newestUnseenAt = res.notifications
-    .filter((notification) => !notification.seen)
-    .map((notification) => notification.most_recent_timestamp)
-    .filter((timestamp): timestamp is string => typeof timestamp === "string")
-    .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
 
   return (
     <>
       <div className="section-head">
         <h1>Notifications</h1>
-        <NotificationControls count={unseenCount} newestUnseenAt={newestUnseenAt} canMarkRead={Boolean(signerUuid)} />
+        <NotificationControls count={unseenCount} canMarkRead={Boolean(signerUuid)} />
       </div>
       {res.notifications.map((n, i) => {
         const users: Author[] =

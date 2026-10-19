@@ -17,17 +17,15 @@ export function NotificationLink({ icon }: { icon: React.ReactNode }) {
       if (!force && Date.now() - lastFetch.current < 180_000) return;
       lastFetch.current = Date.now();
       try {
-        const response = await fetch("/api/notifications/count", { cache: "no-store" });
+        const query = clearedAt.current ? `?after=${encodeURIComponent(clearedAt.current)}` : "";
+        const response = await fetch(`/api/notifications/count${query}`, { cache: "no-store" });
         if (!response.ok) return;
-        const result = await response.json() as { count?: number; newestUnseenAt?: string | null };
+        const result = await response.json() as { count?: number; countAfter?: number | null };
         if (active && typeof result.count === "number") {
-          const newestUnseenAt = result.newestUnseenAt ? Date.parse(result.newestUnseenAt) : Number.NaN;
-          // Ignore stale pre-clear counts, but allow any notification created after the clear.
-          if (clearedAt.current && result.count > 0 && (!Number.isFinite(newestUnseenAt) || newestUnseenAt <= clearedAt.current)) return;
-          if (result.count === 0 || newestUnseenAt > clearedAt.current) clearedAt.current = 0;
-          const nextCount = Math.max(0, result.count);
+          if (clearedAt.current && !Number.isSafeInteger(result.countAfter)) return;
+          const nextCount = Math.max(0, clearedAt.current ? result.countAfter as number : result.count);
           setCount(nextCount);
-          window.dispatchEvent(new CustomEvent("jackcaster:notifications-count", { detail: { count: nextCount, newestUnseenAt: result.newestUnseenAt ?? null } }));
+          window.dispatchEvent(new CustomEvent("jackcaster:notifications-count", { detail: { count: nextCount } }));
         }
       } catch {}
     };
