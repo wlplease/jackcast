@@ -4,7 +4,7 @@
 
 ## Base mainnet deployment
 
-The deployed contract address supplied for Jackcaster is `0xf3f1eF40Bf3B3416c7D9Ae896e166634AB433bb1` on Base Mainnet (chain ID `8453`). The complete ABI and address are saved in [`deployments/base-mainnet.json`](deployments/base-mainnet.json). Verify the deployed bytecode and constructor owner on BaseScan before connecting a wallet or accepting payments.
+The deployed contract address supplied for Jackcaster is `0xf3f1eF40bF3b3416c7D9Ae896e166634AB433bb1` on Base Mainnet (chain ID `8453`). The complete ABI and address are saved in [`deployments/base-mainnet.json`](deployments/base-mainnet.json). The Jackcaster app already uses this contract; deploying another contract is not required to enable the existing studio. At the last Base read (**2026-10-19**), the contract returned Base USDC, a **1 USDC** price, **3 paid + 2 bonus credits**, and treasury `0x76bC75Ef2F1f0F25e078641910D8E23A430204F5`; the owner can change future settings. Purchases transfer USDC to that shared treasury, while xAI generation is billed to the API account configured on the individual Jackcaster deployment. Verify current settings on [BaseScan](https://basescan.org/address/0xf3f1eF40bF3b3416c7D9Ae896e166634AB433bb1) before connecting a wallet or accepting payments.
 ## Remix deployment
 
 1. Open [Remix](https://remix.ethereum.org/) and create `JackcasterAnimationCredits.sol`.

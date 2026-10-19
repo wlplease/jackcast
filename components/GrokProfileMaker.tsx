@@ -11,6 +11,13 @@ type EthereumWindow = Window & { ethereum?: EIP1193Provider };
 const baseClient = createPublicClient({ chain: base, transport: http("https://mainnet.base.org") });
 const USDC_DECIMALS = 6;
 
+const animationStyles = [
+  { id: "auto", title: "Auto", note: "Natural, polished motion", icon: "✦", motion: "Create a premium profile animation with subtle natural motion: a gentle expression shift, soft light movement, and a slight breeze. Keep the face and identity unchanged, centered, crisp, and recognizable in a small circular avatar." },
+  { id: "glow", title: "Soft glow", note: "Warm light, calm shimmer", icon: "☼", motion: "Add a soft warm halo and delicate light shimmer around the portrait. Keep effects behind the subject, understated and elegant." },
+  { id: "orbit", title: "Cosmic orbit", note: "Tiny stars, slow drift", icon: "✧", motion: "Add a few tiny tasteful stars and a slow, graceful cosmic light orbit in the background. Keep all effects subtle and away from the face." },
+  { id: "bloom", title: "Bloom", note: "Colorful, gentle energy", icon: "❋", motion: "Add a gentle colorful bloom of light and a few floating petals or particles in the background, with calm graceful motion." },
+] as const;
+
 async function getProvider(): Promise<EIP1193Provider | undefined> {
   try { if (await sdk.isInMiniApp()) return await sdk.wallet.getEthereumProvider() as EIP1193Provider; }
   catch { /* Fall back to an installed browser wallet. */ }
@@ -51,6 +58,7 @@ async function send(provider: EIP1193Provider, from: Address, to: Address, data:
 }
 
 export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse }: { fid: number; farcasterSignedIn: boolean; currentPfpUrl: string; onUse: (url: string) => void }) {
+  const [style, setStyle] = useState<(typeof animationStyles)[number]["id"]>("auto");
   const [prompt, setPrompt] = useState("");
   const [credits, setCredits] = useState<bigint | null>(null);
   const [price, setPrice] = useState<bigint | null>(null);
@@ -66,6 +74,8 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
   const currentPfpIsMp4 = /\.mp4(?:$|[?#])/i.test(currentPfpUrl);
   const currentPfpIsWebm = /\.webm(?:$|[?#])/i.test(currentPfpUrl);
   const currentPfpIsGif = /\.gif(?:$|[?#])/i.test(currentPfpUrl);
+  const selectedStyle = animationStyles.find((item) => item.id === style) ?? animationStyles[0];
+  const finalPrompt = [selectedStyle.motion, prompt.trim()].filter(Boolean).join(" Extra direction: ");
 
   useEffect(() => {
     try {
@@ -120,12 +130,12 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
   async function generate(mode: "image" | "animate" | "upgrade", sourceImageUrl = currentPfpUrl, sourceRequestId?: string) {
     if (busyRef.current) return;
     busyRef.current = true;
-    setBusy(true); setMessage(""); setGeneratedUrl("");
+    setBusy(true); setMessage("");
     try {
       if (mode !== "image" && !farcasterSignedIn) throw new Error("Connect your Farcaster account on this device before creating or upgrading an animation.");
       const state = await refresh(walletAddress ?? undefined);
       if (state.balance < 1n) throw new Error("No credits in this wallet. Buy a pack to create more profile media.");
-      if (!prompt.trim()) throw new Error("Describe the profile image or motion you want first.");
+      if (mode === "image" && !prompt.trim()) throw new Error("Add a short description for the new profile artwork.");
       if (mode !== "image" && !sourceImageUrl) throw new Error(mode === "upgrade" ? "Choose an existing animation to upgrade." : "Set a profile image before animating it.");
       const requestId = toHex(crypto.getRandomValues(new Uint8Array(32))) as Hex;
       setMessage("Confirm spending one profile-media credit in your wallet…");
@@ -134,7 +144,7 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       const authorization = `Jackcaster Grok profile ${mode}\nFID: ${fid}\nWallet: ${state.account.toLowerCase()}\nRequest: ${requestId.toLowerCase()}\nTransaction: ${txHash.toLowerCase()}`;
       const signature = await state.provider.request({ method: "personal_sign", params: [toHex(authorization), state.account] }) as Hex;
       setMessage(mode === "animate" ? "Credit confirmed. Grok is animating your profile image…" : "Credit confirmed. Grok is creating your profile image…");
-      const response = await fetch("/api/grok/profile-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: state.account, requestId, transactionHash: txHash, signature, prompt: prompt.trim(), mode, sourceImageUrl: mode !== "image" ? sourceImageUrl : undefined, sourceRequestId: mode !== "image" ? sourceRequestId : undefined }) });
+      const response = await fetch("/api/grok/profile-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: state.account, requestId, transactionHash: txHash, signature, prompt: mode === "image" ? prompt.trim() : finalPrompt, mode, sourceImageUrl: mode !== "image" ? sourceImageUrl : undefined, sourceRequestId: mode !== "image" ? sourceRequestId : undefined }) });
       const result = await response.json() as { mediaUrl?: string; mediaType?: "image" | "video"; requestId?: string; error?: string };
       if (!response.ok || !result.mediaUrl || !result.mediaType) throw new Error(result.error || "Generation failed. This onchain attempt has been consumed.");
       setGeneratedUrl(result.mediaUrl);
@@ -171,20 +181,24 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       </section>
     </div>}
     <section className="grok-maker" id="grok-profile-studio" aria-label="AI profile media generator">
-    <div className="grok-maker-heading"><div><strong>Profile studio</strong><p className="field-hint">Create art, animate your photo, or refine an animation.</p></div><span className="meta">Base · USDC</span></div>
+    <div className="grok-maker-heading"><div><strong>Profile studio</strong><p className="field-hint">Choose a look, preview your animation, and save only when it feels right.</p></div><span className="meta">Base · USDC</span></div>
     <button type="button" className="grok-offer-reopen" onClick={() => setIntroOpen(true)}>How it works</button>
-    <label className="field"><span className="field-label">Describe the image or motion</span><textarea className="text-input" rows={3} maxLength={500} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="A friendly jackalope astronaut, warm paper-cut illustration, mint and coral palette…" /></label>
+    <fieldset className="grok-style-picker" aria-label="Choose an animation style">
+      <legend>Pick an animation style <span className="meta">Auto is ready to use</span></legend>
+      <div className="grok-style-grid">{animationStyles.map((item) => <button key={item.id} type="button" className={`grok-style-card${style === item.id ? " selected" : ""}`} aria-pressed={style === item.id} onClick={() => setStyle(item.id)}><span className="grok-style-icon" aria-hidden="true">{item.icon}</span><span><strong>{item.title}</strong><small>{item.note}</small></span></button>)}</div>
+    </fieldset>
+    <label className="field"><span className="field-label">Optional custom touch</span><textarea className="text-input" rows={2} maxLength={300} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Add a color, mood, or small detail—or leave blank for Auto." /></label>
     <div className="grok-maker-actions">
       <button type="button" className="btn ghost sm" disabled={busy} onClick={() => void connectOrRefresh()}>{busy ? "Working…" : walletAddress ? "Refresh credits" : "Connect wallet"}</button>
       <button type="button" className="btn ghost sm" disabled={busy || !walletAddress || credits === null || price === null || pack === null} onClick={() => void buy()}>{busy ? "Waiting…" : `Buy ${pack ?? "…"} credits · ${price === null ? "…" : `${formatUnits(price, USDC_DECIMALS)} USDC`}`}</button>
-      <button type="button" className="btn sm" disabled={busy || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("image")}>{busy ? "Creating…" : "Create image · 1 credit"}</button>
+      <button type="button" className="btn sm" disabled={busy || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("image")}>{busy ? "Creating…" : "Create new artwork · 1 credit"}</button>
       {currentPfpUrl && (currentPfpIsMp4
-        ? <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("upgrade")}>{busy ? "Creating…" : "Upgrade current MP4 · 1 credit"}</button>
+        ? <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("upgrade")}>{busy ? "Creating…" : "Upgrade current MP4 · 1 credit"}</button>
         : currentPfpIsWebm || currentPfpIsGif
           ? <button type="button" className="btn sm" disabled title={currentPfpIsGif ? "Grok video generation needs a still PNG, JPEG, or WebP image." : "Grok video editing accepts MP4 source videos."}>{currentPfpIsGif ? "GIF source unsupported" : "WebM upgrade unavailable"}</button>
-          : <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("animate")}>{busy ? "Creating…" : "Animate profile · 1 credit"}</button>)}
-      {generatedUrl && generatedType === "image" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("animate", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Animate this image · 1 credit"}</button>}
-      {generatedUrl && generatedType === "video" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || !prompt.trim() || credits === null || credits < 1n} onClick={() => void generate("upgrade", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Upgrade this animation · 1 credit"}</button>}
+        : <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("animate")}>{busy ? "Creating…" : "Animate my profile · 1 credit"}</button>)}
+      {generatedUrl && generatedType === "image" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("animate", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Animate this image · 1 credit"}</button>}
+      {generatedUrl && generatedType === "video" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("upgrade", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Try another look · 1 credit"}</button>}
     </div>
     {credits !== null && <p className="field-hint">Balance: {credits.toString()} · {walletAddress?.slice(0, 6)}…{walletAddress?.slice(-4)}</p>}
     {!walletAddress && <p className="field-hint">Connect Base to see your live price and credits.</p>}
@@ -192,7 +206,7 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
     {currentPfpIsWebm && <p className="field-hint grok-maker-status" role="note">Animation upgrades currently accept MP4 source video. This WebM will not be sent or charged for an upgrade.</p>}
     {!farcasterSignedIn && <p className="field-hint grok-maker-status" role="note">Connect your Farcaster account on this device to animate or upgrade a profile video. Buying credits and image creation do not enable animation access.</p>}
     {message && <p className="field-hint grok-maker-status" role="status">{message}</p>}
-    {generatedUrl && <div className="grok-maker-result">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="Animated profile preview" /> : <img src={generatedUrl} alt="Generated profile image preview" />}<div><strong>{generatedType === "video" ? "Animation" : "Image"} ready</strong><p className="field-hint">Preview, then apply and save your profile.</p><button type="button" className="btn sm" onClick={() => onUse(generatedUrl)}>Use this</button></div></div>}
+    {generatedUrl && <div className="grok-maker-result"><div className="grok-maker-preview">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="Animated profile preview" /> : <img src={generatedUrl} alt="Generated profile image preview" />}</div><div><span className="grok-result-kicker">YOUR PREVIEW</span><strong>{generatedType === "video" ? "Your animation is ready" : "Your artwork is ready"}</strong><p className="field-hint">It won’t change your Farcaster profile until you apply it and save.</p><button type="button" className="btn sm" disabled={busy} onClick={() => onUse(generatedUrl)}>Use on my profile</button></div></div>}
     <p className="field-hint">1 credit per try, even if it fails. Your prompt and image go to xAI.</p>
     </section>
   </>;

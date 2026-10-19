@@ -7,7 +7,7 @@ import type { GeometryCollection, Topology } from "topojson-specification";
 import { firebaseAnonymousIdToken } from "@/lib/firebase-anonymous-client";
 
 type City = { id: number; name: string; lat: number; lon: number; countryCode: string; country: string };
-type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; cityId: number; city: string; country: string; updatedAt?: { toDate?: () => Date } };
+type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; cityId: number; city: string; country: string; locationMethod?: "gps"; updatedAt?: { toDate?: () => Date } };
 type PinRow = Pin & { id: string };
 type WorldTopology = Topology<{ countries: GeometryCollection }>;
 
@@ -36,7 +36,7 @@ function nearestCity(cities: City[], lat: number, lon: number): { city: City; di
     const distance = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     if (distance < bestDistance) { best = city; bestDistance = distance; }
   }
-  return best && bestDistance <= 60 ? { city: best, distanceKm: bestDistance } : null;
+  return best && bestDistance <= 15 ? { city: best, distanceKm: bestDistance } : null;
 }
 
 export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number; username: string; displayName: string; pfpUrl: string }) {
@@ -44,10 +44,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   const [topology, setTopology] = useState<WorldTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
   const [myPin, setMyPin] = useState<PinRow | null>(null);
-  const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [reviewPin, setReviewPin] = useState(false);
-  const [locationMethod, setLocationMethod] = useState<"gps" | "city">("city");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
@@ -55,15 +53,6 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   const citiesById = useMemo(() => new Map(cities.map((city) => [city.id, city])), [cities]);
   const visiblePins = useMemo(() => pins.filter((pin) => citiesById.has(pin.cityId)), [pins, citiesById]);
   const visibleMyPin = myPin && citiesById.has(myPin.cityId) ? myPin : null;
-  const suggestions = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    if (query.length < 2 || selectedCity) return [];
-    return cities
-      .filter((city) => `${city.name}, ${city.country}`.toLocaleLowerCase().includes(query))
-      .sort((a, b) => Number(!a.name.toLocaleLowerCase().startsWith(query)) - Number(!b.name.toLocaleLowerCase().startsWith(query)))
-      .slice(0, 8);
-  }, [cities, search, selectedCity]);
-
   useEffect(() => {
     let active = true;
     let stop = () => {};
@@ -90,7 +79,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
         stop = onSnapshot(query(collection(db, "jackcaster_map", "pins", "pins"), orderBy("updatedAt", "desc"), limit(300)), (snapshot) => {
           if (!active) return;
           const allRows = snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Pin) }));
-          const rows = allRows.filter((item) => Number.isInteger(item.cityId) && Number.isInteger(item.fid) && Boolean(item.username && item.city && item.country));
+          const rows = allRows.filter((item) => item.locationMethod === "gps" && Number.isInteger(item.cityId) && Number.isInteger(item.fid) && Boolean(item.username && item.city && item.country));
           setPins(rows);
           setMyPin(allRows.find((item) => item.id === uid) ?? null);
           setReady(true);
@@ -103,7 +92,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   }, []);
 
   async function savePin() {
-    if (!selectedCity) { setError("Choose a verified city from the list first."); return; }
+    if (!selectedCity) { setError("Use GPS to find a nearby city before sharing a pin."); return; }
     setBusy(true); setError("");
     try {
       const firebaseConfig = config();
@@ -114,32 +103,37 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       const uid = getAuth(app).currentUser?.uid;
       if (!uid) throw new Error("Firebase could not verify this browser session.");
       const db = getFirestore(app);
-      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), cityId: selectedCity.id, city: selectedCity.name.slice(0, 80), country: selectedCity.country.slice(0, 80), updatedAt: serverTimestamp() as Pin["updatedAt"] };
+      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), cityId: selectedCity.id, city: selectedCity.name.slice(0, 80), country: selectedCity.country.slice(0, 80), locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
       await setDoc(doc(db, "jackcaster_map", "pins", "pins", uid), pin);
-      setSearch(""); setSelectedCity(null); setReviewPin(false); setMyPin({ ...pin, id: uid });
+      setSelectedCity(null); setReviewPin(false); setMyPin({ ...pin, id: uid });
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your city pin."); }
     finally { setBusy(false); }
   }
 
   function useLocation() {
-    if (!navigator.geolocation) { setError("This browser does not provide location. Search for a city in the verified city list instead."); return; }
+    if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
     setBusy(true); setError("");
     navigator.geolocation.getCurrentPosition((position) => {
       // The exact coordinates are used only for a local lookup and are discarded before any network request.
+      if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy > 1_000) {
+        setBusy(false);
+        setError("GPS accuracy is too low to choose a city (over 1 km). Enable precise location and try again. No location was saved.");
+        return;
+      }
       const match = nearestCity(cities, position.coords.latitude, position.coords.longitude);
       if (match) {
         setSelectedCity(match.city);
-        setSearch(`${match.city.name}, ${match.city.country}`);
-        setLocationMethod("gps");
         setReviewPin(true);
       } else {
-        setError("No listed city was found within 60 km. Search for a city from the verified list instead.");
+        setSelectedCity(null);
+        setReviewPin(false);
+        setError("No listed city was found within 15 km of your GPS location. No location was saved.");
       }
       setBusy(false);
     }, (reason) => {
       setBusy(false);
-      setError(reason.code === reason.PERMISSION_DENIED ? "Location permission was declined. Search for a city from the verified list instead." : "Could not read your location. Search for a city from the verified list instead.");
-    }, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 12_000 });
+      setError(reason.code === reason.PERMISSION_DENIED ? "Location permission was declined. Your location was not changed." : "Could not read a GPS location. Your location was not changed; try again or leave it unset.");
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 });
   }
 
   async function removePin() {
@@ -169,7 +163,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     }
     return [...groups.values()];
   }, [citiesById, visiblePins]);
-  const hasLegacyMyPin = Boolean(myPin && !citiesById.has(myPin.cityId));
+  const hasLegacyMyPin = Boolean(myPin && (myPin.locationMethod !== "gps" || !citiesById.has(myPin.cityId)));
 
   return (
     <div className="network-map-page">
@@ -177,63 +171,42 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
         <div>
           <span className="map-eyebrow">JACKCASTER COMMUNITY</span>
           <h1>Network globe</h1>
-        <p>City spots users choose to share. Add a city from the offline gazetteer and remove it whenever you want.</p>
+        <p>Opt-in city spots based on a fresh GPS reading. Share a nearby city or leave your location unset.</p>
         </div>
         <strong className="map-count">{visiblePins.length === 300 ? "300+" : visiblePins.length} {visiblePins.length === 1 ? "person" : "people"}</strong>
       </header>
 
       <section className="map-privacy-card">
         <div>
-          <strong>Choose a city to share</strong>
-          <p>Search the free, offline city list or use GPS to find the nearest listed city on this device. Exact GPS stays in your browser; only the city and country are shared. A place match confirms the city exists, not that a person is physically there. Browser GPS and Firebase Anonymous Auth can be spoofed.</p>
+          <strong>Share a GPS-checked city</strong>
+          <p>Jackcaster requests a fresh GPS reading with reported accuracy within 1 km, then matches a listed city within 15 km on this device. GPS coordinates are discarded; only the city and country are shared after you confirm. You can leave this blank or remove your pin anytime. Browser GPS can be spoofed, so this is an estimate, not proof of physical presence.</p>
         </div>
-        {hasLegacyMyPin ? (
+        {reviewPin && selectedCity ? (
+          <div className="map-pin-review">
+            <strong>Confirm your nearby city</strong>
+            <p>{selectedCity.name}, {selectedCity.country}</p>
+            <small>Matched on this device from your fresh GPS reading. Exact coordinates and GPS accuracy are not uploaded.</small>
+            <div className="map-pin-form">
+              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedCity(null); setReviewPin(false); setError(""); }}>Cancel</button>
+              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Share this city"}</button>
+            </div>
+          </div>
+        ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
-            <span>Older pin hidden because it did not use a verified city.</span>
+            <span>Older pin hidden until you confirm a nearby city with GPS.</span>
+            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Checking GPS…" : "Update with GPS"}</button>
             <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove old pin</button>
           </div>
         ) : visibleMyPin ? (
           <div className="map-your-pin">
             <span>📍 {visibleMyPin.city}, {visibleMyPin.country}</span>
+            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Checking GPS…" : "Update with GPS"}</button>
             <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove my pin</button>
           </div>
-        ) : reviewPin && selectedCity ? (
-          <div className="map-pin-review">
-            <strong>Review before sharing</strong>
-            <p>{selectedCity.name}, {selectedCity.country}</p>
-            <small>{locationMethod === "gps" ? "Matched on this device to the nearest city in the offline gazetteer. GPS coordinates are not uploaded." : "Selected from the offline gazetteer. This verifies the city name and map point, not your presence there."}</small>
-            <div className="map-pin-form">
-              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedCity(null); setSearch(""); setReviewPin(false); }}>Cancel</button>
-              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Confirm city"}</button>
-            </div>
-          </div>
         ) : (
-          <div className="map-pin-form map-city-picker">
-            <div className="map-city-search">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setSelectedCity(null); setReviewPin(false); setLocationMethod("city"); }}
-                maxLength={100}
-                placeholder="Search a real city or country"
-                aria-label="Search verified cities"
-                autoComplete="off"
-              />
-              {suggestions.length > 0 && (
-                <div className="map-city-options" role="group" aria-label="Matching cities">
-                  {suggestions.map((city) => (
-                    <button
-                      key={city.id}
-                      type="button"
-                      onClick={() => { setSelectedCity(city); setSearch(`${city.name}, ${city.country}`); setReviewPin(true); setLocationMethod("city"); }}
-                    >
-                      {city.name}<small>{city.country}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button type="button" className="btn ghost sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding…" : "Use GPS"}</button>
+          <div className="map-pin-form">
+            <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Checking GPS…" : "Use GPS to find my city"}</button>
+            <small className="map-attribution">GPS is optional. Nothing is saved until you confirm.</small>
           </div>
         )}
         {error && <p className="map-error" role="status">{error}</p>}

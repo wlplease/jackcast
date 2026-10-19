@@ -39,7 +39,14 @@ async function generateAnimation(sourceImage: string, prompt: string, key: strin
   const start = await fetch("https://api.x.ai/v1/videos/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "grok-imagine-video-1.5-lite", prompt, image: { url: sourceImage }, duration: 5, resolution: "480p", generate_audio: false }),
+    body: JSON.stringify({
+      model: "grok-imagine-video-1.5-lite",
+      prompt: `Create a polished, silent, seamless five-second looping profile animation from this image. ${prompt} Preserve the exact identity, face, expression, clothing, and framing of the original subject. Keep the face centered, sharp, unobstructed, and recognizable inside a circular avatar crop. Animate only gentle background light and small natural motion; keep all motion smooth and restrained, return to the opening pose for a clean loop, use no cuts, camera movement, text, logos, or audio.`,
+      image: { url: sourceImage },
+      duration: 5,
+      resolution: "480p",
+      generate_audio: false,
+    }),
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });
@@ -76,7 +83,7 @@ async function upgradeAnimation(sourceVideo: string, prompt: string, key: string
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "grok-imagine-video",
-      prompt: `Refine this animated Farcaster profile image: ${prompt}. Preserve the person's or character's identity, face, framing, and overall style. Keep the result clear at small circular avatar size. No text, logos, or audio.`,
+      prompt: `Refine this animated Farcaster profile image: ${prompt}. Preserve the exact person's or character's identity, face, expression, clothing, framing, and overall style. Keep the face centered, sharp, unobstructed, and recognizable inside a circular avatar crop. Keep motion smooth, subtle, and seamless, returning to the opening pose. No cuts, camera movement, text, logos, or audio.`,
       video: { url: sourceVideo },
     }),
     signal: AbortSignal.timeout(20_000),
@@ -127,7 +134,7 @@ export async function POST(request: Request) {
   if (typeof requestId !== "string" || !/^0x[0-9a-f]{64}$/i.test(requestId) || /^0x0{64}$/i.test(requestId)) return fail("Invalid generation request ID.", 400);
   if (typeof transactionHash !== "string" || !/^0x[0-9a-f]{64}$/i.test(transactionHash)) return fail("A confirmed credit-use transaction is required.", 400);
   if (typeof signature !== "string" || !/^0x[0-9a-f]{130,132}$/i.test(signature)) return fail("Wallet authorization is required.", 400);
-  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 500) return fail("Describe the image or motion in 1–500 characters.", 400);
+  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 1_000) return fail("Describe the image or motion in 1–1,000 characters.", 400);
   if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
   if (mode !== "image") {
     if (viewer.source !== "setup" || !viewer.signerUuid) return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);

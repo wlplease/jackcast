@@ -1,7 +1,7 @@
 {
   "chain": "Base Mainnet",
   "chainId": 8453,
-  "address": "0xf3f1eF40Bf3B3416c7D9Ae896e166634AB433bb1",
+  "address": "0xf3f1eF40bF3b3416c7D9Ae896e166634AB433bb1",
   "abi": [
     {
       "inputs": [

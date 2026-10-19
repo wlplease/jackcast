@@ -11,7 +11,7 @@ import { GrokProfileMaker } from "@/components/GrokProfileMaker";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; grokEnabled: boolean }) {
+export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled, grokSetupMessage }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; grokEnabled: boolean; grokSetupMessage?: string }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -99,6 +99,7 @@ export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { 
         </div>
       </div>
 
+      {grokSetupMessage && <div className="env-box" role="status"><strong>Paid profile studio is off</strong><p>{grokSetupMessage}</p></div>}
       {grokEnabled && <GrokProfileMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
 
       <label className="field">

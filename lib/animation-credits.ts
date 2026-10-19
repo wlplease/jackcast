@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-export const ANIMATION_CREDITS_ADDRESS = "0xf3f1eF40Bf3B3416c7D9Ae896e166634AB433bb1" as Address;
+export const ANIMATION_CREDITS_ADDRESS = "0xf3f1eF40bF3b3416c7D9Ae896e166634AB433bb1" as Address;
 export const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
 
 export const animationCreditsAbi = [
