@@ -7,6 +7,7 @@ import { neynar } from "@/lib/neynar";
 import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
 import type { PostCastReqBodyEmbeds } from "@neynar/nodejs-sdk/build/api";
 import { getViewer } from "@/lib/viewer";
+import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 
 async function signer(): Promise<string> {
   const v = await getViewer();
@@ -48,7 +49,7 @@ export async function publish(input: {
       (input.embedUrls !== undefined && (!Array.isArray(input.embedUrls) || input.embedUrls.length > 2 || input.embedUrls.some((url) => typeof url !== "string")))) {
     return { ok: false, error: "That cast request is not valid." };
   }
-  const text = input.text.trim();
+  const text = withCastAttribution(input.text);
   const urls = (input.embedUrls ?? []).map((u) => u.trim()).filter(Boolean);
   if (urls.some((u) => !/^https?:\/\//i.test(u) || u.length > 256)) {
     return { ok: false, error: "Links need to start with https:// and be under 256 characters." };
@@ -56,9 +57,9 @@ export async function publish(input: {
   if (urls.some((u) => /\.private\.blob\.vercel-storage\.com/i.test(u))) {
     return { ok: false, error: "That photo is in a private Blob store, so nobody could see it. Switch to a public store first." };
   }
-  if (!text && !urls.length && !input.quote) return { ok: false, error: "Nothing to cast" };
-  if (new TextEncoder().encode(text).length > 1024) {
-    return { ok: false, error: "Too long (1024 bytes max)" };
+  if (!input.text.trim() && !urls.length && !input.quote) return { ok: false, error: "Nothing to cast" };
+  if (new TextEncoder().encode(text).length > MAX_CAST_BYTES) {
+    return { ok: false, error: "This cast is too long after adding the Jackcaster source link. Shorten the text to fit Farcaster's 1,024-byte limit." };
   }
   // The SDK's generated embed type merges the url and cast variants; the API wants one or the other.
   const embeds = [
@@ -92,10 +93,11 @@ export async function publishThread(input: { casts: string[]; parentHash?: strin
   if (!Array.isArray(input?.casts) || input.casts.length < minimum || input.casts.length > 5) {
     return { ok: false, posted: 0, lastHash: input?.parentHash ?? null, error: input?.parentHash ? "Add at least one cast to continue this thread." : "A thread needs 2 to 5 casts." };
   }
-  const texts = input.casts.map((text) => typeof text === "string" ? text.trim() : "");
-  if (texts.some((text) => !text)) return { ok: false, posted: 0, lastHash: null, error: "Every cast needs text." };
+  const rawTexts = input.casts.map((text) => typeof text === "string" ? text.trim() : "");
+  if (rawTexts.some((text) => !text)) return { ok: false, posted: 0, lastHash: null, error: "Every cast needs text." };
+  const texts = rawTexts.map(withCastAttribution);
   if (texts.some((text) => new TextEncoder().encode(text).length > 1024)) {
-    return { ok: false, posted: 0, lastHash: null, error: "Each cast must be 1024 bytes or less." };
+    return { ok: false, posted: 0, lastHash: null, error: "Each cast must fit Farcaster's 1,024-byte limit after adding the Jackcaster source link." };
   }
   if (input.parentHash && !/^0x[0-9a-f]{40}$/i.test(input.parentHash)) {
     return { ok: false, posted: 0, lastHash: null, error: "The thread continuation point is invalid." };

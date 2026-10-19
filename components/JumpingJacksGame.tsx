@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getArcadeSecrets, recordArcadeSecret } from "@/lib/arcade-client";
 import { useArcadeLeaderboard } from "@/lib/arcade-leaderboard";
+import { withCastAttribution } from "@/lib/cast-attribution";
 
 type BoardRow = { fid: number; username: string; score: number; playedAt: string };
 type JackTarget = { x: number; y: number; size: number; angle: number; gold: boolean };
@@ -119,7 +120,7 @@ export function JumpingJacksGame({ player }: { player: { fid: number; username: 
     try {
       const { sdk } = await import("@farcaster/miniapp-sdk");
       if (await sdk.isInMiniApp()) {
-        await sdk.actions.composeCast({ text, embeds: [appUrl] });
+        await sdk.actions.composeCast({ text: withCastAttribution(text), embeds: [appUrl] });
         return;
       }
     } catch { /* Fall back to the in-app cast composer. */ }

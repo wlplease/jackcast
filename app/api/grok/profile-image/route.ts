@@ -1,6 +1,6 @@
 import { get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { base } from "viem/chains";
+import { base } from "@/lib/base-chain";
 import { createPublicClient, decodeEventLog, http, isAddress, verifyMessage, type Address, type Hex } from "viem";
 import { ANIMATION_CREDITS_ADDRESS, animationCreditsAbi } from "@/lib/animation-credits";
 import { neynar } from "@/lib/neynar";
@@ -70,6 +70,45 @@ async function generateAnimation(sourceImage: string, prompt: string, key: strin
   return { bytes, contentType: "video/mp4", ext: "mp4" };
 }
 
+async function upgradeAnimation(sourceVideo: string, prompt: string, key: string): Promise<{ bytes: Buffer; contentType: "video/mp4"; ext: "mp4" }> {
+  const start = await fetch("https://api.x.ai/v1/videos/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "grok-imagine-video",
+      prompt: `Refine this animated Farcaster profile image: ${prompt}. Preserve the person's or character's identity, face, framing, and overall style. Keep the result clear at small circular avatar size. No text, logos, or audio.`,
+      video: { url: sourceVideo },
+    }),
+    signal: AbortSignal.timeout(20_000),
+    cache: "no-store",
+  });
+  if (!start.ok) throw new Error(`Grok could not start the animation upgrade (${start.status}).`);
+  const job = await start.json() as { request_id?: string };
+  if (!job.request_id || !/^[A-Za-z0-9_-]{1,160}$/.test(job.request_id)) throw new Error("Grok returned an invalid animation edit job.");
+
+  let videoUrl = "";
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    const statusResponse = await fetch(`https://api.x.ai/v1/videos/${encodeURIComponent(job.request_id)}`, {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(5_000),
+      cache: "no-store",
+    });
+    if (!statusResponse.ok) continue;
+    const status = await statusResponse.json() as { status?: string; video?: { url?: string } };
+    if (status.status === "failed") throw new Error("Grok could not finish the animation upgrade.");
+    if (status.status === "done" && status.video?.url) { videoUrl = status.video.url; break; }
+  }
+  if (!videoUrl) throw new Error("Animation upgrade is still processing. The attempt is recorded; check before spending another credit.");
+  const remote = new URL(videoUrl);
+  if (remote.protocol !== "https:" || remote.hostname !== "vidgen.x.ai") throw new Error("Grok returned an unexpected video host.");
+  const videoResponse = await fetch(remote, { signal: AbortSignal.timeout(15_000), cache: "no-store" });
+  if (!videoResponse.ok || Number(videoResponse.headers.get("content-length") || 0) > 30 * 1024 * 1024) throw new Error("Grok returned a video that could not be saved.");
+  const bytes = Buffer.from(await videoResponse.arrayBuffer());
+  if (bytes.length < 12 || bytes.length > 30 * 1024 * 1024 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("Grok returned an invalid MP4 file.");
+  return { bytes, contentType: "video/mp4", ext: "mp4" };
+}
+
 export async function POST(request: Request) {
   const viewer = await getViewer();
   if (!viewer?.canWrite) return fail("Connect a writable Farcaster account before generating profile media.", 401);
@@ -89,7 +128,8 @@ export async function POST(request: Request) {
   if (typeof transactionHash !== "string" || !/^0x[0-9a-f]{64}$/i.test(transactionHash)) return fail("A confirmed credit-use transaction is required.", 400);
   if (typeof signature !== "string" || !/^0x[0-9a-f]{130,132}$/i.test(signature)) return fail("Wallet authorization is required.", 400);
   if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 500) return fail("Describe the image or motion in 1–500 characters.", 400);
-  if (mode !== "image" && mode !== "animate") return fail("Choose image generation or profile animation.", 400);
+  if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
+  if (mode !== "image" && viewer.source !== "setup") return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);
 
   const wallet = walletAddress as Address;
   const hash = transactionHash as Hex;
@@ -98,20 +138,33 @@ export async function POST(request: Request) {
   try {
     if (!(await verifyMessage({ address: wallet, message, signature: signature as Hex }))) return fail("Wallet authorization did not match this request.", 401);
     let animationSource: string | undefined;
-    if (mode === "animate") {
+    let videoSource: string | undefined;
+    let sourceKind: string | null = null;
+    if (mode === "animate" || mode === "upgrade") {
       if (typeof sourceImageUrl !== "string" || !sourceImageUrl.startsWith("https://")) return fail("Choose a profile image to animate.", 400);
       if (typeof sourceRequestId === "string" && /^0x[0-9a-f]{64}$/i.test(sourceRequestId)) {
         const sourcePath = `grok-requests/${wallet.toLowerCase()}/${sourceRequestId.slice(2).toLowerCase()}.json`;
         const source = await get(sourcePath, { access: process.env.GROK_REQUEST_BLOB_ACCESS === "private" ? "private" : "public" });
         if (!source || source.statusCode !== 200) return fail("That generated source image was not found for this wallet.", 403);
         const savedSource = await new Response(source.stream).json() as { mediaUrl?: unknown; mediaType?: unknown };
-        if (savedSource.mediaType !== "image" || savedSource.mediaUrl !== sourceImageUrl) return fail("You can only animate an image generated for this connected wallet.", 403);
-        animationSource = sourceImageUrl;
+        const expectedType = mode === "upgrade" ? "video" : "image";
+        if (savedSource.mediaType !== expectedType || savedSource.mediaUrl !== sourceImageUrl) return fail(mode === "upgrade" ? "You can only upgrade an animation generated for this connected wallet." : "You can only animate an image generated for this connected wallet.", 403);
+        if (mode === "upgrade") videoSource = sourceImageUrl;
+        else animationSource = sourceImageUrl;
+        sourceKind = mode === "upgrade" ? "wallet-generated-animation" : "wallet-generated-image";
       } else {
         const { users } = await neynar().fetchBulkUsers({ fids: [viewer.fid] });
         const currentPfp = users[0]?.pfp_url;
         if (!currentPfp?.startsWith("https://") || currentPfp !== sourceImageUrl) return fail("The source must be your current Farcaster profile image.", 403);
-        animationSource = currentPfp;
+        if (mode === "upgrade") {
+          const currentPfpPath = new URL(currentPfp).pathname;
+          if (!/\.mp4$/i.test(currentPfpPath)) return fail("Only an MP4 animated profile can be upgraded. Choose an animation you created in Jackcaster or your current MP4 profile image.", 400);
+          videoSource = currentPfp;
+          sourceKind = "current-farcaster-video";
+        } else {
+          animationSource = currentPfp;
+          sourceKind = "current-farcaster-image";
+        }
       }
     }
     const receipt = await baseClient.getTransactionReceipt({ hash });
@@ -130,6 +183,17 @@ export async function POST(request: Request) {
 
     const lockPath = `grok-requests/${wallet.toLowerCase()}/${requestHex.slice(2).toLowerCase()}.json`;
     const blobAccess = process.env.GROK_REQUEST_BLOB_ACCESS === "private" ? "private" : "public";
+    const auditRecord = {
+      fid: viewer.fid,
+      wallet: wallet.toLowerCase(),
+      requestId: requestHex.toLowerCase(),
+      tx: hash.toLowerCase(),
+      mode,
+      sourceKind,
+      sourceRequestId: typeof sourceRequestId === "string" ? sourceRequestId.toLowerCase() : null,
+      status: "processing",
+      startedAt: Date.now(),
+    };
     const previous = await get(lockPath, { access: blobAccess });
     if (previous?.statusCode === 200) {
       const saved = await new Response(previous.stream).json() as { mediaUrl?: unknown; mediaType?: unknown };
@@ -137,16 +201,23 @@ export async function POST(request: Request) {
       return fail("This credit is already processing or was consumed by a failed attempt. Check your profile before spending another credit.", 409);
     }
     try {
-      await put(lockPath, JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), tx: hash.toLowerCase(), startedAt: Date.now() }), {
+      await put(lockPath, JSON.stringify(auditRecord), {
         access: blobAccess, addRandomSuffix: false, allowOverwrite: false, contentType: "application/json", cacheControlMaxAge: 60,
       });
     } catch { return fail("This credit was already used or secure request storage failed. Check your profile before spending another credit.", 409); }
 
     let generated: { bytes: Buffer; contentType: string; ext: "png" | "jpg" | "mp4" };
     try {
-      generated = mode === "image" ? await generateImage(prompt.trim(), key) : await generateAnimation(animationSource!, prompt.trim(), key);
+      generated = mode === "image"
+        ? await generateImage(prompt.trim(), key)
+        : mode === "upgrade"
+          ? await upgradeAnimation(videoSource!, prompt.trim(), key)
+          : await generateAnimation(animationSource!, prompt.trim(), key);
     } catch (error) {
       console.error("Grok profile media generation failed:", error instanceof Error ? error.message : "unknown error");
+      await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_generation_failed", completedAt: Date.now() }), {
+        access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
+      }).catch(() => {});
       return fail("Grok could not complete this generation. The onchain credit was spent for this attempt.", 502);
     }
 
@@ -156,7 +227,7 @@ export async function POST(request: Request) {
     });
     const mediaUrl = blobAccess === "private" ? `${new URL(request.url).origin}/i/${blob.pathname}` : blob.url;
     const mediaType = generated.ext === "mp4" ? "video" : "image";
-    await put(lockPath, JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), tx: hash.toLowerCase(), mediaUrl, mediaType, completedAt: Date.now() }), {
+    await put(lockPath, JSON.stringify({ ...auditRecord, status: "completed", mediaUrl, mediaType, completedAt: Date.now() }), {
       access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
     });
     return NextResponse.json({ mediaUrl, mediaType, requestId: requestHex }, { headers: { "Cache-Control": "no-store" } });

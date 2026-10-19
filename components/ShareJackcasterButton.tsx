@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { withCastAttribution } from "@/lib/cast-attribution";
 
 const SHARE_OPTIONS = {
   signal: {
@@ -60,7 +61,7 @@ export function ShareJackcasterButton({ full = false }: { full?: boolean }) {
     setBusy(true);
     const option = SHARE_OPTIONS[style];
     const appUrl = new URL(option.href, window.location.origin).href;
-    const text = `${castText.trim()}${tags.length ? `\n\n${tags.join(" ")}` : ""}`;
+    const text = withCastAttribution(`${castText.trim()}${tags.length ? `\n\n${tags.join(" ")}` : ""}`);
     try {
       const { sdk } = await import("@farcaster/miniapp-sdk");
       if (await sdk.isInMiniApp()) {

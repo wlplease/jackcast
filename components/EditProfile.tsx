@@ -11,7 +11,7 @@ import { GrokProfileMaker } from "@/components/GrokProfileMaker";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial, fid, grokEnabled }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; grokEnabled: boolean }) {
+export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; grokEnabled: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -92,7 +92,7 @@ export function EditProfile({ initial, fid, grokEnabled }: { initial: { displayN
         </div>
       </div>
 
-      {grokEnabled && <GrokProfileMaker fid={fid} currentPfpUrl={initial.pfpUrl} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
+      {grokEnabled && <GrokProfileMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
 
       <label className="field">
         <span className="field-label">

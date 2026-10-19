@@ -58,14 +58,16 @@ async function decodeSignerCookie(raw: string | undefined): Promise<{ fid: numbe
 }
 
 export const getViewer = cache(async (): Promise<Viewer | null> => {
+  // Prefer an account explicitly connected on this device. Paid profile media
+  // must bind to this approved Farcaster signer, not a deployment-wide fallback.
+  const jar = await cookies();
+  const fromCookie = await decodeSignerCookie(jar.get(SIGNER_COOKIE)?.value);
+  if (fromCookie) return { ...fromCookie, canWrite: true, source: "setup" };
+
   const envFid = Number(process.env.MY_FID || 0);
   const envSigner = process.env.SIGNER_UUID || "";
 
   if (envFid && envSigner) return { fid: envFid, signerUuid: envSigner, canWrite: true, source: "env" };
-
-  const jar = await cookies();
-  const fromCookie = await decodeSignerCookie(jar.get(SIGNER_COOKIE)?.value);
-  if (fromCookie) return { ...fromCookie, canWrite: true, source: "setup" };
 
   if (envFid) return { fid: envFid, signerUuid: null, canWrite: false, source: "read-only" };
   return null;

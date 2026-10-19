@@ -27,7 +27,7 @@ const VERB: Record<string, string> = {
 
 function whoLine(users: Author[], verb: string) {
   if (!users.length) return verb;
-  const first = users[0].display_name || users[0].username;
+  const first = users[0].display_name || users[0].username || `FID ${users[0].fid}`;
   const rest = users.length - 1;
   return (
     <>
@@ -62,15 +62,20 @@ export default async function NotificationsPage({
         <h1>Notifications</h1>
         <NotificationControls count={unseenCount} canMarkRead={Boolean(signerUuid)} />
       </div>
-      {res.notifications.map((n, i) => {
-        const users: Author[] =
+      {(Array.isArray(res.notifications) ? res.notifications : []).map((n, i) => {
+        const rawUsers: unknown[] =
           n.type === "follows"
-            ? (n.follows ?? []).map((f) => f.user as Author)
+            ? (n.follows ?? []).map((f) => f?.user)
             : n.type === "likes" || n.type === "recasts"
-              ? (n.reactions ?? []).map((r) => r.user as Author)
+              ? (n.reactions ?? []).map((r) => r?.user)
               : n.cast
-                ? [n.cast.author as Author]
+                ? [n.cast.author]
                 : [];
+        // Notification payloads can contain partial actors (for example, a deleted or
+        // unavailable account). Keep one malformed actor from taking down the whole page.
+        const users: Author[] = rawUsers.filter((user): user is Author =>
+          Boolean(user && typeof user === "object" && Number.isSafeInteger((user as Author).fid) && (user as Author).fid > 0)
+        );
         const href = n.cast ? `/cast/${n.cast.hash}` : users[0]?.username ? `/u/${users[0].username}` : "#";
         return (
           <Link key={`${n.type}-${n.most_recent_timestamp}-${i}`} href={href} className={`note${n.seen ? "" : " unseen"}`} data-notification-time={n.most_recent_timestamp}>
@@ -92,7 +97,7 @@ export default async function NotificationsPage({
           </Link>
         );
       })}
-      {!res.notifications.length && (
+      {(!Array.isArray(res.notifications) || !res.notifications.length) && (
         <div className="empty">
           <h2>All caught up</h2>
         </div>

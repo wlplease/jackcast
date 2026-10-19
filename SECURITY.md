@@ -2,6 +2,8 @@
 
 Jackcaster runs on your own Vercel account, for one person: you. It is a personal fork of Selfcaster. Here's what it does with the sensitive stuff, and where to check.
 
+For production bot protection and Vercel Firewall setup, see the [Vercel deployment security guide](./docs/VERCEL-SECURITY.md). App notices and `noindex` metadata do not replace edge controls.
+
 ## Your recovery phrase
 
 Farcaster requires every new app key to be approved with a signature from your account's custody wallet. `/setup` makes that signature in your browser:
@@ -36,7 +38,7 @@ Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `N
 
 ## Location sharing
 
-Location is opt-in per cast. The browser provides a device location; Jackcaster snaps it to a broad grid (roughly a few miles across) and discards the raw coordinates before creating a public OpenStreetMap link. The rounded location becomes public if you publish the cast. Browser GPS and network-assisted location can be spoofed or inaccurate; this feature cannot prove physical presence. Wi-Fi alone does not provide a trustworthy anti-cheat proof. Review the preview and remove the pin before posting if you do not want to share it.
+The community map is opt-in and separate from casting. The browser reads location only after you tap the location button and grant permission. Jackcaster rounds the coordinates in the browser to a broad grid (about 10 km), then asks you to review and confirm before saving. Exact GPS coordinates are not sent to Jackcaster's app server or written to Firebase; only the rounded grid is sent directly from your browser to the shared Firebase project after confirmation. A city or region you type is also sent only after review and confirmation. Confirmed pins include your public Farcaster profile details and are readable by any Firebase-authenticated client with access to this project, including anonymous sessions, so treat them as public self-reported information rather than device-only data. Remove your pin any time. GPS can be inaccurate or spoofed and does not prove physical presence.
 
 ## Reporting a problem
 

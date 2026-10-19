@@ -8,16 +8,14 @@ import { uploadImage } from "@/lib/upload-client";
 import { publish } from "@/app/actions";
 import { prepareImage, randomName } from "@/lib/image";
 import type { Author } from "@/lib/types";
+import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 import { Avatar } from "./Avatar";
 import { GifMemePicker } from "./GifMemePicker";
 
-const MAX_BYTES = 1024;
 const MAX_EMBEDS = 2;
 
 type Photo = { id: string; preview: string; status: "uploading" | "done" | "error"; url?: string; error?: string };
 type GifSelection = { url: string; preview: string; title: string; sourceUrl?: string };
-type CoarseLocation = { url: string };
-
 export type QuoteTarget = { hash: string; fid: number; author: Author; text: string };
 
 function uploadError(e: unknown): string {
@@ -67,8 +65,6 @@ export function Composer({
   const [showLink, setShowLink] = useState(Boolean(initialLink));
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [gif, setGif] = useState<GifSelection | null>(null);
-  const [location, setLocation] = useState<CoarseLocation | null>(null);
-  const [locationBusy, setLocationBusy] = useState(false);
   const [quoted, setQuoted] = useState<QuoteTarget | undefined>(quote);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,18 +118,17 @@ export function Composer({
     try { localStorage.removeItem(draftKey); } catch {}
     setText("");
     setLink("");
-    setLocation(null);
     setShowLink(false);
     setDraftStatus("idle");
     if (ref.current) ref.current.style.height = "auto";
   }
 
-  const bytes = new TextEncoder().encode(text).length;
-  const over = bytes > MAX_BYTES;
-  const used = photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0) + (location ? 1 : 0);
+  const bytes = new TextEncoder().encode(withCastAttribution(text)).length;
+  const over = bytes > MAX_CAST_BYTES;
+  const used = photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0);
   const slotsLeft = MAX_EMBEDS - used;
   const uploading = photos.some((p) => p.status === "uploading");
-  const empty = !text.trim() && !link.trim() && !quoted && !gif && !location && !photos.some((p) => p.status === "done");
+  const empty = !text.trim() && !link.trim() && !quoted && !gif && !photos.some((p) => p.status === "done");
 
   function grow(el: HTMLTextAreaElement) {
     el.style.height = "auto";
@@ -144,7 +139,7 @@ export function Composer({
     setError(null);
     const images = files.filter((f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name));
     if (!images.length) return;
-    const room = MAX_EMBEDS - (photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0) + (location ? 1 : 0));
+    const room = MAX_EMBEDS - (photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0));
     if (room <= 0) {
       setError("Farcaster allows 2 attachments per cast. Remove one first.");
       return;
@@ -178,39 +173,6 @@ export function Composer({
     setError(null);
   }
 
-  function toggleLocation() {
-    if (location) { setLocation(null); setError(null); return; }
-    if (slotsLeft <= 0) { setError("Farcaster allows 2 attachments per cast. Remove one first."); return; }
-    if (!navigator.geolocation) { setError("This browser doesn't provide location. You can still add a place name or map link yourself."); return; }
-    setLocationBusy(true);
-    setError(null);
-    navigator.geolocation.getCurrentPosition((position) => {
-      const { latitude, longitude, accuracy } = position.coords;
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(accuracy) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
-        setError("Your device returned an invalid location.");
-        setLocationBusy(false);
-        return;
-      }
-      if (accuracy > 5000) {
-        setError("Your device location is too broad to make a useful map pin. Try again outdoors or add a place name/link instead.");
-        setLocationBusy(false);
-        return;
-      }
-      // Snap to a broad grid before storing or publishing. Raw device coordinates are discarded.
-      const lat = Math.round(latitude / 0.05) * 0.05;
-      const lon = Math.round(longitude / 0.05) * 0.05;
-      const coord = (value: number) => value.toFixed(2);
-      const url = `https://www.openstreetmap.org/?mlat=${coord(lat)}&mlon=${coord(lon)}#map=11/${coord(lat)}/${coord(lon)}`;
-      setLocation({ url });
-      setLocationBusy(false);
-    }, (reason) => {
-      setLocationBusy(false);
-      setError(reason.code === reason.PERMISSION_DENIED
-        ? "Location permission was declined. You can still add a place name or map link yourself."
-        : "Couldn't get your device location. Try again or add a place name/map link yourself.");
-    }, { enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 });
-  }
-
   function submit() {
     if (empty || over || pending || uploading) return;
     if (photos.some((p) => p.status === "error")) {
@@ -224,7 +186,7 @@ export function Composer({
         parentHash,
         parentAuthorFid,
         channelId: channel || undefined,
-        embedUrls: [...photos.map((p) => p.url!).filter(Boolean), ...(gif ? [gif.url] : []), ...(link.trim() ? [link.trim()] : []), ...(location ? [location.url] : [])],
+        embedUrls: [...photos.map((p) => p.url!).filter(Boolean), ...(gif ? [gif.url] : []), ...(link.trim() ? [link.trim()] : [])],
         quote: quoted ? { hash: quoted.hash, fid: quoted.fid } : undefined,
       });
       if (!res.ok) {
@@ -239,7 +201,6 @@ export function Composer({
       setShowLink(false);
       setPhotos([]);
       setGif(null);
-      setLocation(null);
       setQuoted(undefined);
       if (ref.current) ref.current.style.height = "auto";
       if (afterPost) {
@@ -314,7 +275,6 @@ export function Composer({
 
         {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}{gif.sourceUrl && <a href={gif.sourceUrl} target="_blank" rel="noreferrer">Open GIF ↗</a>}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
 
-        {location && <div className="composer-location-preview"><span className="composer-location-pin" aria-hidden="true">⌖</span><div><strong>Approximate area</strong><small>Rounded to a broad area before sharing. Device location can be spoofed; this is not proof of presence.</small><a href={location.url} target="_blank" rel="noopener noreferrer">Preview map ↗</a></div><button type="button" className="attach-x" onClick={() => setLocation(null)} aria-label="Remove location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
 
         {quoted && (
           <div className="quote composer-quote">
@@ -336,8 +296,6 @@ export function Composer({
             <input type="url" placeholder="https:// link to embed" value={link} onChange={(e) => setLink(e.target.value)} aria-label="Embed URL" />
           </div>
         )}
-
-        {location && <p className="composer-location-privacy">Your post will include an OpenStreetMap link to this approximate area. Exact coordinates are discarded in the browser.</p>}
 
         <div className="composer-bar">
           <input
@@ -366,9 +324,6 @@ export function Composer({
             </svg>
           </button>
           <GifMemePicker disabled={slotsLeft <= 0} onSelect={selectGif} onMeme={(file) => { void addFiles([file]); }} />
-          <button type="button" className={`tool${location ? " location-active" : ""}`} onClick={toggleLocation} disabled={locationBusy || (!location && slotsLeft <= 0)} aria-label={location ? "Remove approximate location" : "Add approximate location"} aria-pressed={Boolean(location)} title={location ? "Remove location" : "Add approximate location"}>
-            {locationBusy ? <span className="location-loading" aria-hidden="true">…</span> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>}
-          </button>
           <button
             type="button"
             className="tool"
@@ -393,7 +348,7 @@ export function Composer({
               ))}
             </select>
           )}
-          <span className={`count${over ? " over" : ""}`}>{MAX_BYTES - bytes}</span>
+          <span className={`count${over ? " over" : ""}`} title="Bytes remaining after the Jackcaster attribution">{MAX_CAST_BYTES - bytes}</span>
           <div className="composer-actions">
             {!parentHash && !quoted && <Link className="btn ghost sm thread-compose-button" href="/compose/thread">Thread</Link>}
             <button className="btn" onClick={submit} disabled={empty || over || pending || uploading}>
@@ -401,6 +356,7 @@ export function Composer({
             </button>
           </div>
         </div>
+        <div className="composer-attribution">Every cast is marked <a href="https://jackcaster.vercel.app" target="_blank" rel="noreferrer">“Casted from Jackcaster.vercel.app”</a>.</div>
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}</div>}

@@ -22,7 +22,7 @@ export default async function SetupPage() {
       </div>
       <SetupFlow
         connected={
-          viewer?.canWrite && viewer.signerUuid
+          viewer?.source === "setup" && viewer.signerUuid
             ? { fid: viewer.fid, signerUuid: viewer.signerUuid, username, source: viewer.source }
             : null
         }

@@ -14,7 +14,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const [cursor, setCursor] = useState(initial.cursor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [showEarlier, setShowEarlier] = useState(false);
+  const [earlierOpen, setEarlierOpen] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
   const path = usePathname();
   const search = useSearchParams();
@@ -86,11 +86,11 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     router.replace(`${path}${suffix}`, { scroll: false });
   }
 
-  const archiveCount = casts.length > 160 ? casts.length - 100 : 0;
+  const archiveCount = casts.length > 180 ? casts.length - 120 : 0;
   const earlierCasts = casts.slice(0, archiveCount);
   const activeCasts = casts.slice(archiveCount);
   const list = groupLinks ? groupRepeatedLinks(activeCasts) : activeCasts.map((cast) => [cast]);
-  const earlierList = groupLinks ? groupRepeatedLinks(earlierCasts) : earlierCasts.map((cast) => [cast]);
+  const earlierList = earlierOpen ? (groupLinks ? groupRepeatedLinks(earlierCasts) : earlierCasts.map((cast) => [cast])) : [];
   return <>
     {aiOpen && <div className="ai-overlay" role="dialog" aria-modal="true" aria-label="AI catch-up">
       <button className="ai-overlay-backdrop" type="button" onClick={closeAi} aria-label="Close AI catch-up" />
@@ -100,7 +100,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     </div>}
     <CaughtUpProvider feed={live ?? path} newest={initial.casts[0]?.timestamp ?? null}>
     <div className="infinite-feed">
-      {earlierCasts.length > 0 && <details className="feed-archive" onToggle={(event) => setShowEarlier(event.currentTarget.open)}><summary>Show {earlierCasts.length} earlier loaded casts</summary>{showEarlier && <div>{earlierList.map((group) => <div className="feed-group" key={group[0].hash}><CastCard cast={group[0]} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />{group.length > 1 && <details className="expandable-casts"><summary>{group.length - 1} more with this link</summary>{group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />)}</details>}</div>)}</div>}</details>}
+      {earlierCasts.length > 0 && <details className="feed-archive" onToggle={(event) => setEarlierOpen(event.currentTarget.open)}><summary>{earlierOpen ? "Hide" : "Show"} {earlierCasts.length} earlier loaded casts</summary>{earlierOpen && <div>{earlierList.map((group) => <div className="feed-group" key={group[0].hash}><CastCard cast={group[0]} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />{group.length > 1 && <details className="expandable-casts"><summary>{group.length - 1} more with this link</summary>{group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />)}</details>}</div>)}</div>}</details>}
       {earlierCasts.length > 0 && activeCasts.length > 0 && <SeenLine above={activeCasts[0].timestamp} below={earlierCasts[earlierCasts.length - 1].timestamp} />}
       {list.map((group, index) => <Fragment key={group[0].hash}>
         {index > 0 && <SeenLine above={list[index - 1][0].timestamp} below={group[0].timestamp} />}

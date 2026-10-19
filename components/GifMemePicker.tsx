@@ -5,21 +5,25 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { firebaseAnonymousIdToken } from "@/lib/firebase-anonymous-client";
 
 type GifItem = { id: string; url: string; preview: string; title: string; sourceUrl?: string };
-type SearchResult = { items?: GifItem[]; hasMore?: boolean; retryAfterMs?: number; error?: string };
+type SearchResult = { items?: GifItem[]; hasMore?: boolean; retryAfterMs?: number; scope?: "global" | "personal" | null; error?: string };
+type GiphyPayload = { data?: Array<{ id?: string; title?: string; url?: string; images?: { original?: { url?: string }; downsized_large?: { url?: string }; fixed_width?: { url?: string }; fixed_width_small?: { url?: string } } }>; pagination?: { total_count?: number } };
+const PERSONAL_KEY_STORAGE = "jackcaster:giphy-personal-key:v1";
+const GIF_LIMIT = 18;
 
-function directGifUrl(value?: string): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" || !/\.gif$/i.test(url.pathname)) return null;
-    if (/^media\d*\.giphy\.com$/i.test(url.hostname)) {
-      // GIPHY's cid/tracking query is unnecessary for its public media path and can
-      // push a valid image embed over Farcaster's URL length limit.
-      url.search = "";
-      url.hash = "";
-    }
-    return url.href.length <= 256 ? url.href : null;
-  } catch { return null; }
+function normalizeGiphyResults(payload: GiphyPayload): { items: GifItem[]; hasMore: boolean } {
+  const items = (payload.data ?? []).flatMap((item) => {
+    const full = [item.images?.original?.url, item.images?.downsized_large?.url, item.images?.fixed_width?.url, item.images?.fixed_width_small?.url].find((candidate) => {
+      try { const value = new URL(candidate || ""); return value.protocol === "https:" && /^media\d*\.giphy\.com$/i.test(value.hostname) && /\.gif$/i.test(value.pathname) && value.href.length <= 256; } catch { return false; }
+    });
+    try {
+      const imageUrl = new URL(full || "");
+      const previewUrl = new URL(item.images?.fixed_width_small?.url || "");
+      const pageUrl = item.url ? new URL(item.url) : undefined;
+      if (!item.id || previewUrl.protocol !== "https:" || !/^media\d*\.giphy\.com$/i.test(previewUrl.hostname) || !pageUrl || pageUrl.protocol !== "https:" || !/(^|\.)giphy\.com$/i.test(pageUrl.hostname)) return [];
+      return [{ id: item.id.slice(0, 96), url: imageUrl.href, preview: previewUrl.href, title: (item.title || "GIF").slice(0, 120), sourceUrl: pageUrl.href }];
+    } catch { return []; }
+  });
+  return { items, hasMore: (payload.pagination?.total_count ?? 0) > 0 };
 }
 
 const GIF_CATEGORIES = [
@@ -39,6 +43,9 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"gifs" | "meme">("gifs");
   const [query, setQuery] = useState("");
+  const [personalKey, setPersonalKey] = useState("");
+  const [keyDraft, setKeyDraft] = useState("");
+  const [keySaved, setKeySaved] = useState(false);
   const [category, setCategory] = useState("Trending");
   const [items, setItems] = useState<GifItem[]>([]);
   const [offset, setOffset] = useState(0);
@@ -46,6 +53,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [loading, setLoading] = useState(false);
   const [checkingGate, setCheckingGate] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
+  const [cooldownScope, setCooldownScope] = useState<"global" | "personal" | null>(null);
   const [error, setError] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -53,12 +61,22 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [bottomText, setBottomText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PERSONAL_KEY_STORAGE) || "";
+      setPersonalKey(saved);
+      setKeyDraft(saved);
+    } catch { /* Private browsing may disable local storage. */ }
+  }, []);
+
   const coolingDown = cooldownMs > 0;
   const secondsLeft = Math.max(0, Math.ceil(cooldownMs / 1000));
 
   useEffect(() => {
     if (!open || tab !== "gifs") return;
+    if (personalKey) { setCheckingGate(false); setCooldownMs(0); return; }
     let active = true;
+    setError("");
     setCheckingGate(true);
     void (async () => {
       try {
@@ -66,13 +84,13 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
         const response = await fetch("/api/giphy/search", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
         const data = await response.json() as SearchResult;
         if (!response.ok) throw new Error(data.error || "Shared GIF search is not available.");
-        if (active) setCooldownMs(data.retryAfterMs || 0);
+        if (active) { setCooldownMs(data.retryAfterMs || 0); setCooldownScope(data.scope ?? null); }
       } catch (reason) {
         if (active) setError((reason as Error).message || "Shared GIF search is not available.");
       } finally { if (active) setCheckingGate(false); }
     })();
     return () => { active = false; };
-  }, [open, tab]);
+  }, [open, tab, personalKey]);
 
   useEffect(() => {
     if (!cooldownMs) return;
@@ -87,20 +105,43 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   }, [cooldownMs > 0]);
 
   async function search(term = "", append = false) {
-    if (cooldownMs > 0 || checkingGate) return;
+    if ((!personalKey && cooldownMs > 0) || checkingGate) return;
     setLoading(true);
     setError("");
     try {
-      const token = await firebaseAnonymousIdToken();
-      const response = await fetch("/api/giphy/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ query: term.trim().slice(0, 50), offset: append ? offset : 0 }), signal: AbortSignal.timeout(12000) });
-      const data = await response.json() as SearchResult;
-      if (data.retryAfterMs) setCooldownMs(data.retryAfterMs);
-      if (response.status === 429) { setError(""); return; }
-      if (!response.ok) throw new Error(data.error || "GIF search is temporarily unavailable.");
-      const nextItems = data.items ?? [];
+      const queryText = term.trim().slice(0, 50);
+      const nextOffset = append ? offset : 0;
+      let nextItems: GifItem[];
+      let more: boolean;
+      if (personalKey) {
+        // The user's own key goes directly from this browser to GIPHY and is never sent
+        // to Jackcaster's server. GIPHY requires its Trending endpoint to be client-side.
+        const endpoint = queryText ? "search" : "trending";
+        const url = new URL(`https://api.giphy.com/v1/gifs/${endpoint}`);
+        url.searchParams.set("api_key", personalKey.trim());
+        url.searchParams.set("limit", String(GIF_LIMIT));
+        url.searchParams.set("offset", String(nextOffset));
+        url.searchParams.set("rating", "g");
+        if (queryText) url.searchParams.set("q", queryText);
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000), cache: "no-store" });
+        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "GIPHY did not accept this key. Check it and save again." : "GIPHY personal-key search is temporarily unavailable.");
+        const payload = await response.json() as GiphyPayload;
+        const normalized = normalizeGiphyResults(payload);
+        nextItems = normalized.items;
+        more = nextOffset + nextItems.length < (payload.pagination?.total_count ?? 0) && nextOffset + nextItems.length < 90;
+      } else {
+        const token = await firebaseAnonymousIdToken();
+        const response = await fetch("/api/giphy/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ query: queryText, offset: nextOffset }), signal: AbortSignal.timeout(12000) });
+        const data = await response.json() as SearchResult;
+        if (data.retryAfterMs) { setCooldownMs(data.retryAfterMs); setCooldownScope(data.scope ?? "global"); }
+        if (response.status === 429) { setError(""); return; }
+        if (!response.ok) throw new Error(data.error || "GIF search is temporarily unavailable.");
+        nextItems = data.items ?? [];
+        more = Boolean(data.hasMore) && nextOffset + nextItems.length < 90;
+      }
       setItems((current) => append ? [...current, ...nextItems.filter((item) => !current.some((saved) => saved.id === item.id))] : nextItems);
       setOffset((current) => append ? current + nextItems.length : nextItems.length);
-      setHasMore(Boolean(data.hasMore) && (append ? offset + nextItems.length : nextItems.length) < 90);
+      setHasMore(more);
     } catch (reason) {
       setError((reason as Error).message || "GIF search could not load.");
       const retryAfter = Number((reason as Error & { retryAfterMs?: number }).retryAfterMs);
@@ -108,6 +149,21 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       if (!append) { setItems([]); setOffset(0); setHasMore(false); }
     }
     finally { setLoading(false); }
+  }
+
+  function savePersonalKey() {
+    const value = keyDraft.trim().slice(0, 256);
+    try {
+      if (value) localStorage.setItem(PERSONAL_KEY_STORAGE, value);
+      else localStorage.removeItem(PERSONAL_KEY_STORAGE);
+    } catch {
+      if (value) { setError("This browser could not save the key on this device. Allow local storage or use the shared search."); return; }
+    }
+    setPersonalKey(value);
+    setKeyDraft(value);
+    setKeySaved(true);
+    window.setTimeout(() => setKeySaved(false), 2500);
+    setItems([]); setOffset(0); setHasMore(false); setCooldownMs(0); setCooldownScope(null); setError("");
   }
 
   useEffect(() => {
@@ -177,10 +233,11 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       <div className="gif-picker-head"><strong>Add a GIF or meme</strong><button type="button" aria-label="Close GIF picker" onClick={() => setOpen(false)}>×</button></div>
       <div className="gif-picker-tabs"><button type="button" className={tab === "gifs" ? "active" : ""} onClick={() => setTab("gifs")}>Find a GIF</button><button type="button" className={tab === "meme" ? "active" : ""} onClick={() => setTab("meme")}>Make a meme</button></div>
       {tab === "gifs" ? <>
-        <p className="gif-shared-note">Built-in GIPHY search · shared 45-second cooldown for everyone · no key needed</p>
+        <details className="gif-personal-key"><summary>{personalKey ? "Using your personal GIPHY key" : "Use your own GIPHY key (optional)"}</summary><p>Your key is saved in this browser&apos;s local storage and sent directly to GIPHY; Jackcaster&apos;s server never receives it. Local storage is available to scripts running on this site, so use a key you control and remove it before using a shared device. Get a key from the <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">GIPHY developer dashboard</a>. Without a personal key, everyone shares the free search: one search globally every 45 seconds, and one shared search per browser session every five minutes so one user cannot keep winning.</p><label htmlFor="giphy-personal-key">GIPHY API key</label><input id="giphy-personal-key" type="password" autoComplete="off" value={keyDraft} maxLength={256} onChange={(event) => setKeyDraft(event.target.value)} placeholder="Paste your personal GIPHY key" /><div className="gif-personal-key-actions"><button type="button" className="btn sm" disabled={!keyDraft.trim() && !personalKey} onClick={savePersonalKey}>{keySaved ? "Saved on this device" : keyDraft.trim() ? "Save key on this device" : "Remove saved key"}</button>{personalKey && <span>Personal searches follow your GIPHY key&apos;s own quota.</span>}</div></details>
+        <p className="gif-shared-note">{personalKey ? "Searching GIPHY with your personal key · direct from this browser" : "Free shared GIPHY search · one request globally every 45 seconds"}</p>
         <form className="gif-search" onSubmit={(event) => { event.preventDefault(); setCategory(""); void search(query); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reactions, moments…" aria-label="Search GIFs" /><button type="submit" disabled={loading || checkingGate || coolingDown}>{loading || checkingGate ? "…" : coolingDown ? `${secondsLeft}s` : "Search"}</button></form>
         <div className="gif-categories" role="group" aria-label="GIF categories">{GIF_CATEGORIES.map((item) => <button key={item.label} type="button" className={category === item.label ? "active" : ""} disabled={loading || checkingGate || coolingDown} onClick={() => { setCategory(item.label); setQuery(item.query); void search(item.query); }}>{item.label}</button>)}</div>
-        {coolingDown && <div className="gif-picker-cooldown" role="status">Shared search opens in <strong>{secondsLeft}s</strong>. This keeps the free GIF library available for everyone.</div>}
+        {coolingDown && <div className="gif-picker-cooldown" role="status">{cooldownScope === "personal" ? "Your shared-search turn opens in" : "The next free shared search opens in"} <strong>{secondsLeft}s</strong>. {cooldownScope === "personal" ? "This session gets one free search every five minutes to give others a fair turn." : "The shared library is first-come-first-served, once every 45 seconds."}</div>}
         {checkingGate && <div className="gif-picker-message" role="status">Checking shared search window…</div>}
         {error && <div className="gif-picker-message">{error}</div>}
         {!error && <div className="gif-picker-grid">{items.map((item) => <div className="gif-picker-item" key={item.id}>
@@ -189,7 +246,6 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
         </div>)}</div>}
         {!error && hasMore && <button type="button" className="gif-load-more" disabled={loading || checkingGate || coolingDown} onClick={() => void search(category && !query ? GIF_CATEGORIES.find((item) => item.label === category)?.query ?? query : query, true)}>{loading ? "Loading…" : coolingDown ? `Load more in ${secondsLeft}s` : "Load more GIFs"}</button>}
         {!loading && !error && items.length === 0 && <p className="gif-picker-message">No GIFs found. Try another search.</p>}
-        <label className="gif-paste">Or paste a direct GIF image URL<input type="url" placeholder="https://…/image.gif" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const input = event.currentTarget; const url = directGifUrl(input.value.trim()); if (url) { onSelect({ url, preview: url, title: "GIF" }); setOpen(false); } else { setError("Use GIF search or paste a direct HTTPS .gif image URL. Share-page links do not embed as animations."); } } }} /></label>
         <small className="gif-attribution">Powered By GIPHY</small>
       </> : <div className="meme-maker">
         <button type="button" className="meme-image-button" onClick={() => fileRef.current?.click()}>{imagePreview ? <img src={imagePreview} alt="Meme source preview" /> : <span>Choose a photo for your meme</span>}</button>

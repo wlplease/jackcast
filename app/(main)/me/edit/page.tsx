@@ -17,6 +17,7 @@ export default async function EditProfilePage() {
         </div>
         <EditProfile
           fid={viewer.fid}
+          farcasterSignedIn={viewer.source === "setup"}
           grokEnabled={Boolean(process.env.REACT_APP_GROK_API_KEY || process.env.XAI_API_KEY)}
           initial={{ displayName: me.display_name ?? "", bio: me.profile?.bio?.text ?? "", pfpUrl: me.pfp_url ?? "", bannerUrl: me.profile?.banner?.url ?? "" }}
         />

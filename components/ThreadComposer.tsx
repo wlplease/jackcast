@@ -3,9 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { publishThread } from "@/app/actions";
+import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 
 const MAX_CASTS = 5;
-const MAX_BYTES = 1024;
 const DRAFT_KEY = "selfcaster:draft:thread:v1";
 
 export function ThreadComposer() {
@@ -66,19 +66,19 @@ export function ThreadComposer() {
     });
   }
 
-  const invalid = casts.length < (resumeParent ? 1 : 2) || casts.some((text) => !text.trim() || new TextEncoder().encode(text.trim()).length > MAX_BYTES);
+  const invalid = casts.length < (resumeParent ? 1 : 2) || casts.some((text) => !text.trim() || new TextEncoder().encode(withCastAttribution(text)).length > MAX_CAST_BYTES);
 
   return (
     <section className="thread-composer">
       <div className="thread-intro">
         <div>
           <h1>Write a thread</h1>
-          <p>Each cast replies to the one before it. Up to {MAX_CASTS} casts, 1,024 bytes each.</p>
+          <p>Each cast replies to the one before it. Up to {MAX_CASTS} casts; the Jackcaster source link is added to each one.</p>
         </div>
         <span className="draft-note">{saved ? "Draft saved on this device" : "Drafts stay on this device"}</span>
       </div>
       {casts.map((text, index) => {
-        const bytes = new TextEncoder().encode(text).length;
+        const bytes = new TextEncoder().encode(withCastAttribution(text)).length;
         return (
           <label className="thread-part" key={index}>
             <span className="thread-part-label">Cast {index + 1}{resumeParent && index === 0 ? " (resume here)" : ""}</span>
@@ -89,7 +89,7 @@ export function ThreadComposer() {
               placeholder={index === 0 && resumeParent ? "Continue the thread here" : "Write this part of your thread…"}
               onChange={(event) => setCasts((current) => current.map((item, i) => i === index ? event.target.value : item))}
             />
-            <span className={`thread-count${bytes > MAX_BYTES ? " over" : ""}`}>{bytes}/{MAX_BYTES} bytes</span>
+            <span className={`thread-count${bytes > MAX_CAST_BYTES ? " over" : ""}`}>{bytes}/{MAX_CAST_BYTES} bytes incl. source</span>
           </label>
         );
       })}

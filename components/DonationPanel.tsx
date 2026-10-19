@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { encodeFunctionData, parseEther, parseUnits, toHex, type EIP1193Provider, type Hex } from "viem";
 import { createPublicClient, http } from "viem";
-import { base } from "viem/chains";
+import { base } from "@/lib/base-chain";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { BASE_CHAIN_HEX, BASE_USDC, DONATION_RECIPIENTS } from "@/lib/donation-recipients";
 

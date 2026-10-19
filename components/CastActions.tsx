@@ -8,6 +8,7 @@ import { savePrefs } from "@/app/(main)/me/actions";
 import { compact } from "@/lib/format";
 import { MAX_MUTES, normalizeMute } from "@/lib/prefs-shared";
 import { SaveCastButton } from "@/components/SaveCastButton";
+import { withCastAttribution } from "@/lib/cast-attribution";
 
 type State = { liked: boolean; recasted: boolean; likes: number; recasts: number };
 
@@ -133,7 +134,7 @@ export function CastActions(props: {
     try {
       const { sdk } = await import("@farcaster/miniapp-sdk");
       if (await sdk.isInMiniApp()) {
-        await sdk.actions.composeCast({ text: `Sharing this cast on Jackcaster`, embeds: [castUrl] });
+        await sdk.actions.composeCast({ text: withCastAttribution("Sharing this cast on Jackcaster"), embeds: [castUrl] });
         return;
       }
     } catch {
