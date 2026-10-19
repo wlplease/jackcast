@@ -219,6 +219,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
         <button type="button" className={scope === "loaded" ? "active" : ""} aria-pressed={scope === "loaded"} onClick={() => { setScope("loaded"); clearDigest(); }}>All loaded posts</button>
         <span>{sampleLabel}</span>
       </div>
+      {digestEnabled && eligibleCasts.length === 0 && <p className="field-hint">No posts are available for this range yet. Load more feed posts or choose a range with recent activity, then try again.</p>}
       {digest && <div className="ai-digest-content" aria-live="polite">
         {savedAt > 0 && <small className="digest-saved-note">Saved on this device · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(savedAt)}. Refreshing will keep this digest; choose Redo digest to use newer posts.</small>}
         <div className="digest-metrics" aria-label="Activity snapshot">

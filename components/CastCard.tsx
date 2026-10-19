@@ -5,6 +5,7 @@ import { Avatar } from "./Avatar";
 import { RichText } from "./RichText";
 import { Embeds } from "./Embeds";
 import { CastActions } from "./CastActions";
+import { isJackcastAttributed } from "@/lib/cast-attribution";
 
 export function CastCard({
   cast,
@@ -22,6 +23,7 @@ export function CastCard({
   mutes?: string[];
 }) {
   const a = cast.author;
+  const postedViaJackcast = isJackcastAttributed(cast.text);
   return (
     <article className={`cast${variant ? ` ${variant}` : ""}`}>
       {variant !== "focus" && <Link className="stretch" href={`/cast/${cast.hash}`} aria-label="Open thread" />}
@@ -42,7 +44,11 @@ export function CastCard({
           <time dateTime={cast.timestamp} title={new Date(cast.timestamp).toLocaleString()}>
             {timeAgo(cast.timestamp)}
           </time>
-          {cast.app && (cast.app.display_name || cast.app.username) && (
+          {postedViaJackcast ? (
+            <span className="cast-client" title="Published through Jackcast">
+              via <a href="https://jackcast.vercel.app/" target="_blank" rel="noreferrer">Jackcast</a>
+            </span>
+          ) : cast.app && (cast.app.display_name || cast.app.username) && (
             <span className="cast-client" title="Posting client">
               via {cast.app.username
                 ? <Link href={`/u/${cast.app.username}`}>{cast.app.display_name || `@${cast.app.username}`}</Link>

@@ -10,3 +10,8 @@ export function withCastAttribution(text: string): string {
   if (/Casted from\s+https:\/\/jackcast\.vercel\.app\/?/i.test(trimmed)) return trimmed;
   return `${trimmed}${CAST_ATTRIBUTION_LINE}`;
 }
+
+/** True when the visible source line identifies this cast as published through Jackcast. */
+export function isJackcastAttributed(text: string): boolean {
+  return /Casted from\s+https:\/\/jackcast\.vercel\.app\/?/i.test(text);
+}

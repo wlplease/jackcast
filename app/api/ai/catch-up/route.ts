@@ -139,6 +139,46 @@ function parseDigest(raw: string, allowedHashes: Set<string>): Digest | null {
   return parseStructuredDigest(raw, allowedHashes) ?? parsePlainTextDigest(raw, allowedHashes);
 }
 
+const STOP_WORDS = new Set("about after again against all also although among and any are around because been before being between both but can could did does doing down during each few for from further had has have having here how into its itself just more most other our out over same should some such than that the their them then there these they this those through too under until very was were what when where which while who will with would you your into across".split(" "));
+
+function terms(value: string): Set<string> {
+  return new Set(value.toLowerCase().match(/[a-z0-9]{3,}/g)?.filter((word) => !STOP_WORDS.has(word)) ?? []);
+}
+
+function rankSourceHashes(text: string, casts: InputCast[], limit: number): string[] {
+  const wanted = terms(text);
+  if (!wanted.size) return [];
+  return casts.map((cast) => {
+    const content = terms(`${cast.text} ${cast.author} ${cast.username}`);
+    return { hash: cast.hash, score: [...wanted].filter((word) => content.has(word)).length };
+  }).filter((item) => item.score >= 2).sort((a, b) => b.score - a.score).slice(0, limit).map((item) => item.hash);
+}
+
+function attachSourcesAndDeduplicate(digest: Digest, casts: InputCast[]): Digest {
+  const normalize = (parts: Digest["sections"], limit: number): Digest["sections"] => {
+    const seenTitles = new Set<string>();
+    const seenSummaries = new Set<string>();
+    return parts.flatMap((part) => {
+      const clean = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const titleKey = clean(part.title);
+      const summaryKey = clean(part.summary);
+      if (!titleKey || !summaryKey || seenTitles.has(titleKey) || seenSummaries.has(summaryKey)) return [];
+      seenTitles.add(titleKey);
+      seenSummaries.add(summaryKey);
+      const wanted = terms(`${part.title} ${part.summary}`);
+      const validHashes = part.castHashes.filter((hash) => {
+        const cast = casts.find((item) => item.hash === hash);
+        if (!cast) return false;
+        const content = terms(`${cast.text} ${cast.author} ${cast.username}`);
+        return [...wanted].filter((word) => content.has(word)).length >= 2;
+      });
+      const castHashes = validHashes.length ? validHashes : rankSourceHashes(`${part.title} ${part.summary}`, casts, limit);
+      return [{ ...part, castHashes }];
+    });
+  };
+  return { ...digest, sections: normalize(digest.sections, 3), insights: normalize(digest.insights, 2) };
+}
+
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (!origin || origin !== new URL(request.url).origin) {
@@ -226,7 +266,8 @@ export async function POST(request: NextRequest) {
       typeof result.text === "string" ? result.text : "",
       typeof result.output === "string" ? result.output : "",
     ].find((text) => Boolean(text));
-    const digest = rawSummary ? parseDigest(rawSummary, new Set(casts.map((cast) => cast.hash))) : null;
+    const parsedDigest = rawSummary ? parseDigest(rawSummary, new Set(casts.map((cast) => cast.hash))) : null;
+    const digest = parsedDigest ? attachSourcesAndDeduplicate(parsedDigest, casts) : null;
     if (!digest) {
       const finishReason = result.candidates?.[0]?.finishReason;
       const error = finishReason === "SAFETY"
