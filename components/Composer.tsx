@@ -356,7 +356,7 @@ export function Composer({
             </button>
           </div>
         </div>
-        <div className="composer-attribution">Every cast is marked <a href="https://jackcaster.vercel.app" target="_blank" rel="noreferrer">“Casted from Jackcaster.vercel.app”</a>.</div>
+        <div className="composer-attribution">Every cast is marked <a href="https://jackcast.vercel.app" target="_blank" rel="noreferrer">“Casted from Jackcast.vercel.app”</a>.</div>
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}</div>}
