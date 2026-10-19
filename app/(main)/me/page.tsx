@@ -7,12 +7,14 @@ import { ThemeForm } from "@/components/ThemeForm";
 import { ChannelTabsForm } from "@/components/ChannelTabsForm";
 import { CustomFeedForm, CustomFeedNameForm, FriendsFeedForm } from "@/components/FriendsFeedForm";
 import { FiltersForm } from "@/components/FiltersForm";
+import { ListeningSettings } from "@/components/ListeningSettings";
 
 const SETTINGS = [
   { href: "#appearance", icon: "◐", title: "Appearance", detail: "Themes and light or dark mode" },
   { href: "#feeds", icon: "☷", title: "Channel tabs", detail: "Choose feeds and composer channels" },
   { href: "#friends", icon: "♡", title: "Friends and custom", detail: "Choose people for each feed" },
   { href: "#filters", icon: "⌕", title: "Feed controls", detail: "Muted topics, replies, mini apps, and density" },
+  { href: "#listening", icon: "♫", title: "Listening", detail: "Your optional audio playlist" },
   { href: "#account", icon: "◉", title: "Account and connection", detail: "Posting access and setup details" },
 ];
 
@@ -33,6 +35,7 @@ export default async function SettingsPage() {
     <section className="me-section" id="friends"><div className="me-section-head"><h2>Friends</h2><span className="meta">this device</span></div><FriendsFeedForm initial={prefs.friends} /></section>
     <section className="me-section" id="custom-feed"><div className="me-section-head"><h2>Custom feed</h2><span className="meta">this device</span></div><CustomFeedNameForm initial={prefs.customName} /><CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} /></section>
     <section className="me-section" id="filters"><div className="me-section-head"><h2>Feed controls</h2><span className="meta">this device</span></div><FiltersForm initial={prefs} envDefault={envDefault} /></section>
+    <section className="me-section" id="listening"><div className="me-section-head"><div><h2>Listening</h2><p className="field-hint">Optional background tracks and audio settings.</p></div><span className="meta">this device</span></div><ListeningSettings initial={prefs.audioTracks} /></section>
     <section className="me-section" id="account"><div className="me-section-head"><h2>Account and connection</h2></div><p className="field-hint">{viewer.canWrite ? viewer.source === "env" ? "Connected on every device through your environment variables." : "Connected on this device." : "Read-only. Connect to post, like, and reply."} <Link href="/setup" className="linkish">{viewer.canWrite ? "Connection details" : "Connect account"}</Link></p></section>
   </>;
 }

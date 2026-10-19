@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { CHANNEL_ID, DEFAULT_PREFS, MAX_FRIENDS, MAX_MUTES, MAX_TABS, normalizeMute, type Prefs } from "./prefs-shared";
+import { CHANNEL_ID, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_FRIENDS, MAX_MUTES, MAX_TABS, normalizeMute, type Prefs } from "./prefs-shared";
 import { MODES, THEME_IDS, type Mode, type ThemeId } from "./themes";
 
 export const PREFS_COOKIE = "selfcaster_prefs";
@@ -51,7 +51,17 @@ export function parsePrefs(raw: string | undefined): Prefs {
           } catch { return []; }
         })).values())
       : [];
-    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, theme, mode };
+    const audioTracks = Array.isArray(p.audioTracks)
+      ? Array.from(new Map(p.audioTracks.slice(0, MAX_AUDIO_TRACKS).flatMap((entry) => {
+          const url = typeof entry?.url === "string" ? entry.url.trim() : "";
+          const title = typeof entry?.title === "string" ? entry.title.trim().replace(/\s+/g, " ").slice(0, 48) : "";
+          try {
+            const parsed = new URL(url);
+            return parsed.protocol === "https:" && parsed.href.length <= 512 && !parsed.username && !parsed.password && title ? [[parsed.toString(), { url: parsed.toString(), title }] as const] : [];
+          } catch { return []; }
+        })).values())
+      : [];
+    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, audioTracks, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }
