@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { base } from "@/lib/base-chain";
 import { createPublicClient, decodeEventLog, http, isAddress, verifyMessage, type Address, type Hex } from "viem";
 import { ANIMATION_CREDITS_ADDRESS, animationCreditsAbi } from "@/lib/animation-credits";
-import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 
 export const runtime = "nodejs";
@@ -11,9 +10,7 @@ export const maxDuration = 60;
 
 const baseClient = createPublicClient({ chain: base, transport: http("https://mainnet.base.org", { timeout: 15_000 }) });
 const apiKey = () => process.env.GOOGLE_AI_API_KEY;
-const ANIMATION_MODEL = "gemini-omni-1.1-flash";
 const IMAGE_MODEL = "gemini-nano-banana-2.1";
-const VIDEO_EDIT_MODEL = "gemini-omni-1.1-flash";
 const LEGACY_ANIMATION_MODEL = "veo-3.1-lite-generate-preview";
 const GOOGLE_API = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -69,64 +66,6 @@ async function generateImage(prompt: string, key: string): Promise<{ bytes: Buff
   if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return { bytes, contentType: "image/png", ext: "png" };
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { bytes, contentType: "image/jpeg", ext: "jpg" };
   throw new Error("Google returned an unsupported image format.");
-}
-
-async function readRemoteMedia(url: string, maxBytes: number, allowedTypes: string[]): Promise<{ bytes: Buffer; mimeType: string }> {
-  const parsed = new URL(url);
-  if (parsed.protocol !== "https:" || parsed.username || parsed.password) throw new Error("The selected media URL is not a safe HTTPS address.");
-  const response = await fetch(parsed, { redirect: "error", signal: AbortSignal.timeout(15_000), cache: "no-store" });
-  if (!response.ok) throw new Error("The selected profile media could not be retrieved.");
-  const declared = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-  const length = Number(response.headers.get("content-length") || 0);
-  if (length > maxBytes || !allowedTypes.includes(declared)) throw new Error("The selected media format or size is not supported.");
-  if (!response.body) throw new Error("The selected profile media could not be read.");
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > maxBytes) {
-      await reader.cancel();
-      throw new Error("The selected media exceeds the supported size.");
-    }
-    chunks.push(value);
-  }
-  const bytes = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
-  if (!bytes.length) throw new Error("The selected profile media is empty.");
-  return { bytes, mimeType: declared };
-}
-
-async function startVideoGeneration(mode: "animate" | "upgrade", sourceUrl: string, prompt: string, key: string): Promise<string> {
-  const source = mode === "animate"
-    ? await readRemoteMedia(sourceUrl, 10 * 1024 * 1024, ["image/png", "image/jpeg", "image/webp"])
-    : await readRemoteMedia(sourceUrl, 4 * 1024 * 1024, ["video/mp4"]);
-  const instruction = mode === "animate"
-    ? `Create a short polished profile animation from this portrait. ${prompt} Preserve the exact identity, face, expression, clothing, and framing. Keep the face centered, sharp, unobstructed, and recognizable inside a circular avatar crop. Use subtle natural motion, one continuous shot, no cuts, camera movement, text, or logos. Keep the scene quiet with no speech or music.`
-    : `Refine this animated profile image: ${prompt}. Preserve the same identity, face, expression, clothing and framing. Keep the face clear and centered in a circular avatar crop. Use subtle motion, one continuous shot, no cuts, no text, no speech, no music. Keep everything else the same.`;
-  const input = mode === "animate"
-    ? [{ type: "image", data: source.bytes.toString("base64"), mime_type: source.mimeType }, { type: "text", text: instruction }]
-    : [{ type: "video", data: source.bytes.toString("base64"), mime_type: source.mimeType }, { type: "text", text: instruction }];
-  const start = await fetch(`${GOOGLE_API}/interactions`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: mode === "animate" ? ANIMATION_MODEL : VIDEO_EDIT_MODEL,
-      input,
-      background: true,
-      store: true,
-      response_format: { type: "video", aspect_ratio: "9:16", resolution: "360p", delivery: "uri" },
-      ...(mode === "upgrade" ? { generation_config: { video_config: { task: "edit" } } } : { generation_config: { video_config: { task: "image_to_video" } } }),
-    }),
-    signal: AbortSignal.timeout(20_000),
-    cache: "no-store",
-  });
-  if (!start.ok) throw new Error(`Google could not start this video (${await providerError(start)}).`);
-  const job = await start.json() as { id?: string; status?: string; output_video?: { data?: string; uri?: string }; steps?: { type?: string; content?: { type?: string; data?: string; uri?: string }[] }[] };
-  if (!job.id || !/^v1_[A-Za-z0-9_+=/-]{8,512}$/.test(job.id)) throw new Error("Google returned an invalid video job.");
-  if (job.status === "failed" || job.status === "cancelled") throw new Error("Google rejected the video generation request.");
-  return job.id;
 }
 
 function decodeVideo(encoded?: string): Buffer {
@@ -188,70 +127,36 @@ async function getInteractionVideo(interactionId: string, key: string): Promise<
 }
 
 export async function POST(request: Request) {
-  const viewer = await getViewer();
-  if (!viewer?.canWrite) return fail("Connect a writable Farcaster account before generating profile media.", 401);
-  const key = apiKey();
-  if (!key) return fail("Google AI generation is not configured on this deployment.", 503);
-  if (!process.env.BLOB_READ_WRITE_TOKEN && !(process.env.BLOB_STORE_ID && process.env.BLOB_WEBHOOK_PUBLIC_KEY)) return fail("Vercel Blob is required for secure, replay-protected generation storage.", 503);
-
-  let body: { walletAddress?: unknown; requestId?: unknown; transactionHash?: unknown; signature?: unknown; prompt?: unknown; mode?: unknown; sourceImageUrl?: unknown; sourceRequestId?: unknown };
+  let body: { walletAddress?: unknown; requestId?: unknown; transactionHash?: unknown; signature?: unknown; prompt?: unknown; mode?: unknown };
   try {
     if (Number(request.headers.get("content-length") ?? 0) > 12_000) return fail("Request is too large.", 413);
     body = await request.json();
   } catch { return fail("Invalid request body.", 400); }
 
-  const { walletAddress, requestId, transactionHash, signature, prompt, mode, sourceImageUrl, sourceRequestId } = body;
+  const { walletAddress, requestId, transactionHash, signature, prompt, mode } = body;
+  if (mode === "animate" || mode === "upgrade") {
+    return fail("Profile animation is paused. No Google generation was started. If you already confirmed a credit-use transaction, the contract still records that credit as spent.", 503);
+  }
+
+  const viewer = await getViewer();
+  if (!viewer?.canWrite) return fail("Connect a writable Farcaster account before generating profile media.", 401);
+  const key = apiKey();
+  if (!key) return fail("Google AI generation is not configured on this deployment.", 503);
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !(process.env.BLOB_STORE_ID && process.env.BLOB_WEBHOOK_PUBLIC_KEY)) return fail("Vercel Blob is required for secure, replay-protected generation storage.", 503);
   if (typeof walletAddress !== "string" || !isAddress(walletAddress)) return fail("Connect a valid EVM wallet.", 400);
   if (typeof requestId !== "string" || !/^0x[0-9a-f]{64}$/i.test(requestId) || /^0x0{64}$/i.test(requestId)) return fail("Invalid generation request ID.", 400);
   if (typeof transactionHash !== "string" || !/^0x[0-9a-f]{64}$/i.test(transactionHash)) return fail("A confirmed credit-use transaction is required.", 400);
   if (typeof signature !== "string" || !/^0x[0-9a-f]{130,132}$/i.test(signature)) return fail("Wallet authorization is required.", 400);
-  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 1_000) return fail("Describe the image or motion in 1–1,000 characters.", 400);
-  if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
-  if (mode !== "image" && process.env.GOOGLE_AI_VIDEO_ENABLED !== "true") return fail("Profile video is paused until the deployment owner confirms paid Gemini Omni video access. No credit was used. Enable GOOGLE_AI_VIDEO_ENABLED=true only after upgrading the Google AI project and checking its quota.", 503);
-  if (mode !== "image") {
-    if (viewer.source !== "setup" || !viewer.signerUuid) return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);
-    try {
-      const activeSigner = await neynar().lookupSigner({ signerUuid: viewer.signerUuid });
-      if (activeSigner.status !== "approved" || activeSigner.fid !== viewer.fid) return fail("Reconnect your Farcaster account before creating or upgrading an animation.", 401);
-    } catch { return fail("Couldn't verify your Farcaster connection right now. Try again shortly.", 503); }
-  }
+  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 1_000) return fail("Describe the image in 1–1,000 characters.", 400);
+  if (mode !== "image") return fail("Only still profile artwork is available right now.", 400);
 
   const wallet = walletAddress as Address;
   const hash = transactionHash as Hex;
   const requestHex = requestId as Hex;
-  const message = `Jackcaster Google profile ${mode}\nFID: ${viewer.fid}\nWallet: ${wallet.toLowerCase()}\nRequest: ${requestHex.toLowerCase()}`;
+  const message = `Jackcaster Google profile image\nFID: ${viewer.fid}\nWallet: ${wallet.toLowerCase()}\nRequest: ${requestHex.toLowerCase()}`;
   try {
     if (!(await verifyMessage({ address: wallet, message, signature: signature as Hex }))) return fail("Wallet authorization did not match this request.", 401);
-    let animationSource: string | undefined;
-    let videoSource: string | undefined;
-    let sourceKind: string | null = null;
-    if (mode === "animate" || mode === "upgrade") {
-      if (typeof sourceImageUrl !== "string" || !sourceImageUrl.startsWith("https://")) return fail("Choose a profile image to animate.", 400);
-      if (typeof sourceRequestId === "string" && /^0x[0-9a-f]{64}$/i.test(sourceRequestId)) {
-        const sourcePath = `profile-requests/${wallet.toLowerCase()}/${sourceRequestId.slice(2).toLowerCase()}.json`;
-        const source = await get(sourcePath, { access: process.env.PROFILE_REQUEST_BLOB_ACCESS === "private" ? "private" : "public" });
-        if (!source || source.statusCode !== 200) return fail("That generated source image was not found for this wallet.", 403);
-        const savedSource = await new Response(source.stream).json() as { mediaUrl?: unknown; mediaType?: unknown };
-        const expectedType = mode === "upgrade" ? "video" : "image";
-        if (savedSource.mediaType !== expectedType || savedSource.mediaUrl !== sourceImageUrl) return fail(mode === "upgrade" ? "You can only upgrade an animation generated for this connected wallet." : "You can only animate an image generated for this connected wallet.", 403);
-        if (mode === "upgrade") videoSource = sourceImageUrl;
-        else animationSource = sourceImageUrl;
-        sourceKind = mode === "upgrade" ? "wallet-generated-animation" : "wallet-generated-image";
-      } else {
-        const { users } = await neynar().fetchBulkUsers({ fids: [viewer.fid] });
-        const currentPfp = users[0]?.pfp_url;
-        if (!currentPfp?.startsWith("https://") || currentPfp !== sourceImageUrl) return fail("The source must be your current Farcaster profile image.", 403);
-        if (mode === "upgrade") {
-          const currentPfpPath = new URL(currentPfp).pathname;
-          if (!/\.mp4$/i.test(currentPfpPath)) return fail("Only an MP4 animated profile can be upgraded. Choose an animation you created in Jackcaster or your current MP4 profile image.", 400);
-          videoSource = currentPfp;
-          sourceKind = "current-farcaster-video";
-        } else {
-          animationSource = currentPfp;
-          sourceKind = "current-farcaster-image";
-        }
-      }
-    }
+    const sourceKind: string | null = null;
     const receipt = await baseClient.getTransactionReceipt({ hash });
     if (receipt.status !== "success") return fail("The credit-use transaction did not succeed on Base.", 402);
     const transaction = await baseClient.getTransaction({ hash });
@@ -275,7 +180,7 @@ export async function POST(request: Request) {
       tx: hash.toLowerCase(),
       mode,
       sourceKind,
-      sourceRequestId: typeof sourceRequestId === "string" ? sourceRequestId.toLowerCase() : null,
+      sourceRequestId: null,
       status: "processing",
       startedAt: Date.now(),
     };
@@ -292,26 +197,7 @@ export async function POST(request: Request) {
       });
     } catch { return fail("This credit was already used or secure request storage failed. Check your profile before spending another credit.", 409); }
 
-    if (mode !== "image") {
-      try {
-        const sourceUrl = mode === "animate" ? animationSource! : videoSource!;
-        const providerRequestId = await startVideoGeneration(mode, sourceUrl, prompt.trim(), key);
-        await put(lockPath, JSON.stringify({ ...auditRecord, status: "processing", providerRequestId }), {
-          access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
-        });
-        return NextResponse.json({ processing: true, requestId: requestHex }, { status: 202, headers: { "Cache-Control": "no-store" } });
-      } catch (error) {
-        const failureMessage = safeFailureMessage(error);
-        console.error("Google profile video could not start:", failureMessage);
-        await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_start_failed", failureMessage, completedAt: Date.now() }), {
-          access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
-        }).catch(() => {});
-        const detail = error instanceof Error && /^(Google could not start)/.test(error.message) ? ` ${safeFailureMessage(error)}` : "";
-        return fail(`Google could not start this ${mode === "upgrade" ? "upgrade" : "animation"}.${detail} The onchain credit was spent for this attempt.`, 502);
-      }
-    }
-
-    let generated: { bytes: Buffer; contentType: string; ext: "png" | "jpg" | "mp4" };
+    let generated: { bytes: Buffer; contentType: string; ext: "png" | "jpg" };
     try {
       generated = await generateImage(prompt.trim(), key);
     } catch (error) {
@@ -332,7 +218,7 @@ export async function POST(request: Request) {
         access: blobAccess, addRandomSuffix: true, allowOverwrite: false, contentType: generated.contentType, cacheControlMaxAge: 31_536_000,
       });
       const mediaUrl = blobAccess === "private" ? `${new URL(request.url).origin}/i/${blob.pathname}` : blob.url;
-      const mediaType = generated.ext === "mp4" ? "video" : "image";
+      const mediaType = "image" as const;
       const completedAt = Date.now();
       await put(lockPath, JSON.stringify({ ...auditRecord, status: "completed", mediaUrl, mediaType, completedAt }), {
         access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
@@ -357,11 +243,12 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const mode = requestUrl.searchParams.get("mode") || "animate";
   if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
+  const pendingRequestId = requestUrl.searchParams.get("requestId");
+  if (!pendingRequestId && mode !== "image") return fail("Profile animation is temporarily paused. No Jackcaster credit was used.", 503);
   if (!viewer?.canWrite) return fail("Connect a writable Farcaster account first. No credit was used.", 401);
   if (mode !== "image" && (viewer.source !== "setup" || !viewer.signerUuid)) {
     return fail("Connect Farcaster on this device before animating your profile. No credit was used.", 401);
   }
-  const pendingRequestId = requestUrl.searchParams.get("requestId");
   if (pendingRequestId) {
     const walletAddress = requestUrl.searchParams.get("walletAddress");
     if (!walletAddress || !isAddress(walletAddress) || !/^0x[0-9a-f]{64}$/i.test(pendingRequestId)) return fail("Invalid animation status request.", 400);
@@ -415,8 +302,8 @@ export async function GET(request: Request) {
         } catch (error) {
           const detail = safeFailureMessage(error);
           console.error("Google profile video status check failed:", detail);
-          if (/429:.*(?:Free Tier|0 requests per day|quota|rate limit)/i.test(detail)) {
-            return fail("Google reports that Gemini Omni video has no available quota for this project (the Free Tier limit is 0 requests per day). The saved job is preserved; no new Jackcaster credit is needed to resume it. Upgrade the Google AI project to a paid tier, confirm video quota at https://ai.dev/rate-limit, then choose Resume animation.", 503);
+          if (/429:.*(?:Free Tier|0 requests per day)/i.test(detail)) {
+            return fail("Gemini Omni video is unavailable on this Google Free Tier (0 requests per day). Your saved job is still available. After enabling paid video access, resume this job; it will not spend another Jackcaster credit.", 503);
           }
           return fail(`Couldn't check or save this animation right now: ${detail}. Its job remains saved; try checking again.`, 503);
         }
@@ -465,11 +352,10 @@ export async function GET(request: Request) {
 
   const key = apiKey();
   if (!key) return fail("Google AI is not configured on this deployment. No credit was used.", 503);
-  if (mode !== "image" && process.env.GOOGLE_AI_VIDEO_ENABLED !== "true") return fail("Profile video is paused until the deployment owner confirms paid Gemini Omni video access. No credit was used. Enable GOOGLE_AI_VIDEO_ENABLED=true only after upgrading the Google AI project and checking its quota.", 503);
   if (!process.env.BLOB_READ_WRITE_TOKEN && !(process.env.BLOB_STORE_ID && process.env.BLOB_WEBHOOK_PUBLIC_KEY)) {
-    return fail("Vercel Blob is not configured to save the animation. No credit was used.", 503);
+    return fail("Vercel Blob is not configured to save profile artwork. No credit was used.", 503);
   }
-  const model = mode === "image" ? IMAGE_MODEL : mode === "upgrade" ? VIDEO_EDIT_MODEL : ANIMATION_MODEL;
+  const model = IMAGE_MODEL;
   try {
     const modelResponse = await fetch(`${GOOGLE_API}/models/${encodeURIComponent(model)}`, {
       headers: { "x-goog-api-key": key },
@@ -477,12 +363,10 @@ export async function GET(request: Request) {
       cache: "no-store",
     });
     if (!modelResponse.ok) {
-      const advice = mode !== "image" && modelResponse.status === 429
-        ? "Google has no available video quota for this project. No Jackcaster credit was used. Upgrade the Google AI project and confirm Gemini Omni video quota before trying again."
-        : modelResponse.status === 401
+      const advice = modelResponse.status === 401
         ? "Check that GOOGLE_AI_API_KEY is active and the Gemini API is enabled for its project."
         : modelResponse.status === 403
-          ? "Check that the Google project has billing enabled and access to this video model."
+          ? "Check that the Google project has access to this image model."
           : "Try again shortly.";
       return fail(`Google AI preflight failed (${await providerError(modelResponse)}). ${advice} No Jackcaster credit was used.`, 503);
     }

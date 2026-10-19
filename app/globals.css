@@ -846,6 +846,12 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .grok-maker-current .field-hint { margin: 0; }
 .grok-maker-current-image { display: grid; flex: none; width: 56px; aspect-ratio: 1; place-items: center; overflow: hidden; border: 2px solid var(--paper); border-radius: 50%; background: var(--rule); box-shadow: 0 0 0 1px var(--rule-strong); }
 .grok-maker-current-image img, .grok-maker-current-image video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.grok-maker-notice, .grok-maker-pending { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 11px 13px; border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--rule)); border-radius: 13px; background: color-mix(in srgb, var(--accent-soft) 50%, var(--paper)); }
+.grok-maker-notice { display: grid; justify-content: stretch; gap: 3px; }
+.grok-maker-notice strong, .grok-maker-pending strong { color: var(--ink); font-size: 12px; }
+.grok-maker-notice span, .grok-maker-pending .field-hint { margin: 0; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
+.grok-maker-pending > div { display: grid; gap: 3px; min-width: 0; }
+.grok-maker-pending .btn { flex: none; }
 .grok-style-picker { display: grid; gap: 9px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .grok-style-picker legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin-bottom: 8px; color: var(--ink); font-size: 13px; font-weight: 750; }
 .grok-style-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -878,6 +884,8 @@ html[data-previews="off"] .cast .embeds { display: none; }
   .grok-style-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grok-maker-actions { display: grid; grid-template-columns: 1fr; }
   .grok-maker-actions .btn { width: 100%; }
+  .grok-maker-pending { align-items: stretch; flex-direction: column; }
+  .grok-maker-pending .btn { width: 100%; }
   .grok-maker-result { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .grok-maker-result > div:last-child { justify-items: center; }
   .grok-maker-compare .grok-maker-preview { width: 84px; }

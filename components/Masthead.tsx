@@ -45,7 +45,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES, animatedProfilesEnabled = false }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; animatedProfilesEnabled?: boolean }) {
+export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES, profileStudioEnabled = false }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; profileStudioEnabled?: boolean }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
@@ -71,7 +71,7 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
           {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           <ListeningDock personalTracks={audioTracks} />
           <NotificationLink icon={I.bell} />
-          <ProfileQuickMenu animatedProfilesEnabled={animatedProfilesEnabled} />
+          <ProfileQuickMenu profileStudioEnabled={profileStudioEnabled} />
           {icon("/me", "Settings", I.settings)}
           <button type="button" className="icon-btn" aria-label="Sign out" title="Sign out" onClick={() => setConfirmSignOut(true)}>
             {I.lock}

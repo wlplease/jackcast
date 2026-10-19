@@ -18,7 +18,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     return (
       <SavedCastsProvider initial={prefs.savedCasts}><MiniAppSessionProvider><div className="shell">
         <FeedScrollRestoration />
-        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} animatedProfilesEnabled={profileStudio.enabled} />
+        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} profileStudioEnabled={profileStudio.enabled} />
         <ArcadeDiscovery />
         <main>{children}</main>
       </div></MiniAppSessionProvider></SavedCastsProvider>
@@ -28,7 +28,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <SavedCastsProvider initial={[]}><MiniAppSessionProvider><div className="shell">
       <FeedScrollRestoration />
-      <Masthead channels={channels} customName="Custom" animatedProfilesEnabled={profileStudio.enabled} />
+      <Masthead channels={channels} customName="Custom" profileStudioEnabled={profileStudio.enabled} />
       <ArcadeDiscovery />
       <main>{children}</main>
     </div></MiniAppSessionProvider></SavedCastsProvider>
