@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
+import Link from "next/link";
 import { base } from "@/lib/base-chain";
 import { createPublicClient, encodeFunctionData, formatUnits, http, isAddress, toHex, type Address, type EIP1193Provider, type Hex } from "viem";
 import { ANIMATION_CREDITS_ADDRESS, animationCreditsAbi, BASE_USDC_ADDRESS, usdcAbi } from "@/lib/animation-credits";
@@ -138,11 +139,12 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       if (mode === "image" && !prompt.trim()) throw new Error("Add a short description for the new profile artwork.");
       if (mode !== "image" && !sourceImageUrl) throw new Error(mode === "upgrade" ? "Choose an existing animation to upgrade." : "Set a profile image before animating it.");
       const requestId = toHex(crypto.getRandomValues(new Uint8Array(32))) as Hex;
-      setMessage("Confirm spending one profile-media credit in your wallet…");
+      const authorization = `Jackcaster Grok profile ${mode}\nFID: ${fid}\nWallet: ${state.account.toLowerCase()}\nRequest: ${requestId.toLowerCase()}`;
+      setMessage("Sign the request in MetaMask. This message signature does not move funds.");
+      const signature = await state.provider.request({ method: "personal_sign", params: [toHex(authorization), state.account] }) as Hex;
+      setMessage("Confirm spending 1 credit in MetaMask…");
       const txHash = await send(state.provider, state.account, ANIMATION_CREDITS_ADDRESS, encodeFunctionData({ abi: animationCreditsAbi, functionName: "useCredit", args: [requestId] }));
       setCredits(state.balance - 1n);
-      const authorization = `Jackcaster Grok profile ${mode}\nFID: ${fid}\nWallet: ${state.account.toLowerCase()}\nRequest: ${requestId.toLowerCase()}\nTransaction: ${txHash.toLowerCase()}`;
-      const signature = await state.provider.request({ method: "personal_sign", params: [toHex(authorization), state.account] }) as Hex;
       setMessage(mode === "animate" ? "Credit confirmed. Grok is animating your profile image…" : "Credit confirmed. Grok is creating your profile image…");
       const response = await fetch("/api/grok/profile-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: state.account, requestId, transactionHash: txHash, signature, prompt: mode === "image" ? prompt.trim() : finalPrompt, mode, sourceImageUrl: mode !== "image" ? sourceImageUrl : undefined, sourceRequestId: mode !== "image" ? sourceRequestId : undefined }) });
       const result = await response.json() as { mediaUrl?: string; mediaType?: "image" | "video"; requestId?: string; error?: string };
@@ -204,7 +206,7 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
     {!walletAddress && <p className="field-hint">Connect Base to see your live price and credits.</p>}
     {currentPfpIsGif && <p className="field-hint grok-maker-status" role="note">Grok needs a still PNG, JPEG, or WebP image to create a profile animation. You can create a new image below, then animate that result; this GIF will not be sent or charged for animation.</p>}
     {currentPfpIsWebm && <p className="field-hint grok-maker-status" role="note">Animation upgrades currently accept MP4 source video. This WebM will not be sent or charged for an upgrade.</p>}
-    {!farcasterSignedIn && <p className="field-hint grok-maker-status" role="note">Connect your Farcaster account on this device to animate or upgrade a profile video. Buying credits and image creation do not enable animation access.</p>}
+    {!farcasterSignedIn && <p className="field-hint grok-maker-status" role="note">Connect your Farcaster account on this device to animate or upgrade a profile video. <Link href="/setup">Connect Farcaster</Link>. Buying credits and image creation do not enable animation access.</p>}
     {message && <p className="field-hint grok-maker-status" role="status">{message}</p>}
     {generatedUrl && <div className="grok-maker-result"><div className="grok-maker-preview">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="Animated profile preview" /> : <img src={generatedUrl} alt="Generated profile image preview" />}</div><div><span className="grok-result-kicker">YOUR PREVIEW</span><strong>{generatedType === "video" ? "Your animation is ready" : "Your artwork is ready"}</strong><p className="field-hint">It won’t change your Farcaster profile until you apply it and save.</p><button type="button" className="btn sm" disabled={busy} onClick={() => onUse(generatedUrl)}>Use on my profile</button></div></div>}
     <p className="field-hint">1 credit per try, even if it fails. Your prompt and image go to xAI.</p>

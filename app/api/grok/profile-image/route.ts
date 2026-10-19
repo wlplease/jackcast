@@ -147,7 +147,7 @@ export async function POST(request: Request) {
   const wallet = walletAddress as Address;
   const hash = transactionHash as Hex;
   const requestHex = requestId as Hex;
-  const message = `Jackcaster Grok profile ${mode}\nFID: ${viewer.fid}\nWallet: ${wallet.toLowerCase()}\nRequest: ${requestHex.toLowerCase()}\nTransaction: ${hash.toLowerCase()}`;
+  const message = `Jackcaster Grok profile ${mode}\nFID: ${viewer.fid}\nWallet: ${wallet.toLowerCase()}\nRequest: ${requestHex.toLowerCase()}`;
   try {
     if (!(await verifyMessage({ address: wallet, message, signature: signature as Hex }))) return fail("Wallet authorization did not match this request.", 401);
     let animationSource: string | undefined;
@@ -233,7 +233,10 @@ export async function POST(request: Request) {
         access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
       }).catch(() => {});
       console.info("Jackcaster profile-media generation failed", JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), mode, at: new Date().toISOString() }));
-      return fail("Grok could not complete this generation. The onchain credit was spent for this attempt.", 502);
+      const detail = error instanceof Error && /^(Grok could not start|Grok could not finish|Animation is still processing|Animation upgrade is still processing)/.test(error.message)
+        ? ` ${error.message}`
+        : "";
+      return fail(`Grok could not complete this generation.${detail} The onchain credit was spent for this attempt.`, 502);
     }
 
     try {
