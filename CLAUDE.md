@@ -24,30 +24,30 @@ The repo is **public**, and so is every fork. Never commit secrets, `.env*` file
 ## Map
 
 ```
-middleware.ts               password gate (APP_PASSWORD, hashed cookie). Covers /api routes too. Skips /login, /i/, icons.
+middleware.ts               password gate (APP_PASSWORD, HMAC session cookie). Covers /api routes too. Skips /login, /i/, icons.
 app/layout.tsx              root: renders the chosen color theme into <head>, icons, viewport color
 app/actions.ts              publish (text, photos/links, quote), like/recast, login, logout
-app/(main)/                 feed, channels (/c/x), threads (/cast/0x..), profiles (/u/x), notifications
+app/(main)/                 Following, Saved, Media, Friends, Top, Recasts, custom, channels, threads, profiles, notifications
 app/(main)/compose/         composer page: ?quote=0xhash, ?url=&text= (prefill), Android share target
 app/(main)/search/          casts, people, channels
 app/(main)/me/              consolidated settings; /profile for profile and analytics; /me/edit for profile editing
 app/(main)/mini-apps/       weekly Mini Apps discovery, search, categories, per-device saved apps
-app/(main)/dev/             creator-attributed apps found in recent casts
+app/(main)/dev/             creator-attributed apps, Farcaster publishing docs, fork/upstream links
 app/api/upload/             issues Vercel Blob upload tokens (requires a connected signer)
 app/api/head/               newest timestamps for the "new casts" pill
-app/api/feed/[feed]/        protected cursor pages for Following and Friends
+app/api/feed/[feed]/        protected cursor pages for Following, Friends, Top, and Media
 app/i/[...path]/            public, cached copies of photos from a private Blob store (outside the password gate)
 app/setup/                  in-browser signer setup: sign, approve, done
 lib/brand.ts                name, wordmark and description. Change these to rebrand.
 lib/themes.ts               color themes (token sets for light and dark) and themeCss(); checked by scripts/check-themes.ts
 lib/viewer.ts               who's using the app: env vars, else the /setup cookie, else read-only
-lib/data.ts                 feed fetchers, filtering, followed channels and favorites (cached 10 min)
-lib/prefs.ts, prefs-shared  settings (mutes, quality, reply/mini app filters, repeated-link grouping, favorites, Friends/custom feed people and name, app-local pinned cast, saved mini apps, theme, mode), per device in the selfcaster_prefs cookie
+lib/data.ts                 feed fetchers, 10-FID batching, bounded scans, provider caches, profile/Mini App discovery
+lib/prefs.ts, prefs-shared  settings (filters, feeds, pinned cast, up to 30 saved casts, saved apps, up to 3 personal audio tracks, theme), per device in the selfcaster_prefs cookie
 lib/filters.ts              mute matching and score filtering (your own casts are never hidden)
 lib/players.ts              which links get inline players
 lib/image.ts                browser-side resize/compress (2048px JPEG) and square avatar crop
 lib/stats.ts                stats over your last 30 days of top-level casts
-components/                 CastCard, Composer, Embeds, VideoEmbed, Player, Feed, CaughtUp, NewCastsPill, ThemeForm, ...
+components/                 CastCard, Composer, GIF/meme picker, listening dock, saved-cast state, Mini App launch tray, Feed, ThemeForm, ...
 public/                     icons (favicon, PWA, maskable), manifest, brand image
 ```
 
@@ -72,6 +72,8 @@ public/                     icons (favicon, PWA, maskable), manifest, brand imag
 | `MIN_USER_SCORE` | default for the quality dial (0 to 1); the dial overrides it per device |
 | `GOOGLE_AI_API_KEY` | optional; enables the manually requested Gemini digest |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | optional; enables read-aloud for a generated digest |
+| `ELEVELN_LAB_API_KEY` | legacy misspelled ElevenLabs key alias accepted by the speech route; prefer `ELEVENLABS_API_KEY` |
+| `NEXT_PUBLIC_GIPHY_API_KEY` | optional public GIPHY web key for GIF search; restrict it in the GIPHY dashboard |
 | `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` | added by Vercel for newer Blob stores; photos use the presigned flow with the project's OIDC token |
 | `BLOB_READ_WRITE_TOKEN` | older Blob stores; photos use the client-token flow |
 | `NEYNAR_API_BASE` | local testing only, points the SDK at a mock API |
@@ -92,16 +94,21 @@ The Deploy button in the README asks for `NEYNAR_API_KEY` and `APP_PASSWORD` and
 - **Settings** live in the `selfcaster_prefs` cookie so the server can filter and theme before render (no flash). The gear opens `/me`; profile and analytics are at `/profile`. Settings are per device; a database would sync them. `savePrefs()` takes a partial patch and merges it, so each form only sends its own fields.
 - **Feed order**: Following, Friends, and custom feeds exclude recasts. `/recasts` compares Neynar's following feed with recasts on and off, then shows casts present only when recasts are included. Neynar's feed response does not identify which followed account recasted a cast, so the UI says “Recasted by someone you follow” rather than guessing.
 - **Favorite channels**: `prefs.tabs` (picked in Settings), else `PINNED_CHANNELS`. They're the header tabs and the composer's whole channel menu (`composerChannels()`), plus the channel page you're on. The picker searches every followed channel: `fetchUserChannels` caps at 100 per page, so `lib/data.ts` walks the cursor.
-- **Friends feed**: `prefs.friends` stores up to 20 `{ fid, username }` entries in the device preferences cookie. `/friends` fetches a chronological Neynar FID-filtered feed, uses the same mute/quality filters, has a caught-up marker, a new-cast poll, and append-on-scroll cursors from `/api/feed/friends`. Suggestions scan 90 days, capped at 1,000 posts, cached per FID for 24 hours. The saved-list activity check also scans 90 days and is cached for a week. It is private app configuration and does not create a Farcaster group or change who you follow.
-- **Custom feed**: `prefs.customPeople` and `prefs.customName` back `/circle`. Navigation always puts Following, Friends, and the named custom feed first; the custom group is another private FID-filtered chronological feed with its own cursor and new-casts poll. Both curated feeds are per-device and capped at 20 people. Followed-account and channel directories are cached per FID for one hour.
+- **Friends feed**: `prefs.friends` stores up to 50 `{ fid, username }` entries in the device preferences cookie. `/friends` fetches a chronological Neynar FID-filtered feed in batches of at most 10 FIDs per request, then applies shared feed filters and cursor pagination. Suggestions scan up to 1,000 casts from the latest 90-day Following activity and are cached per FID for 24 hours. The saved-list activity check has a hard budget of 10 requests / up to 1,000 casts, is cached for a week, and manual refresh is scoped to that viewer. It does not create a Farcaster group or change follows.
+- **Top Accounts**: combines up to 20 curated ecosystem accounts and up to 20 active accounts from the viewer's network. FIDs are deduplicated, then split into groups of at most 10 per Neynar filter request. The activity ranking reuses the 24-hour suggestions cache.
+- **Custom feed**: `prefs.customPeople` and `prefs.customName` back `/circle`. It holds up to 20 accounts and uses at most two 10-FID feed requests per page. It remains separate from Friends and Following. Followed-account and channel directories are cached per FID for one hour.
+- **Saved casts**: `SavedCastsProvider` keeps the local bookmark list in sync with the cookie; `/saved` resolves up to 30 hashes through one bulk-casts request.
+- **Media feed**: `/media` filters the viewer's Following feed locally into images, video, or audio. Sparse results can advance a small bounded number of cursor pages as the reader scrolls.
 - **Repeated link grouping**: `prefs.groupLinks` defaults on. `components/Feed.tsx` groups casts across every feed by their identical set of normalized embed URLs, ignores common tracking query parameters, and shows the newest cast first with an expandable list of the rest. It intentionally does not group by domain or similar text.
 - **Feed filters**: `prefs.showReplies` and `prefs.hideMiniApps` filter Following/Friends/custom feeds locally after Neynar returns the page. Mini-app detection uses `metadata.frame`; feeds report the number hidden by all filters.
 - **Scroll position**: `FeedScrollRestoration` stores a per-tab `sessionStorage` position by route, so Following, Friends, custom and channel feeds resume where you left off.
 - **Drafts and threads**: `Composer` stores only text/link/channel draft fields in browser `localStorage`; photo files are not saved. `/compose/thread` saves up to five text casts locally and `publishThread` sends them in order, returning the confirmed sent count and last hash to resume a partial thread. Network failures can be ambiguous; the UI tells you to check your profile before retrying.
-- **AI catch-up**: optional `GOOGLE_AI_API_KEY` enables a manual digest of up to 20 Following casts. Only post text and author names are sent; Gemini returns structured JSON with a storyline and up to four topical sections. The server limits the storyline and each section summary to 42 words and section titles to six words; output generation is capped at 500 tokens. Optional ElevenLabs read-aloud requires both `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`; the speech route accepts up to 2,400 characters and sends only the digest. Audio is held in a browser object URL, not stored by the app. Both providers can bill separately; the one-request-per-page UI limit is not a durable rate limiter, so use provider account limits. Neither integration can post/react or use tools.
-- **Mini Apps**: `/mini-apps` uses Neynar's `7d` catalog ranking plus a FID-personalized relevance request, both cached for seven days; search is on demand. Save up to six HTTPS app URLs in the device preferences cookie. Category filtering uses `manifest.miniapp.primary_category` when Neynar includes it. `/dev` combines exact FID matches from Neynar app search, cached trending/relevant catalog results, and creator-attributed apps in the latest 100 top-level casts. This is index discovery, not a complete registry; the manual refresh invalidates the six-hour per-FID cache. `MiniAppHostReady` dynamically loads the official SDK only in iframe or React Native WebView candidates, verifies `sdk.isInMiniApp()`, then calls `sdk.actions.ready()`. Launch buttons use `sdk.actions.openMiniApp({ url })` in a verified Farcaster host and a sandboxed iframe preview in a regular browser. The web preview does not expose host wallet or session capabilities.
+- **AI catch-up**: optional `GOOGLE_AI_API_KEY` enables a manual digest of up to 40 loaded Following casts, each text excerpt capped at 420 characters. Google receives cast text, author names, dates, and public engagement counts. The route requests structured JSON with a storyline, up to five topic sections, and up to four insights; output is capped at 1,200 tokens. Optional ElevenLabs read-aloud requires `ELEVENLABS_API_KEY` (or legacy `ELEVELN_LAB_API_KEY`) and `ELEVENLABS_VOICE_ID`; speech accepts up to 2,400 characters and sends only the digest. Audio stays in a browser object URL. Both providers can bill separately; the UI attempt limit is not a durable rate limiter, so use provider account limits. Neither integration can post/react or use tools.
+- **Mini Apps**: `/mini-apps` uses Neynar's `7d` catalog ranking and a FID-personalized relevance request, both cached for seven days; search is on demand. Save up to six HTTPS app URLs in the device preferences cookie. `/dev` combines exact FID matches from Neynar app search, cached catalog results, and app embeds in the latest 100 top-level casts. This is index discovery, not a complete registry; manual refresh invalidates creator discovery. `MiniAppHostReady` verifies the official SDK host before calling `ready()`. Launch uses native `openMiniApp` in Farcaster and a large sandboxed iframe preview in a browser; minimize hides it to a tray while preserving the iframe. The browser preview does not expose host wallet or session capabilities.
+- **Listening player**: `ListeningDock` is in the masthead and remains mounted across main routes. It offers eight bundled tracks plus up to three personal HTTPS URLs. Playback never starts automatically; the list is stored in this device's preferences.
+- **Donations**: `DonationPanel` is shared by Settings and Dev. The recipient addresses and Base USDC contract are centralized in `lib/donation-recipients.ts`. It uses the Mini App wallet provider when hosted in Farcaster, otherwise `window.ethereum`. Native ETH is quoted approximately from Coinbase spot data; USDC uses 6 decimals. Donations require an explicit wallet confirmation and are linked to BaseScan after submission. Keep recipient addresses and chain/token metadata reviewed as wallet integrations change.
 - **Infinite feeds**: Following and Friends use `/api/feed/following` and `/api/feed/friends`, protected by the same middleware gate as the app. Cursor length is bounded and control characters are rejected; API responses are no-store. The client appends unique casts, skips up to four empty/filtered pages at a time, uses IntersectionObserver with a visible Load more button fallback, and keeps the initial batch for the AI digest.
-- **Profile curation**: public profile headers offer an Add to Friends action backed by the same device cookie and 20-person limit. Profile cover styling uses theme tokens, not fixed colors.
+- **Profile curation and analytics**: public profile headers offer an Add to Friends action backed by the same device cookie and 50-person limit. Own analytics use up to 100 recent casts and a five-minute server cache, with 7/30/90-day and loaded-cast views. Profile cover styling uses theme tokens, not fixed colors.
 - **Profile pages**: `/u/<username>?view=media` filters to image/video casts and walks at most five Neynar pages per request to find media. The optional pinned cast is chosen from the 30 newest casts and appears only on this Selfcaster profile. Profile banner updates use Neynar's `banner` field and require Neynar Pro; the banner is Farcaster profile data, not a local-only theme setting.
 - **Stats** bucket by time of day and weekday in the browser, so they use your own time zone. Bars use `--chart`, which each theme validates against its card color.
 
@@ -119,6 +126,7 @@ The Deploy button in the README asks for `NEYNAR_API_KEY` and `APP_PASSWORD` and
 - Call `requireViewer()` at the **top** of a page, outside any `try/catch`. `redirect()` throws, and a catch block will swallow it.
 - The SDK's generated `PostCastReqBodyEmbeds` type merges URL and cast variants. A bare `{ url }` is correct; it's cast in `app/actions.ts`.
 - Farcaster limits: max 2 embeds per cast, 1024 bytes of text.
+- Neynar feed filters accept at most 10 FIDs per request. Use the `groupFeedFids` helper for Friends, Top, and activity scans; see [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md).
 - Neynar `signer_uuid` values only work with the API key that created them.
 
 ## Verify before shipping

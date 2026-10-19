@@ -1,22 +1,30 @@
-# Jackcast fork notes
+# Jackcaster fork notes
 
-Jackcast is an open-source, personal customization of [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This repository is [wlplease/jackcast](https://github.com/wlplease/jackcast); it keeps the upstream project's MIT license and credits the original author. The [README](./README.md) documents how to deploy this Jackcast repository, while this page records the custom direction and maintenance notes for the fork.
+Jackcaster is an open-source personal customization of [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). The app is named **Jackcaster**; the repository is [wlplease/jackcast](https://github.com/wlplease/jackcast). This fork keeps the upstream MIT license and credits the original project. It is maintained separately and is not an official Selfcaster release.
 
 ## What this fork adds
 
-- Private Friends and named custom feeds (up to 20 accounts each), a 90-day activity scan capped at 1,000 posts, and a weekly batch check for saved Friends. Suggestions are cached for 24 hours; the saved-Friends batch is cached for seven days.
-- A Recasts tab before the custom feed. It separates casts introduced by Neynar's `withRecasts` Following feed from ordinary posts; standard feeds keep recasts off. Neynar does not identify the exact account that recasted a cast in this response, so the UI does not guess at the actor.
-- Feed filters for replies, mini apps, recurring words/topics, and account handles. A cast menu can mute a prolific account; the handle appears in the normal mute list so it is easy to review and undo. Repeated links can also be grouped.
-- Profile Posts/Media views, a locally pinned cast, and optional profile cover editing.
-- Feed media sizing tuned for desktop and phone screens.
-- A Mini Apps hub with Neynar's weekly trending and user-relevant catalogs, search, category filters, up to six saved apps per device, and a Dev page for creator-attributed apps found in recent casts.
-- A dedicated settings page at `/me`, a separate profile and analytics page at `/profile`, and append-on-scroll Following and Friends feeds with manual fallback.
-- An optional, user-triggered Gemini catch-up digest from the header AI icon with optional ElevenLabs read-aloud. It returns a concise storyline followed by 2–4 topic sections, with redo/clear controls. Gemini receives a bounded batch of loaded public posts; ElevenLabs receives only the generated digest. Both features are server-keyed, opt-in, and unable to post or take account actions.
-- Clearer Neynar, Gemini, and ElevenLabs errors distinguish missing configuration, rejected credentials, rate limits, timeouts, and temporary provider outages. Failed feed polling leaves loaded posts in place and reports that refresh failed.
-- Security and design decisions tracked in [SECURITY-PLAN.md](./SECURITY-PLAN.md); future ideas in [ROADMAP.md](./ROADMAP.md).
+- **Separate reading views:** Following, Top Friends, Top Accounts, Recasts, one named custom feed, Saved casts, and a media-focused feed. Recasts do not spill into the normal Following/Friends feeds.
+- **Private curation:** Top Friends supports up to 50 accounts. The Top Accounts view combines a curated list with the viewer's most active follows. The custom list supports up to 20. These settings are stored on the device, do not change follows, and do not create Farcaster groups.
+- **Bounded Neynar pulls:** feed-by-account requests are split into groups of at most 10 FIDs. Activity scans and directory scans have explicit page/request caps and cache windows. See [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md).
+- **Reading and creation tools:** local saved casts, repeated-link grouping, reply/mini-app/mute/quality controls, search for casts/people/channels, GIF search, meme captions, browser-local drafts, and recoverable text threads.
+- **Media and listening:** inline image/video/audio embeds, a media feed, a top-bar soundtrack player with eight bundled tracks, and up to three personal HTTPS tracks.
+- **Mini Apps:** weekly trending and network-relevant discovery, search, saved apps, creator discovery, native Farcaster launch, and a nearly full-screen browser preview that can minimize to a tray.
+- **Profiles and analytics:** profile posts/media views, 7/30/90-day posting metrics, a device-local pinned cast, and optional Neynar Pro profile cover editing.
+- **Optional AI:** a manual Gemini digest with a storyline, cited topic sections, and activity insights; optional ElevenLabs read-aloud. Provider keys stay server-side, and the digest is kept separate from the normal feed.
+- **Support options:** optional direct USDC or ETH donations to the original Selfcaster developer or Jackcaster on Base, available in Settings and Dev.
+- **Navigation and safety:** settings in one place, a sign-out confirmation, upstream and fork attribution in the footer and Dev section, baseline response headers, bounded uploads, and best-effort process-local login throttling.
 
-## Keeping it current
+## What remains upstream
 
-Review upstream releases and changes before syncing. Prefer small, focused merges and inspect conflicts in files this fork customizes, especially `app/globals.css`, `components/Feed.tsx`, `lib/data.ts`, and this README. Run the checks listed in [CLAUDE.md](./CLAUDE.md) after resolving changes. Keep API keys and deployment values in local/Vercel environment settings; never commit them.
+Selfcaster remains the original app, repository, product direction, and upstream source. Jackcaster-specific choices do not change Selfcaster or its users. Use upstream commits as an opportunity to review and selectively merge improvements; do not assume the codebases remain identical.
 
-This fork is for one owner's deployment. Personal feed lists and preferences are not a public group feature. AI summaries and speech are optional; see the privacy and cost notes in [README.md](./README.md). A concise, shareable feature and security summary is in [RELEASE-NOTES.md](./RELEASE-NOTES.md).
+## Maintenance
+
+1. Review upstream changes at [GenuineJack/Selfcaster](https://github.com/GenuineJack/selfcaster) before merging.
+2. Read this fork's source changes in `app/`, `components/`, and `lib/`, especially `lib/data.ts`, `app/globals.css`, `components/Feed.tsx`, and account setup.
+3. Keep feature and API limit descriptions aligned across `README.md`, [`CLAUDE.md`](./CLAUDE.md), [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md), and [`ROADMAP.md`](./ROADMAP.md).
+4. Run the appropriate local checks, review the diff, and let the owner decide when to push to GitHub or deploy. This project does not require automatic deployments.
+5. Keep API keys, signer identifiers, recovery phrases, personal data, and `.env.local` out of commits.
+
+For deployment and provider costs, see [`README.md`](./README.md). For recovery-phrase and session details, see [`SECURITY.md`](./SECURITY.md). The current feature summary is in [`RELEASE-NOTES.md`](./RELEASE-NOTES.md).

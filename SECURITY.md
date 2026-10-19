@@ -22,7 +22,7 @@ This is evidence about the checked-in source code only. It cannot prove which co
 
 `APP_PASSWORD` gates every page and API route (`middleware.ts`). The session cookie contains a versioned HMAC derived from the password; it does not contain the password itself. Anyone who obtains the cookie can replay it to access the app until the password changes or the cookie expires. Use a long, unique password and protect access to your browser and deployment. The HMAC prevents offline guessing against a stolen cookie as easily as an unkeyed hash, but it does not prevent replay.
 
-Login has no rate limit, and the session lasts 90 days. Treat the cookie as a bearer credential and rotate `APP_PASSWORD` if you suspect it was exposed. Rate limiting and session lifetime are tracked in [`SECURITY-PLAN.md`](./SECURITY-PLAN.md).
+Login applies a best-effort, process-local limit of five failed attempts per client address followed by a 15-minute block. Serverless instances do not share this counter, so it is not a durable edge-level rate limit. Sessions last 90 days. Treat the cookie as a bearer credential and rotate `APP_PASSWORD` if you suspect it was exposed. Remaining limitations are tracked in [`SECURITY-PLAN.md`](./SECURITY-PLAN.md).
 
 One route is public on purpose: `/i/...`, which serves photos you've already posted (from a private Blob store) so other Farcaster clients can show them. It only serves `casts/` and `pfp/` image files.
 

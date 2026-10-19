@@ -1,66 +1,37 @@
-# Roadmap
+# Jackcaster roadmap
 
-Ideas for Jackcaster, a personal fork of Selfcaster, grouped by what they do for you. PRs welcome; open an issue first for anything big. Nothing here is committed until it moves to **Next up**.
+This roadmap is a list of ideas, not a promise or release schedule. Jackcaster is a personal, single-owner fork of [Selfcaster](https://github.com/GenuineJack/selfcaster); keep that relationship and the upstream MIT attribution clear. Do not push or deploy a change without the owner's decision.
 
-Effort: **S** an evening, **M** a weekend, **L** a few sessions.
-Storage: **none** (just Farcaster/Neynar), **browser** (this device only), **blob** (Vercel Blob for files), **db** (a small database so it syncs across devices).
+## Shipped in this source
 
-Out of scope on purpose: DMs.
+- Chronological Following, Top Friends (up to 50), Top Accounts, Recasts, custom feeds, channel feeds, Saved, and Media views.
+- Neynar FID batching at 10 accounts per request; bounded activity discovery and request budgets. See [Neynar usage](./docs/NEYNAR-USAGE.md).
+- Per-device filters, channel tabs, saved posts and Mini Apps, custom account lists, themes, and audio URLs.
+- Search for casts, people, and channels; notifications with mark-read controls.
+- Composer with images, links, quote/reply, text threads, local drafts, GIF search, and a local meme maker.
+- Inline feed video and audio, plus a user-initiated soundtrack player with bundled and personal tracks.
+- On-demand AI digest with sourced sections and insights; optional text-to-speech.
+- Mini Apps catalog, categories, search, saved apps, developer discovery, native Farcaster launching, and a nearly full-screen browser preview with a minimize tray.
+- Profile posts/media, profile analytics, pinned cast, theme-aware settings, security headers, and best-effort login throttling.
 
-## Shipped
+## Useful next refinements
 
-Chronological Following, Friends, and named custom feeds with caught-up line and new casts pill, separate recasts feed, repeated-link grouping, reply and mini app filters, per-feed scroll restoration, expandable image viewer, favorite channels (tabs + composer), Friends curation and weekly activity checks, refreshed profile headers, profile Posts/Media tabs and analytics, app-local pinned cast, editable Neynar Pro profile banner, local composer and thread drafts, recoverable text thread composer, photos (public or private Blob store), videos and inline players, quote casts, search, muted words, quality dial, Gemini storyline digest with topical sections and optional ElevenLabs speech, trending and personalized Mini Apps with saved apps and developer discovery, user settings, security response headers, login throttling, color themes with light and dark, one-click Deploy button.
+| Idea | Why it may help | Constraint |
+| --- | --- | --- |
+| Reorder channel tabs | Keep the channels used most in reach. | Keep settings local and preserve the current selected-channel fallback. |
+| Add a real shared-device preference option | Device cookies do not follow the owner across browsers. | Requires an explicit storage and account-security decision; the app is currently single-owner, not multi-tenant. |
+| Improve long-session feed memory | Many loaded cards can increase browser memory use. | Must preserve scroll position, duplicate-link expansion, and digest source posts. |
+| Durable login throttling | The current five-failure block is process-local and does not span serverless instances. | Needs host-level or shared storage rate limiting; do not claim the local limiter is comprehensive. |
+| Better Mini App registry coverage | Neynar creator indexing may omit published apps. | Use official Farcaster attribution or a clear manual-add path; never claim Neynar search is complete. |
+| Spaces discovery | Live conversations could complement cast feeds. | First verify reliable Neynar discovery data and native Farcaster join support. If only external links are supported, label and open them as such. |
 
-## Next up
+## Product boundaries
 
-_Pick from below._
+- Keep Following chronological and separate from Friends, Top, Media, and AI catch-up.
+- Keep account selection, filters, bookmarks, themes, and personal audio private to this device unless sync is deliberately designed.
+- Do not imply that a browser Mini App preview has Farcaster wallet or native-host capabilities.
+- DMs, ads, autonomous AI actions, and multi-user hosting are out of scope for this fork.
 
-## Make feeds more personal
+## Before choosing more features
 
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| More custom feeds | Add additional named private groups beyond the one custom feed, if the three-feed layout proves useful. | M | browser initially; db for sync |
-
-Design constraints for group feeds: chronological ordering, obvious group identity, empty-state guidance, no surprise posting to a group, and a visible indicator when a cast is also in another feed. Preserve the existing Following and channel feeds as separate choices.
-
-Recommended sequence: start with the single Friends feed from selected accounts, learn whether that is enough, then expand to named circles only if you need more than one curated group.
-
-## Post better
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-
-## Channels
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| Channel browser | Search and browse channels, follow and unfollow right in the app. | M | none |
-| Arrange tabs | Reorder tabs by hand (picking which ones show is shipped; they sort A to Z). | S | browser, or db |
-| Channels mix | One feed of everything happening in your channels. | S | none |
-
-## Read better
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| Lists | Hand-picked feeds of specific people: builders, friends, your city. | M | db |
-
-## Keep it calm
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| Remembered reading position | Restore position after a full browser restart, not only while the tab stays open. | S | browser |
-
-## Your stuff
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| Bookmarks | Save casts to come back to. | S | db |
-| Synced settings | Mutes, favorites and theme follow you across devices. | M | db |
-
-## Power moves
-
-| Idea | What it does | Effort | Storage |
-| --- | --- | --- | --- |
-| Keyboard shortcuts | `j`/`k` to move, `l` like, `r` reply, `c` compose. | S | none |
-| Gemini catch-up | Shipped as an on-demand storyline plus topic breakdown of up to 20 loaded Following posts. Sends only selected post text and author handles to Gemini; no autonomous actions. | S | none |
-| Scheduled casts | Write now, post later. | M | db |
+Review Neynar request patterns and limits in [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md), the current behavior in [`README.md`](./README.md), and the fork boundaries in [`FORK-NOTES.md`](./FORK-NOTES.md). Prefer improving reliability and discoverability of shipped features over adding duplicate surfaces.

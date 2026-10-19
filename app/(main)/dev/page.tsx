@@ -3,6 +3,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { requireViewer } from "@/lib/viewer";
 import { MiniAppLaunchButton } from "@/components/MiniAppLaunchButton";
 import { RefreshOwnMiniAppsButton } from "@/components/RefreshOwnMiniAppsButton";
+import { DonationPanel } from "@/components/DonationPanel";
 
 const developerLinks = [
   { title: "Publish a Mini App", description: "Verify your app URL, manifest, and Farcaster account association.", href: "https://farcaster.xyz/~/developers/mini-apps/manifest", label: "Farcaster developer tools", kind: "Publish" },
@@ -31,5 +32,6 @@ export default async function DevPage() {
       <div className="dev-link-grid">{developerLinks.map((link) => <a key={link.href} className="dev-link-card" href={link.href} target="_blank" rel="noopener noreferrer"><span className="dev-link-kind">{link.kind}</span><strong>{link.title}</strong><span className="dev-link-description">{link.description}</span><span className="dev-link-label">{link.label} <span aria-hidden="true">↗</span></span></a>)}</div>
       <p className="field-hint dev-publish-note">Publishing and account association are managed in Farcaster’s developer tools. Edit and deploy app source with your hosting provider.</p>
     </section>
+    <section className="me-section"><div className="me-section-head"><div><h2>Support development</h2><p className="field-hint">Donations go directly to the project you select.</p></div><span className="meta">optional</span></div><DonationPanel /></section>
   </>;
 }

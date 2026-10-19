@@ -1,41 +1,35 @@
-# Jackcast — change summary for Selfcaster
+# Jackcaster source summary
 
-Jackcast is a personal fork of [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). This note summarizes the additions for upstream review. The upstream project and its author remain credited in the [README](./README.md), and the existing MIT license is retained.
+This document summarizes the current repository source. It is not a versioned release announcement and does not indicate that these changes have been pushed or deployed.
 
-## What changed
+## Current feature set
 
-- **Separate feeds:** Added private Friends and named custom feeds, each with up to 20 selected accounts, plus a Recasts tab. Friends suggestions use a 90-day activity window, a 1,000-post scan cap, and a 24-hour cache. Saved Friends can be checked together for activity, with a weekly cache.
-- **Feed controls:** Added reply and mini-app filters, repeated-link grouping, per-feed scroll restoration, new-cast and caught-up markers, and an expandable image viewer. Cast menus can mute prolific accounts through the reversible `@handle` filter. Feed images, video, and link cards are constrained to the cast column.
-- **Friend and custom feeds:** Followed accounts can be searched in either feed picker; selected counts, alphabetical lists, and direct removal make device-local lists easier to review.
-- **Service status:** Feed errors and failed new-cast checks explain whether Neynar needs configuration, is rate-limiting, or is temporarily unavailable. Gemini and ElevenLabs errors identify key/access, quota, timeout, and provider availability issues.
-- **Profiles:** Added Posts and Media tabs, an app-local pinned cast, profile header improvements, and optional cover editing through Neynar.
-- **Mini Apps and navigation:** Added 7-day trending and network-relevant discovery, catalog search, category filters, device-saved apps, creator-attributed apps in Dev, a consolidated Settings page, and separate profile analytics.
-- **Reading flow:** Following and Friends append pages while scrolling and keep a manual Load more fallback. The AI digest opens separately from the cast list.
-- **Composer:** Added browser-local drafts, quote and media improvements, and a text thread composer for up to five casts with recovery guidance after a partial send.
-- **Optional AI:** Added an on-demand Gemini digest for up to 20 loaded Following posts, opened from the header AI icon and hidden from the ordinary feed until requested. It now starts with a concise storyline and breaks the update into 2–4 short topic sections, with redo/clear controls. A separate optional ElevenLabs action can read the digest aloud. Both API keys stay server-side; speech receives only the digest and is not stored by Jackcast.
-- **Security and maintenance:** Added baseline response headers, safer server error handling, bounded upload and AI requests, signer input validation, and best-effort login throttling. `SECURITY-PLAN.md` records decisions, verification, and remaining limits.
+- Chronological Following with caught-up and new-cast indicators, incremental loading, and per-device reading position.
+- Private Top Friends (up to 50), Top Accounts, Recasts, a named custom feed, channel feeds, Saved casts, and Media filters for images, video, and audio.
+- Neynar feed-by-accounts batching at 10 FIDs per request, with bounded scans and cached discovery; details are in [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md).
+- Composer support for photos, links, replies, quotes, text threads, browser-local drafts, GIPHY search, and a local meme maker. Cast sharing opens a cast composer with the source post embedded.
+- Inline feed media and a top-bar soundtrack player with eight bundled tracks and up to three personal HTTPS tracks. Playback is user initiated.
+- Mini Apps discovery, search, categories, bookmarks, creator discovery, Farcaster-native launching, and a large browser preview with minimize-to-tray behavior.
+- Profile Posts/Media views, analytics for 7/30/90 days and loaded casts, app-local pinned cast, and optional Farcaster profile cover editing.
+- Optional, user-triggered Gemini digest with storyline, source-linked topics, and activity insights; optional ElevenLabs read-aloud.
+- Optional Base donations to the original Selfcaster developer or Jackcaster using USDC or an approximate ETH amount, with wallet approval.
+- Centralized settings, search suggestions, notification controls, sign-out confirmation, and explicit links to Selfcaster, Jackcaster, and the original creator.
+- Baseline security headers, bounded request bodies and uploads, sanitized provider errors, and best-effort process-local login throttling.
 
-## Scope and privacy
+## Fork identity
 
-This deployment is configured as a single-owner client. Personal feeds and preferences are saved on that device. The recovery phrase is not part of Jackcast's server configuration. AI features are disabled unless their corresponding server environment variables are configured, and provider costs and data terms remain the operator's responsibility. See [README.md](./README.md) for deployment and provider details.
+Jackcaster is the personal open-source fork in [wlplease/jackcast](https://github.com/wlplease/jackcast). It builds on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster), keeps the upstream MIT license and attribution, and is not an official Selfcaster release. See [`FORK-NOTES.md`](./FORK-NOTES.md).
 
-## Review notes
+## Limits to keep visible
 
-These changes reflect one user's workflow and are offered for consideration; they are not assumed to fit Selfcaster's product direction. Individual feed, profile, composer, or security changes can be reviewed or adapted independently. The source repository is [wlplease/jackcast](https://github.com/wlplease/jackcast).
+- Preferences and saved lists are stored per device, not synced between browsers.
+- Neynar creator indexing can miss published Mini Apps; Dev discovery is best-effort, not a complete registry.
+- The 90-day account activity rankings use bounded scans; a ranking may be incomplete when the scan cap is reached.
+- Neynar feed filters accept at most 10 FIDs per request. Larger lists are supported through multiple bounded requests.
+- Mini App browser previews do not have Farcaster-host wallet or native action access.
+- Login throttling is process-local. A shared edge-level limiter remains a separate hardening opportunity.
+- Gemini and ElevenLabs have separate provider terms, quotas, and possible costs. Review [`SECURITY.md`](./SECURITY.md) and `README.md` before enabling them.
 
-## Suggested upstream post
+## Local verification
 
-Hi GenuineJack — I built Jackcast as an open-source personal fork of Selfcaster and have documented the changes and security decisions. It explores separate Friends and custom feeds, feed filters and repeated-link grouping, profile Posts/Media and pinned casts, drafts and recoverable threads, and an optional Gemini summary of Following posts with ElevenLabs read-aloud. The fork keeps Selfcaster attribution and the MIT license. I’ve included deployment notes and verification results here: [Jackcast](https://github.com/wlplease/jackcast). These are personal-client changes for review; feel free to use or adapt any parts that fit Selfcaster.
-
-## Checks for this snapshot
-
-The checks below are filled in after validating the release candidate:
-
-- Typecheck: passed (`npm run typecheck`)
-- Theme contrast check: passed (`npm run check:themes`, all theme/mode combinations)
-- Dependency audit: passed (`npm audit`, zero vulnerabilities)
-- Production build: passed (`npm run build`); `/api/ai/speech` is included and the external workspace-root warning is gone
-- Secret and personal-data scan: no populated credential values, private-key material, local Windows paths, or local username in tracked files; `.env.example` contains blank placeholders
-- Git author metadata: one GitHub noreply address; no personal email in commit metadata
-- Diff review: passed (`git diff --check`); changes remain uncommitted in the working tree
-- Live provider check: not performed; ElevenLabs needs `ELEVENLABS_API_KEY` (or the existing deployment's accepted alias), `ELEVENLABS_VOICE_ID`, and a valid provider quota
+For the commands and UI review expected before an owner-approved release, see [`CLAUDE.md`](./CLAUDE.md). A successful local build does not confirm a live Neynar, Gemini, ElevenLabs, Blob, wallet, or Farcaster-host integration.

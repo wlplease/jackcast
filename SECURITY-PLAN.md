@@ -2,6 +2,8 @@
 
 This document tracks review findings and implementation decisions for this repository. It is a working plan, not a claim that listed risks have already been fixed. Update the status and change log as work lands.
 
+> **Current source snapshot (2026-10-18):** Top Friends supports up to 50 selected accounts, and custom feeds support up to 20. Older change-log entries below describe the limits at the time they were written; they are historical, not current settings.
+
 ## Scope and product constraints
 
 - One deployment is for one person. Keep the product single-user unless that goal changes.
@@ -16,7 +18,7 @@ This document tracks review findings and implementation decisions for this repos
 | --- | --- | --- | --- |
 | High | The lockfile resolves Next.js 15.5.28 with PostCSS 8.4.31. `npm audit` reports high severity PostCSS advisories through Next.js. | Keep Next 15 and override PostCSS to a patched 8.5 release; re-audit after install. Revisit when a patched Next 15 release becomes available. | Done (PostCSS override) |
 | High | `selfcaster_session` is a deterministic, unkeyed SHA-256 digest of `APP_PASSWORD`; possession permits replay. It lasts 90 days. | Replace it with a versioned, keyed session token and invalidate old tokens. Replay remains possible if a current cookie is stolen; rotation still uses `APP_PASSWORD`. | Done (token); replay and lifetime remain open |
-| Medium | Login has no throttling, so password guessing can consume app resources. | Apply five-attempt/15-minute process-local throttling and generic errors. Add edge-level limiting for durable enforcement across serverless instances. | Done (best-effort; edge-level still recommended) |
+| Medium | Login throttling is process-local and does not coordinate attempts across serverless instances. | Keep the five-attempt/15-minute best-effort block and add host-level or shared-storage limiting if stronger enforcement is needed. | Partial (best-effort only; edge-level still recommended) |
 | Medium | Signer setup can create signer requests and poll Neynar without app-level throttling. | Validate signer IDs and request data at the server boundary; rate-limit signer creation and polling; cap polling duration and request frequency. | Open |
 | Medium | The public image route trusts the Blob object's `image/*` content type and serves it at the app origin. | Verify the stored type and extension agree; restrict served formats; set `X-Content-Type-Options` and a restrictive content security policy for image responses. | Done (response checks) |
 | Medium | Upload route parses arbitrary JSON before its error handler and returns exception messages. | Bound request body size, handle malformed JSON consistently, return generic client errors, and keep diagnostic details in server logs. Confirm Blob SDK callback validation remains enabled. | Done (body cap and generic errors) |

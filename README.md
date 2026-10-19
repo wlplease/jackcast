@@ -36,20 +36,24 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 ## What you get
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Following and Top Friends can append more posts as you scroll. Posts shared by people you follow appear in their own Recasts tab.
+- **Saved for later.** Bookmark up to 30 casts into a private reading list stored in this browser's settings. Remove saved posts whenever you want.
+- **A dedicated Media feed.** Browse images, videos, and audio shared by people you follow, with a filter for each type. Sparse media pages continue through a small, bounded number of feed pages as you scroll.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
 - **Top Friends.** Keep a private chronological feed of up to 50 accounts. Settings can batch-add the 20 most active people you follow over 90 days and 20 curated Farcaster accounts, or you can pick people manually. The activity scan checks at most 1,000 posts and is cached for a day; multi-request batching respects Neynar's 10-FID feed-filter limit. The selected list stays on this device and out of Following and Custom.
 - **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Review and edit the selected list in settings; Following, Top Friends, and this custom feed stay separate.
 - **Profiles.** Browse posts or media, pin one cast on your Selfcaster profile, and set an optional Farcaster profile cover (Neynar Pro required to update the cover).
-- **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context, a GIF picker, and a photo meme maker with custom captions.
+- **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context, a GIPHY picker, and a photo meme maker with custom captions. Share opens a cast composer with the original cast embedded; Jackcaster uses Farcaster's native composer in its host and Jackcaster's compose screen in a regular browser.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
 - **Your filters.** Mute words or phrases to quiet recurring topics, or mute an `@handle` to hide that account and posts mentioning it. A quality dial can also hide low-score accounts. These controls are optional and can be reversed in Settings.
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in Settings → Feed controls if you want every post shown separately.
 - **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
 - **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
-- **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for a weekly storyline, topic citations, insights, and activity analytics based on up to 40 loaded posts in Following. The digest stays out of the feed unless opened from the icon; its options let you redo or clear it. Optionally have ElevenLabs read it aloud. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text, author names, dates, and public engagement counts; ElevenLabs receives only the generated digest. Audio is created on demand and kept in the browser for that visit.
+- **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for a storyline, cited topic sections, insights, and activity analytics based on up to 40 loaded posts in Following. The digest stays out of the feed unless opened from the icon; its options let you redo or clear it. Optionally have ElevenLabs read it aloud. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text, author names, dates, and public engagement counts; ElevenLabs receives only the generated digest. Audio is created on demand and held in the browser for that visit.
+- **A small soundtrack player.** Eight Jackcaster tracks are available from the top bar, with play/pause, previous/next, shuffle, repeat, and volume. Playback never starts automatically. Add up to three direct HTTPS tracks of your own under Settings → Listening; links are saved in this browser's settings.
+- **Support development.** Settings and Dev include optional Base donations to the original Selfcaster developer or Jackcaster. Choose $1, $10, or $100 in USDC or approximate ETH; your connected Farcaster wallet is preferred in Farcaster, with a browser wallet fallback. The wallet must confirm each transaction. ETH uses a spot quote and can change before approval; verify the recipient and amount in your wallet.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
-- **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
-- **Mini Apps.** Explore Neynar's 7-day trending catalog, apps relevant to your network, and search. Open apps in Farcaster's native Mini App surface when Jackcaster is hosted there, or use the isolated in-app web preview in a regular browser. Filter by available categories, save up to six apps on this device, and see apps Neynar attributes to your FID in the Dev section, with recent-cast discovery as a fallback. Catalog data is cached for a week; your own app discovery refreshes every six hours to limit repeat API pulls. Native wallet and Farcaster actions require the official host; the browser preview does not grant those capabilities. Launch behavior follows the official [Mini App detection](https://miniapps.farcaster.xyz/docs/sdk/is-in-mini-app) and [`openMiniApp`](https://miniapps.farcaster.xyz/docs/sdk/actions/open-miniapp) SDK guidance.
+- **The rest.** Search casts, people, and channels with suggested starting points; notifications; profile analytics for 7, 30, and 90 days; profile editing; installable app support; and a Dev section linking to this fork, upstream Selfcaster, and the original creator's Farcaster profile.
+- **Mini Apps.** Explore Neynar's 7-day trending catalog, apps relevant to your network, and search. Open apps in Farcaster's native Mini App surface when Jackcaster is hosted there, or use the isolated in-app web preview in a regular browser. The preview fills nearly the whole screen, can minimize to a tray, and keeps the app session mounted. Filter by available categories, save up to six apps on this device, and see apps Neynar attributes to your FID in the Dev section, with recent-cast discovery as a fallback. Catalog data is cached for a week; your own app discovery refreshes every six hours to limit repeat API pulls. Native wallet and Farcaster actions require the official host; the browser preview does not grant those capabilities. Launch behavior follows the official [Mini App detection](https://miniapps.farcaster.xyz/docs/sdk/is-in-mini-app) and [`openMiniApp`](https://miniapps.farcaster.xyz/docs/sdk/actions/open-miniapp) SDK guidance.
 - **One settings home.** Use the gear icon for themes, channel tabs, Top Friends, Custom, filters, and connection details. The profile icon opens your profile and analytics.
 - **Keep reading.** Following and Top Friends append more posts as you scroll, with a manual Load more button if automatic loading is unavailable. The AI digest opens in its own panel from the AI icon and stays out of the post list.
 - **Service status.** When Neynar, Gemini, or ElevenLabs has a configuration, quota, or availability problem, Jackcast explains what happened and whether to check settings or try again. AI remains optional; the core app works without Google or ElevenLabs keys.
@@ -95,7 +99,7 @@ Open your URL, enter your password, and you'll land on `/setup`.
 2. Approve in the Farcaster app: scan the QR on desktop, or tap **Open in Farcaster** on your phone.
 3. Done. That device is connected.
 
-The last screen shows `SIGNER_UUID` and `MY_FID`. Add both in Vercel (**Settings, Environment Variables**) and redeploy, so every device is connected, not just this one.
+The last screen shows `SIGNER_UUID` and `MY_FID`. Add both in Vercel (**Settings → Environment Variables**) and deploy that configuration when you choose, so every device is connected, not just this one.
 
 Rather not use your main recovery phrase? Make a separate Farcaster account just for this and use its phrase. You still approve and post as *you*. The other account only shows up as the app that asked.
 
@@ -126,11 +130,11 @@ All optional settings are in [`.env.example`](./.env.example).
 
 ### GIFs and memes in the composer
 
-The composer includes a photo caption maker that works locally, plus GIF search powered by GIPHY. Add a GIPHY web API key as `NEXT_PUBLIC_GIPHY_API_KEY` in `.env.local` for local development (or the app's environment when you choose to deploy); GIF search is optional, and the meme maker and pasted HTTPS GIF links work without it. The picker requests G-rated GIFs and shows GIPHY attribution.
+The composer includes a photo caption maker that works locally, plus GIF search powered by GIPHY. Add a GIPHY web API key as `NEXT_PUBLIC_GIPHY_API_KEY` in `.env.local` for local development (or the app's environment when you choose to deploy); GIF search is optional, and the meme maker and pasted HTTPS GIF links work without it. This key is public by design and must be restricted in your GIPHY dashboard. The picker requests G-rated GIFs and shows GIPHY attribution.
 
 ### Optional Gemini catch-up
 
-This feature is off unless you choose to enable it. You do not need an AI key to deploy or use Jackcast's feeds, profiles, or posting features. To enable the digest, add `GOOGLE_AI_API_KEY` to your Vercel environment and redeploy. The key stays on the server. The digest is user-triggered, uses at most 20 loaded casts (text capped at 500 characters each), asks for at most 300 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
+This feature is off unless you choose to enable it. You do not need an AI key to use Jackcast's feeds, profiles, or posting features. To enable the digest, add `GOOGLE_AI_API_KEY` to your server environment. The key stays on the server. The digest is user-triggered, accepts up to 40 loaded casts with each text excerpt capped at 420 characters, asks for up to 1,200 output tokens, and does not use Google Search grounding. Google applies its own project quotas and billing; review [Gemini API pricing and usage](https://ai.google.dev/gemini-api/docs/pricing) and set a project spend cap in AI Studio if billing is enabled. The free tier may use submitted content to improve Google products; review Google's current terms before enabling it.
 
 To add spoken playback, also set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`. Choose a voice available to that key. Jackcast sends ElevenLabs only the generated digest, caps it at 2,400 characters, and allows one audio generation attempt per page visit. The MP3 is not saved by Jackcast; it is held in the browser until you leave the page, with an option to download it. ElevenLabs usage is billed separately; review [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) and set limits in your ElevenLabs account. The integration follows ElevenLabs' [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert). See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
 
@@ -138,7 +142,7 @@ To disable the digest and audio, remove `GOOGLE_AI_API_KEY` and redeploy. To kee
 
 ## Getting updates
 
-The Deploy button makes a fresh copy of Jackcast, so your repo won't update on its own. For upstream Selfcaster changes, review [GenuineJack/Selfcaster commits](https://github.com/GenuineJack/selfcaster/commits/main) and copy or merge the changes you want. This repository has its own customizations, so review changes and resolve conflicts before deploying an update:
+The Deploy button makes a fresh copy of Jackcast, so your repo won't update on its own. Jackcaster changes are not pushed or deployed automatically by this project; review and push source changes yourself, then deploy when you decide. For upstream Selfcaster changes, review [GenuineJack/Selfcaster commits](https://github.com/GenuineJack/selfcaster/commits/main) and copy or merge the changes you want. This repository has its own customizations, so review changes and resolve conflicts before deploying an update:
 
 ```bash
 git remote add upstream https://github.com/GenuineJack/selfcaster.git
@@ -158,6 +162,8 @@ your browser ── password cookie ──> Next.js on Vercel ──> Neynar API
 
 All Neynar calls happen on the server. Your API key and signer never reach the browser. Settings like mutes, favorites and theme are stored per device in a cookie.
 
+For endpoint-by-endpoint request counts, caching windows, account batch limits, and bounded scan budgets, see [Neynar usage and pull budgets](./docs/NEYNAR-USAGE.md).
+
 ## Running locally
 
 ```bash
@@ -167,6 +173,8 @@ npm run dev
 ```
 
 Open http://localhost:3000/setup. Without `APP_PASSWORD`, local dev skips the lock screen.
+
+Add only the optional provider keys you intend to use to `.env.local`; never commit that file. `NEXT_PUBLIC_GIPHY_API_KEY` is intentionally browser-visible and only enables optional GIF search.
 
 Checks: `npm run typecheck`, `npm run check:themes`, `NEYNAR_API_KEY=x npm run build`.
 
