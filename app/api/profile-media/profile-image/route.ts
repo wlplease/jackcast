@@ -35,6 +35,17 @@ async function providerError(response: Response): Promise<string> {
   return String(response.status);
 }
 
+/** Keep a short, useful provider diagnostic in the request record for later polls. */
+function safeFailureMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : "Unknown provider error";
+  return raw
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/AIza[A-Za-z0-9_-]+/gi, "[redacted]")
+    .replace(/xai-[A-Za-z0-9_-]+/gi, "[redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 280);
+}
+
 function fail(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
 }
@@ -123,7 +134,8 @@ async function downloadVideo(videoUrl: string): Promise<Buffer> {
   const remote = new URL(videoUrl);
   if (remote.protocol !== "https:" || !["generativelanguage.googleapis.com", "storage.googleapis.com"].includes(remote.hostname)) throw new Error("Google returned an unexpected video host.");
   const response = await fetch(remote, { headers: { "x-goog-api-key": apiKey() || "" }, signal: AbortSignal.timeout(20_000), cache: "no-store" });
-  if (!response.ok || Number(response.headers.get("content-length") || 0) > 30 * 1024 * 1024) throw new Error("Google returned a video that could not be saved.");
+  if (!response.ok) throw new Error(`Google video download failed (${await providerError(response)}).`);
+  if (Number(response.headers.get("content-length") || 0) > 30 * 1024 * 1024) throw new Error("Google returned a video larger than Jackcaster can save.");
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length < 12 || bytes.length > 30 * 1024 * 1024 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("Google returned an invalid MP4 file.");
   return bytes;
@@ -241,11 +253,12 @@ export async function POST(request: Request) {
         });
         return NextResponse.json({ processing: true, requestId: requestHex }, { status: 202, headers: { "Cache-Control": "no-store" } });
       } catch (error) {
-        console.error("Google profile animation could not start:", error instanceof Error ? error.message : "unknown error");
-        await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_start_failed", completedAt: Date.now() }), {
+        const failureMessage = safeFailureMessage(error);
+        console.error("Google profile animation could not start:", failureMessage);
+        await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_start_failed", failureMessage, completedAt: Date.now() }), {
           access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
         }).catch(() => {});
-        const detail = error instanceof Error && /^(Google could not start)/.test(error.message) ? ` ${error.message}` : "";
+        const detail = error instanceof Error && /^(Google could not start)/.test(error.message) ? ` ${safeFailureMessage(error)}` : "";
         return fail(`Google could not start this animation.${detail} The onchain credit was spent for this attempt.`, 502);
       }
     }
@@ -314,7 +327,7 @@ export async function GET(request: Request) {
       if (!lock || lock.statusCode !== 200) return fail("Animation request was not found for this wallet.", 404);
       const record = await new Response(lock.stream).json() as {
         fid?: unknown; wallet?: unknown; requestId?: unknown; mode?: unknown; status?: unknown; providerRequestId?: unknown;
-        mediaUrl?: unknown; mediaType?: unknown; startedAt?: unknown;
+        mediaUrl?: unknown; mediaType?: unknown; startedAt?: unknown; failureMessage?: unknown;
       };
       if (record.fid !== viewer.fid || record.wallet !== wallet || record.requestId !== requestId || (record.mode !== "animate" && record.mode !== "upgrade")) {
         return fail("Animation request does not belong to this Farcaster account and wallet.", 403);
@@ -322,7 +335,10 @@ export async function GET(request: Request) {
       if (record.status === "completed" && typeof record.mediaUrl === "string") {
         return NextResponse.json({ mediaUrl: record.mediaUrl, mediaType: record.mediaType, requestId }, { headers: { "Cache-Control": "no-store" } });
       }
-      if (record.status === "failed") return fail("Google could not complete this animation. The onchain credit was spent for this attempt.", 502);
+      if (record.status === "failed") {
+        const detail = typeof record.failureMessage === "string" ? ` ${record.failureMessage.slice(0, 280)}` : "";
+        return fail(`Google could not complete this animation.${detail} The onchain credit was spent for this attempt.`, 502);
+      }
       if (typeof record.providerRequestId !== "string" || !/^models\/veo-3\.1-lite-generate-preview\/operations\/[^\s]{1,240}$/.test(record.providerRequestId)) {
         return fail("The animation job is not available to resume. Check the profile before spending another credit.", 409);
       }
@@ -341,10 +357,11 @@ export async function GET(request: Request) {
       }
       const providerStatus = await statusResponse.json() as { done?: boolean; error?: { message?: string }; response?: { generateVideoResponse?: { generatedSamples?: { video?: { uri?: string } }[] } } };
       if (providerStatus.error) {
-        await put(lockPath, JSON.stringify({ ...record, status: "failed", failure: "provider_generation_failed", completedAt: Date.now() }), {
+        const failureMessage = safeFailureMessage(new Error(providerStatus.error.message || "Google reported an animation error."));
+        await put(lockPath, JSON.stringify({ ...record, status: "failed", failure: "provider_generation_failed", failureMessage, completedAt: Date.now() }), {
           access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
         }).catch(() => {});
-        return fail(`Google could not complete this animation${providerStatus.error.message ? `: ${providerStatus.error.message.slice(0, 180)}` : ""}. The onchain credit was spent for this attempt.`, 502);
+        return fail(`Google could not complete this animation: ${failureMessage}. The onchain credit was spent for this attempt.`, 502);
       }
       if (!providerStatus.done) {
         return NextResponse.json({ processing: true, requestId }, { status: 202, headers: { "Cache-Control": "no-store" } });
@@ -363,8 +380,9 @@ export async function GET(request: Request) {
       console.info("Jackcaster profile animation completed", JSON.stringify({ fid: viewer.fid, wallet, requestId, mode: record.mode, at: new Date().toISOString() }));
       return NextResponse.json({ mediaUrl, mediaType: "video", requestId }, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
-      console.error("Google profile animation status check failed:", error instanceof Error ? error.message : "unknown error");
-      return fail("Couldn't check or save this animation right now. Its job remains saved; try checking again.", 503);
+      const detail = safeFailureMessage(error);
+      console.error("Google profile animation status check failed:", detail);
+      return fail(`Couldn't check or save this animation right now: ${detail}. Its job remains saved; try checking again.`, 503);
     }
   }
 

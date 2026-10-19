@@ -122,7 +122,9 @@ export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse
       try { result = await poll.json() as typeof result; }
       catch { continue; }
       if (poll.status === 202 && result.processing) continue;
-      if (poll.status === 503) continue;
+      // Keep the saved job resumable, but surface provider/configuration errors
+      // instead of hiding them behind ten minutes of repeated polling.
+      if (poll.status === 503) throw new Error(result.error || "Google could not check the saved animation. Resume it later; no new credit is needed.");
       if (!poll.ok || !result.mediaUrl || result.mediaType !== "video") {
         savePendingAnimation(null);
         throw new Error(result.error || "Google could not complete this animation. The onchain credit was spent for this attempt.");

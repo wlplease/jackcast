@@ -21,6 +21,9 @@ export async function GET(request: NextRequest) {
       : null;
     return NextResponse.json({ count, countAfter }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json({ error: "Notification count unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    // Neynar can temporarily throttle or fail. Treat this as unavailable rather
+    // than returning a fake zero (or a browser-console 503); the client keeps its
+    // last known badge and can refresh again later.
+    return NextResponse.json({ unavailable: true }, { headers: { "Cache-Control": "no-store" } });
   }
 }
