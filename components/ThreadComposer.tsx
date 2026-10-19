@@ -8,7 +8,7 @@ import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 const MAX_CASTS = 5;
 const DRAFT_KEY = "selfcaster:draft:thread:v1";
 
-export function ThreadComposer() {
+export function ThreadComposer({ username }: { username: string }) {
   const router = useRouter();
   const [casts, setCasts] = useState(["", ""]);
   const [resumeParent, setResumeParent] = useState<string>();
@@ -73,7 +73,7 @@ export function ThreadComposer() {
       <div className="thread-intro">
         <div>
           <h1>Write a thread</h1>
-          <p>Each cast replies to the one before it. Up to {MAX_CASTS} casts; the Jackcaster source link is added to each one.</p>
+          <p>Posting as <strong>@{username}</strong> · each cast replies to the one before it. Up to {MAX_CASTS} casts; the Jackcast source link is added to each one.</p>
         </div>
         <span className="draft-note">{saved ? "Draft saved on this device" : "Drafts stay on this device"}</span>
       </div>

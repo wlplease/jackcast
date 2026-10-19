@@ -7,16 +7,17 @@ import { redirect } from "next/navigation";
  * Who is using the app, and whether they can write.
  *
  * Resolved in this order:
- * 1. SIGNER_UUID + MY_FID env vars (set once in Vercel, works on every device)
- * 2. The signed cookie /setup drops after you approve a signer (works on that device right away)
- * 3. MY_FID alone (read-only mode)
+ * 1. The signed cookie /setup drops after you approve your own Farcaster signer (write access on this device)
+ * 2. MY_FID alone (read-only mode)
+ * A deployment-wide signer is intentionally never used for writes, so one user's
+ * Neynar configuration cannot make another user's casts appear under its account.
  * Nothing found means the app sends you to /setup.
  */
 export type Viewer = {
   fid: number;
   signerUuid: string | null;
   canWrite: boolean;
-  source: "env" | "setup" | "read-only";
+  source: "setup" | "read-only";
 };
 
 export const SIGNER_COOKIE = "selfcaster_signer";
@@ -65,10 +66,6 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (fromCookie) return { ...fromCookie, canWrite: true, source: "setup" };
 
   const envFid = Number(process.env.MY_FID || 0);
-  const envSigner = process.env.SIGNER_UUID || "";
-
-  if (envFid && envSigner) return { fid: envFid, signerUuid: envSigner, canWrite: true, source: "env" };
-
   if (envFid) return { fid: envFid, signerUuid: null, canWrite: false, source: "read-only" };
   return null;
 });

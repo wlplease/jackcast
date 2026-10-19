@@ -59,7 +59,7 @@ export async function publish(input: {
   }
   if (!input.text.trim() && !urls.length && !input.quote) return { ok: false, error: "Nothing to cast" };
   if (new TextEncoder().encode(text).length > MAX_CAST_BYTES) {
-    return { ok: false, error: "This cast is too long after adding the Jackcaster source link. Shorten the text to fit Farcaster's 1,024-byte limit." };
+    return { ok: false, error: "This cast is too long after adding the Jackcast source link. Shorten the text to fit Farcaster's 1,024-byte limit." };
   }
   // The SDK's generated embed type merges the url and cast variants; the API wants one or the other.
   const embeds = [
@@ -97,7 +97,7 @@ export async function publishThread(input: { casts: string[]; parentHash?: strin
   if (rawTexts.some((text) => !text)) return { ok: false, posted: 0, lastHash: null, error: "Every cast needs text." };
   const texts = rawTexts.map(withCastAttribution);
   if (texts.some((text) => new TextEncoder().encode(text).length > 1024)) {
-    return { ok: false, posted: 0, lastHash: null, error: "Each cast must fit Farcaster's 1,024-byte limit after adding the Jackcaster source link." };
+    return { ok: false, posted: 0, lastHash: null, error: "Each cast must fit Farcaster's 1,024-byte limit after adding the Jackcast source link." };
   }
   if (input.parentHash && !/^0x[0-9a-f]{40}$/i.test(input.parentHash)) {
     return { ok: false, posted: 0, lastHash: null, error: "The thread continuation point is invalid." };

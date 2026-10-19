@@ -7,7 +7,7 @@ import { mnemonicToAccount } from "viem/accounts";
 import { SIGNED_KEY_REQUEST_DOMAIN, SIGNED_KEY_REQUEST_TYPES } from "@/lib/signed-key-request";
 import { checkSigner, disconnectDevice, findAccount, registerSigner, startSigner } from "./actions";
 
-type Connected = { fid: number; signerUuid: string; username?: string; source: string };
+type Connected = { fid: number; signerUuid: string; username?: string };
 
 const PENDING_KEY = "selfcaster:pending-signer";
 const QR_OPTS = { margin: 1, width: 440, color: { dark: "#0d0d0d", light: "#ffffff" } };
@@ -36,28 +36,6 @@ function Steps({ at }: { at: number }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-function CopyRow({ name, value }: { name: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="env-row">
-      <code>
-        {name}=<b>{value}</b>
-      </code>
-      <button
-        type="button"
-        className="btn ghost sm"
-        onClick={async () => {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        }}
-      >
-        {copied ? "Copied" : "Copy"}
-      </button>
-    </div>
   );
 }
 
@@ -314,26 +292,17 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
       <Steps at={3} />
       <h1>{step.fresh ? "You're connected" : "Connected"}</h1>
       <p>
-        {step.username ? <>Posting as <b>@{step.username}</b></> : <>Posting as fid {step.fid}</>}
-        {connected?.source === "env" && !step.fresh ? " from your environment variables, so every device is set." : " on this device."}
+        {step.username ? <>Posting as <b>@{step.username}</b></> : <>Posting as fid {step.fid}</>} on this device.
       </p>
-
-      {!(connected?.source === "env" && !step.fresh) && (
-        <div className="env-box">
-          <h2>Make it work on every device</h2>
-          <p>
-            In Vercel, open your project, Settings, Environment Variables. Add these two, then redeploy.
-          </p>
-          <CopyRow name="SIGNER_UUID" value={step.signerUuid} />
-          <CopyRow name="MY_FID" value={String(step.fid)} />
-          <p className="fine">Skip this and you&apos;ll just need to connect again on each new device.</p>
-        </div>
-      )}
+      <div className="env-box">
+        <h2>Your account stays yours</h2>
+        <p>The Neynar API key connects Jackcast to Farcaster. This device-specific signer chooses your posting account; Jackcast never uses a deployment-wide signer for your casts. Connect separately on each device.</p>
+      </div>
 
       <Link className="btn wide" href="/">
         Go to my feed
       </Link>
-      {connected?.source === "setup" && !step.fresh && (
+      {connected && !step.fresh && (
         <button
           className="quiet"
           onClick={async () => {

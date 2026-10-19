@@ -23,7 +23,7 @@ export default async function SetupPage() {
       <SetupFlow
         connected={
           viewer?.source === "setup" && viewer.signerUuid
-            ? { fid: viewer.fid, signerUuid: viewer.signerUuid, username, source: viewer.source }
+            ? { fid: viewer.fid, signerUuid: viewer.signerUuid, username }
             : null
         }
         hasApiKey={Boolean(process.env.NEYNAR_API_KEY)}

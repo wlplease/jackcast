@@ -82,9 +82,8 @@ Keep secrets in Vercel Environment Variables or an ignored local `.env.local`; n
 | Variable | Required? | Purpose and notes |
 | --- | --- | --- |
 | `NEYNAR_API_KEY` | Yes | Server-only Neynar access for Farcaster profiles, feeds, and actions. Get it from [Neynar](https://dev.neynar.com). Never use a `NEXT_PUBLIC_` prefix. |
-| `APP_PASSWORD` | Yes in production | Locks your deployment. Use a long, unique password and do not share it: anyone who enters can act through the signer configured for that deployment. Local development can run without it. |
-| `MY_FID` | Recommended | Your numeric Farcaster ID. Needed with `SIGNER_UUID` for all devices to use the server-configured connected account; by itself, it enables read-only mode. |
-| `SIGNER_UUID` | Optional | Server-side Neynar signer identifier. Pair with `MY_FID` to post from every device. Alternatively connect at `/setup`; that stores a signed, device-specific connection cookie. Never expose the signer UUID publicly. |
+| `APP_PASSWORD` | Yes in production | Locks your deployment. Use a long, unique password and do not share it. Each person connects their own Farcaster account before posting. Local development can run without it. |
+| `MY_FID` | Optional | Your numeric Farcaster ID for read-only mode before connecting a device-specific signer. |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Enables direct Vercel Blob photo uploads for an existing token-based store. For newer stores use `BLOB_STORE_ID` plus `BLOB_WEBHOOK_PUBLIC_KEY` instead. |
 | `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` | Optional pair | Enables Vercel's presigned Blob upload flow. Do not set only one. |
 | `GOOGLE_AI_API_KEY` | Optional | Enables Gemini catch-up and paid profile art/animation. It is a server key; selected public casts go to Google when a user requests a digest, and prompts/profile media go to Google only when a user requests profile generation. Review Google's terms, model access, quotas, and billing. |
@@ -98,7 +97,7 @@ Keep secrets in Vercel Environment Variables or an ignored local `.env.local`; n
 | `MIN_USER_SCORE` | Optional | Default Neynar user-quality filter, from `0` to `1`; defaults to `0`. Users may adjust their own setting. |
 | `NEYNAR_API_BASE` | Advanced | Optional Neynar API endpoint override; leave unset for the standard API. |
 
-`APP_PASSWORD`, `NEYNAR_API_KEY`, and `SIGNER_UUID` must remain server-side. Firebase Web config and GIPHY web keys are intentionally public; they are not admin credentials and should be restricted with provider settings where available. Do not paste recovery phrases, private keys, Firebase service-account JSON, or wallet secrets into Vercel variables for this app.
+`APP_PASSWORD` and `NEYNAR_API_KEY` must remain server-side. An old `SIGNER_UUID` environment variable is ignored; remove it to avoid confusion. Jackcast only posts through the account approved on the current device. Firebase Web config and GIPHY web keys are intentionally public; they are not admin credentials and should be restricted with provider settings where available. Do not paste recovery phrases, private keys, Firebase service-account JSON, or wallet secrets into Vercel variables for this app.
 
 ## Setup
 
@@ -131,7 +130,7 @@ Open your URL, enter your password, and you'll land on `/setup`.
 2. Approve in the Farcaster app: scan the QR on desktop, or tap **Open in Farcaster** on your phone.
 3. Done. That device is connected.
 
-The last screen shows `SIGNER_UUID` and `MY_FID`. Add both in Vercel (**Settings → Environment Variables**) and deploy that configuration when you choose, so every device is connected, not just this one.
+The confirmation screen shows the Farcaster account that will publish. Sign in separately on each device; Jackcast does not share a deployment-wide signer, so a cast cannot silently publish as the site owner's account.
 
 Rather not use your main recovery phrase? Make a separate Farcaster account just for this and use its phrase. You still approve and post as *you*. The other account only shows up as the app that asked.
 
@@ -233,11 +232,11 @@ No. Changes here stay in your local checkout until you choose to commit, push, o
 
 ### Which keys are required, and which are optional?
 
-For a basic production instance, set `NEYNAR_API_KEY` and a strong `APP_PASSWORD`. `MY_FID` and `SIGNER_UUID` are optional; together they configure the operator's Neynar signer for the deployment. Otherwise connect at `/setup`. All provider features are optional. The [environment table](#environment-variables-required-and-optional) describes each variable and where it belongs.
+For a basic production instance, set `NEYNAR_API_KEY` and a strong `APP_PASSWORD`. `MY_FID` is optional and only provides read-only account context; each device must connect its own signer at `/setup` before it can post. All provider features are optional. The [environment table](#environment-variables-required-and-optional) describes each variable and where it belongs.
 
 ### Which values are secrets?
 
-Keep `NEYNAR_API_KEY`, `APP_PASSWORD`, `SIGNER_UUID`, `GIPHY_APP`, `GOOGLE_AI_API_KEY`, and `ELEVENLABS_API_KEY` in Vercel's server environment or an ignored local `.env.local`. Do not add `NEXT_PUBLIC_` to them. Firebase Web App config is intentionally public and is limited by Firebase Authentication and Firestore rules; it is not an admin credential. Never add a Firebase service account, wallet private key, or recovery phrase to this project.
+Keep `NEYNAR_API_KEY`, `APP_PASSWORD`, `GIPHY_APP`, `GOOGLE_AI_API_KEY`, and `ELEVENLABS_API_KEY` in Vercel's server environment or an ignored local `.env.local`. Do not add `NEXT_PUBLIC_` to them. Firebase Web App config is intentionally public and is limited by Firebase Authentication and Firestore rules; it is not an admin credential. Never add a Firebase service account, wallet private key, recovery phrase, or Neynar signer UUID to this project.
 
 ### How do GIF search and the meme maker work?
 
@@ -281,13 +280,12 @@ Want one-click updates to Jackcast? [Fork this repository](https://github.com/wl
 ## How it works
 
 ```
-your browser ── password cookie ──> Next.js on Vercel ──> Neynar API ──> Farcaster
-                                       │
-                                       └─ SIGNER_UUID: Neynar holds a key your
-                                          account approved once, and signs casts with it
+your browser ── password + account cookie ──> Next.js on Vercel ──> Neynar API ──> Farcaster
+                         │                         │
+                         └─ device-specific signer ─┘
 ```
 
-All Neynar calls happen on the server. Your API key and signer never reach the browser. Settings like mutes, favorites and theme are stored per device in a cookie.
+The API key stays on the server. The approved device-specific signer is stored in a signed, HttpOnly cookie; Jackcast does not use one deployment-wide signer for posts. Settings like mutes, favorites and theme are stored per device in a cookie.
 
 For endpoint-by-endpoint request counts, caching windows, account batch limits, and bounded scan budgets, see [Neynar usage and pull budgets](./docs/NEYNAR-USAGE.md).
 

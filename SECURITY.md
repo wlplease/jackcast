@@ -30,7 +30,7 @@ One route is public on purpose: `/i/...`, which serves photos you've already pos
 
 ## Your keys
 
-`NEYNAR_API_KEY` and `SIGNER_UUID` live in your Vercel environment variables and are only used on the server. Neither ever reaches the browser. A `SIGNER_UUID` only works with the API key that created it.
+`NEYNAR_API_KEY` lives in your Vercel environment and is only used on the server. The Farcaster signer is approved per device and stored in a signed, HttpOnly cookie. A legacy `SIGNER_UUID` environment variable is ignored for posting, preventing a deployment-wide account from being used accidentally.
 
 To cut off access: revoke the app in Farcaster settings (connected apps), and rotate your Neynar key at dev.neynar.com.
 

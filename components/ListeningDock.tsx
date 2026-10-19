@@ -6,6 +6,9 @@ import { JACKCASTER_TRACKS, type AudioTrack } from "@/lib/audio-tracks";
 export function ListeningDock({ personalTracks = [] }: { personalTracks?: AudioTrack[] }) {
   const tracks = useMemo(() => [...JACKCASTER_TRACKS, ...personalTracks], [personalTracks]);
   const audio = useRef<HTMLAudioElement>(null);
+  const selectedRef = useRef("");
+  const autoplayRef = useRef(false);
+  const sourceVersion = useRef(0);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState("");
   const [playing, setPlaying] = useState(false);
@@ -15,29 +18,86 @@ export function ListeningDock({ personalTracks = [] }: { personalTracks?: AudioT
   const [error, setError] = useState("");
   const current = tracks.find((track) => track.url === selected);
 
+  function startPlayback(player: HTMLAudioElement, version: number) {
+    if (version !== sourceVersion.current) return;
+    window.dispatchEvent(new CustomEvent<HTMLAudioElement>("jackcaster:music-claim", { detail: player }));
+    void player.play()
+      .then(() => { if (version === sourceVersion.current) setPlaying(true); })
+      .catch(() => {
+        if (version === sourceVersion.current) {
+          setPlaying(false);
+          setError("Playback was blocked or this audio file could not be opened. Press play to try again.");
+        }
+      });
+  }
+
   useEffect(() => { if (audio.current) audio.current.volume = volume; }, [volume]);
   useEffect(() => { if (audio.current) audio.current.loop = repeat; }, [repeat]);
+  useEffect(() => {
+    const player = audio.current;
+    const track = tracks.find((item) => item.url === selected);
+    if (!player || !track) return;
+    const version = sourceVersion.current;
+    const source = new URL(track.url, window.location.href).href;
+    if (player.src === source) return;
+
+    player.pause();
+    player.currentTime = 0;
+    player.src = track.url;
+    player.load();
+    if (autoplayRef.current) {
+      const playWhenReady = () => {
+        if (selectedRef.current !== track.url || !autoplayRef.current || version !== sourceVersion.current) return;
+        autoplayRef.current = false;
+        startPlayback(player, version);
+      };
+      if (player.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) playWhenReady();
+      else player.addEventListener("canplay", playWhenReady, { once: true });
+    }
+  }, [selected, tracks]);
   useEffect(() => {
     const pauseForOtherMedia = () => {
       if (!audio.current || audio.current.paused) return;
       audio.current.pause();
     };
     window.addEventListener("jackcaster:pause-background-audio", pauseForOtherMedia);
-    return () => window.removeEventListener("jackcaster:pause-background-audio", pauseForOtherMedia);
+    const pauseOtherPlayer = (event: Event) => {
+      const claimed = (event as CustomEvent<HTMLAudioElement>).detail;
+      const player = audio.current;
+      if (!player || !claimed || player === claimed || player.paused) return;
+      player.pause();
+      player.currentTime = 0;
+    };
+    window.addEventListener("jackcaster:music-claim", pauseOtherPlayer);
+    return () => {
+      window.removeEventListener("jackcaster:pause-background-audio", pauseForOtherMedia);
+      window.removeEventListener("jackcaster:music-claim", pauseOtherPlayer);
+    };
   }, []);
 
   async function choose(track: AudioTrack, autoplay = true) {
     const player = audio.current;
     if (!player) return;
+    const version = ++sourceVersion.current;
+    selectedRef.current = track.url;
+    const source = new URL(track.url, window.location.href).href;
+    if (player.src !== source) {
+      autoplayRef.current = autoplay;
+      player.pause();
+      player.currentTime = 0;
+      setPlaying(false);
+    } else {
+      autoplayRef.current = false;
+    }
     setSelected(track.url);
     setError("");
-    if (player.src !== new URL(track.url, window.location.href).href) {
-      player.src = track.url;
-      player.load();
+    if (player.src === source) {
+      if (!autoplay) { player.pause(); setPlaying(false); return; }
+      startPlayback(player, version);
+    } else if (!autoplay) {
+      player.pause();
+      setPlaying(false);
     }
-    if (!autoplay) { player.pause(); setPlaying(false); return; }
-    try { await player.play(); setPlaying(true); }
-    catch { setPlaying(false); setError("Playback was blocked or this audio file could not be opened. Press play to try again."); }
   }
 
   function step(direction: 1 | -1) {
@@ -48,7 +108,10 @@ export function ListeningDock({ personalTracks = [] }: { personalTracks?: AudioT
       return;
     }
     const index = tracks.findIndex((track) => track.url === selected);
-    void choose(tracks[(index + direction + tracks.length) % tracks.length]);
+    const nextIndex = index < 0
+      ? direction === 1 ? 0 : tracks.length - 1
+      : (index + direction + tracks.length) % tracks.length;
+    void choose(tracks[nextIndex]);
   }
 
   return <div className="listening-dock">
@@ -64,11 +127,11 @@ export function ListeningDock({ personalTracks = [] }: { personalTracks?: AudioT
         <optgroup label="Jackcaster soundtrack">{JACKCASTER_TRACKS.map((track) => <option key={track.url} value={track.url}>{track.title}</option>)}</optgroup>
         {personalTracks.length > 0 && <optgroup label="Your tracks">{personalTracks.map((track) => <option key={track.url} value={track.url}>{track.title}</option>)}</optgroup>}
       </select>
-      <audio ref={audio} controls preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { if (!repeat) step(1); }} />
+      <audio ref={audio} controls preload="none" onPlay={(event) => { window.dispatchEvent(new CustomEvent<HTMLAudioElement>("jackcaster:music-claim", { detail: event.currentTarget })); setPlaying(true); }} onPause={() => setPlaying(false)} onError={() => { autoplayRef.current = false; setPlaying(false); setError("This track could not be loaded. Choose another track or try again later."); }} onEnded={() => { if (!repeat) step(1); }} />
       <div className="listening-dock-controls">
         <button type="button" className={shuffle ? "active" : ""} aria-pressed={shuffle} onClick={() => setShuffle((value) => !value)} title="Shuffle">⇄</button>
         <button type="button" onClick={() => step(-1)} aria-label="Previous track" title="Previous track">|◀</button>
-        <button type="button" className="listening-play" onClick={() => { if (!selected) { void choose(tracks[0]); return; } if (audio.current?.paused) void audio.current.play().then(() => setPlaying(true)).catch(() => setError("Playback could not start. Try again.")); else audio.current?.pause(); }} aria-label={playing ? "Pause" : "Play"}>{playing ? "Ⅱ" : "▶"}</button>
+        <button type="button" className="listening-play" onClick={() => { if (!selected) { void choose(tracks[0]); return; } if (audio.current?.paused) startPlayback(audio.current, sourceVersion.current); else audio.current?.pause(); }} aria-label={playing ? "Pause" : "Play"}>{playing ? "Ⅱ" : "▶"}</button>
         <button type="button" onClick={() => step(1)} aria-label="Next track" title="Next track">▶|</button>
         <button type="button" className={repeat ? "active" : ""} aria-pressed={repeat} onClick={() => setRepeat((value) => !value)} title="Repeat track">↻</button>
         <label className="listening-volume"><span aria-hidden="true">♪</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={(event) => setVolume(Number(event.target.value))} aria-label="Volume" /></label>

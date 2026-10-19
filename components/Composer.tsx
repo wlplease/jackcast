@@ -234,6 +234,7 @@ export function Composer({
     >
       <Avatar user={me} />
       <div style={{ minWidth: 0 }}>
+        <div className="composer-identity">Posting as <strong>@{me.username || `fid-${me.fid}`}</strong> · <Link href="/setup">switch account</Link></div>
         <textarea
           ref={ref}
           value={text}
@@ -348,7 +349,7 @@ export function Composer({
               ))}
             </select>
           )}
-          <span className={`count${over ? " over" : ""}`} title="Bytes remaining after the Jackcaster attribution">{MAX_CAST_BYTES - bytes}</span>
+          <span className={`count${over ? " over" : ""}`} title="Bytes remaining after the Jackcast attribution">{MAX_CAST_BYTES - bytes}</span>
           <div className="composer-actions">
             {!parentHash && !quoted && <Link className="btn ghost sm thread-compose-button" href="/compose/thread">Thread</Link>}
             <button className="btn" onClick={submit} disabled={empty || over || pending || uploading}>
@@ -356,7 +357,7 @@ export function Composer({
             </button>
           </div>
         </div>
-        <div className="composer-attribution">Every cast is marked <a href="https://jackcast.vercel.app" target="_blank" rel="noreferrer">“Casted from Jackcast.vercel.app”</a>.</div>
+        <div className="composer-attribution">This source link identifies the app; the author is the account shown above. <a href="https://jackcast.vercel.app" target="_blank" rel="noreferrer">Jackcast</a>.</div>
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}</div>}

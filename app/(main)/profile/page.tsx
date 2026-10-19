@@ -70,10 +70,8 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           </div>
           <p className="field-hint">
             {viewer.canWrite
-              ? viewer.source === "env"
-                ? "Connected on every device through your environment variables."
-                : "Connected on this device."
-              : "Read-only. Connect to post, like and reply."}{" "}
+              ? `Connected as @${me?.username || `FID ${viewer.fid}`} on this device.`
+              : "Read-only. Connect your own Farcaster account to post, like and reply."}{" "}
             <Link href="/setup" className="linkish">
               {viewer.canWrite ? "Connection details" : "Connect"}
             </Link>

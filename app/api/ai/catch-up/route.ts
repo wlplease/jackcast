@@ -22,39 +22,121 @@ type Digest = {
 
 function plainText(value: unknown, maxWords: number): string {
   if (typeof value !== "string") return "";
-  const words = value.replace(/[#*_`~]/g, "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const words = value
+    .replace(/\[([^\]]+)\]\((?:https?:\/\/)?[^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[#*_`~]/g, "")
+    .replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   const text = words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "");
   return text && !/[.!?]$/.test(text) ? `${text}${words.length > maxWords ? "…" : "."}` : text;
 }
 
-function parseDigest(raw: string, allowedHashes: Set<string>): Digest | null {
-  try {
-    const value = JSON.parse(raw) as { storyline?: unknown; sections?: unknown; insights?: unknown };
-    const storyline = plainText(value.storyline, 72);
-    const sections = Array.isArray(value.sections)
-      ? value.sections.slice(0, 5).flatMap((section) => {
-          if (!section || typeof section !== "object") return [];
-          const item = section as { title?: unknown; summary?: unknown; castHashes?: unknown };
-          const title = plainText(item.title, 7).replace(/[.!?]+$/, "");
-          const summary = plainText(item.summary, 65);
-          const castHashes = Array.isArray(item.castHashes) ? Array.from(new Set(item.castHashes.filter((hash): hash is string => typeof hash === "string" && allowedHashes.has(hash.toLowerCase())))).slice(0, 4) : [];
-          return title && summary ? [{ title, summary, castHashes }] : [];
-        })
-      : [];
-    const insights = Array.isArray(value.insights)
-      ? value.insights.slice(0, 4).flatMap((insight) => {
-          if (!insight || typeof insight !== "object") return [];
-          const item = insight as { title?: unknown; summary?: unknown; castHashes?: unknown };
-          const title = plainText(item.title, 7).replace(/[.!?]+$/, "");
-          const summary = plainText(item.summary, 45);
-          const castHashes = Array.isArray(item.castHashes) ? Array.from(new Set(item.castHashes.filter((hash): hash is string => typeof hash === "string" && allowedHashes.has(hash.toLowerCase())))).slice(0, 3) : [];
-          return title && summary ? [{ title, summary, castHashes }] : [];
-        })
-      : [];
-    return storyline && sections.length ? { storyline, sections, insights } : null;
-  } catch {
-    return null;
+function jsonCandidates(raw: string): string[] {
+  const trimmed = raw.trim();
+  const unfenced = trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  const candidates = [unfenced];
+  const start = unfenced.indexOf("{");
+  if (start >= 0) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < unfenced.length; index++) {
+      const char = unfenced[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+      } else if (char === '"') inString = true;
+      else if (char === "{") depth++;
+      else if (char === "}" && --depth === 0) {
+        candidates.push(unfenced.slice(start, index + 1));
+        break;
+      }
+    }
   }
+  return [...new Set(candidates)];
+}
+
+function hashList(value: unknown, allowedHashes: Set<string>, max: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.flatMap((hash) => {
+    if (typeof hash !== "string") return [];
+    const normalized = hash.toLowerCase();
+    return allowedHashes.has(normalized) ? [normalized] : [];
+  }))).slice(0, max);
+}
+
+function parseStructuredDigest(raw: string, allowedHashes: Set<string>): Digest | null {
+  let value: Record<string, unknown> | null = null;
+  for (const candidate of jsonCandidates(raw)) {
+    try {
+      const parsed: unknown = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        value = parsed as Record<string, unknown>;
+        break;
+      }
+    } catch { /* Try the extracted object, then use the plain-text formatter. */ }
+  }
+  if (!value) return null;
+
+  const storyline = plainText(value.storyline ?? value.overview ?? value.summary, 72);
+  const sectionsValue = value.sections ?? value.topics ?? value.highlights;
+  const sections = Array.isArray(sectionsValue)
+    ? sectionsValue.slice(0, 5).flatMap((section) => {
+        if (!section || typeof section !== "object") return [];
+        const item = section as Record<string, unknown>;
+        const title = plainText(item.title ?? item.heading ?? item.topic, 7).replace(/[.!?]+$/, "");
+        const summary = plainText(item.summary ?? item.description ?? item.text, 65);
+        const castHashes = hashList(item.castHashes ?? item.cast_hashes ?? item.hashes, allowedHashes, 4);
+        return title && summary ? [{ title, summary, castHashes }] : [];
+      })
+    : [];
+  const insightsValue = value.insights ?? value.signals ?? value.takeaways;
+  const insights = Array.isArray(insightsValue)
+    ? insightsValue.slice(0, 4).flatMap((insight) => {
+        if (!insight || typeof insight !== "object") return [];
+        const item = insight as Record<string, unknown>;
+        const title = plainText(item.title ?? item.heading, 7).replace(/[.!?]+$/, "");
+        const summary = plainText(item.summary ?? item.description ?? item.text, 45);
+        const castHashes = hashList(item.castHashes ?? item.cast_hashes ?? item.hashes, allowedHashes, 3);
+        return title && summary ? [{ title, summary, castHashes }] : [];
+      })
+    : [];
+  return storyline && sections.length ? { storyline, sections, insights } : null;
+}
+
+function parsePlainTextDigest(raw: string, allowedHashes: Set<string>): Digest | null {
+  const cleaned = raw
+    .replace(/^```(?:markdown|text)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .replace(/\r/g, "")
+    .trim();
+  const lines = cleaned.split("\n").map((line) => line.trim()).filter(Boolean);
+  const normalizedLines = lines.map((line) => line
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^[-*•]\s*/, "")
+    .replace(/^\d+[.)]\s*/, "")
+    .replace(/\*\*/g, "")
+    .trim()).filter(Boolean);
+  const sourceText = normalizedLines.join(" ").replace(/[{}\[\]"]/g, " ");
+  const storyline = plainText(sourceText, 72);
+  if (!storyline) return null;
+
+  const sections = normalizedLines
+    .filter((line) => line.length > 45)
+    .slice(0, 5)
+    .map((line, index) => ({
+      title: index === 0 ? "Key developments" : `More from the feed ${index + 1}`,
+      summary: plainText(line, 65),
+      castHashes: Array.from(line.matchAll(/0x[0-9a-f]{40}/gi), (match) => match[0].toLowerCase()).filter((hash) => allowedHashes.has(hash)).slice(0, 4),
+    }))
+    .filter((section) => section.summary);
+  if (!sections.length) sections.push({ title: "Digest summary", summary: plainText(sourceText, 65), castHashes: [] });
+  return { storyline, sections, insights: [] };
+}
+
+function parseDigest(raw: string, allowedHashes: Set<string>): Digest | null {
+  return parseStructuredDigest(raw, allowedHashes) ?? parsePlainTextDigest(raw, allowedHashes);
 }
 
 export async function POST(request: NextRequest) {
@@ -134,10 +216,24 @@ export async function POST(request: NextRequest) {
           : "Gemini is temporarily unavailable. Try again in a little while.";
       return NextResponse.json({ error }, { status: 502 });
     }
-    const result = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const rawSummary = result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim();
+    const result = await response.json() as {
+      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+      output?: unknown;
+      text?: unknown;
+    };
+    const rawSummary = [
+      result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim(),
+      typeof result.text === "string" ? result.text : "",
+      typeof result.output === "string" ? result.output : "",
+    ].find((text) => Boolean(text));
     const digest = rawSummary ? parseDigest(rawSummary, new Set(casts.map((cast) => cast.hash))) : null;
-    if (!digest) return NextResponse.json({ error: "Gemini couldn't format this digest. Please try again." }, { status: 502 });
+    if (!digest) {
+      const finishReason = result.candidates?.[0]?.finishReason;
+      const error = finishReason === "SAFETY"
+        ? "Google declined to summarize this sample. Try a smaller or different set of posts."
+        : "Google returned an empty or unusable summary. Try again, or choose a smaller sample.";
+      return NextResponse.json({ error }, { status: 502 });
+    }
     return NextResponse.json({ digest }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"

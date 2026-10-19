@@ -58,8 +58,8 @@ public/                     icons (favicon, PWA, maskable), manifest, brand imag
 - `/setup` does the custody signature **in the browser**: the recovery phrase is read from a password input, used once by `viem`'s `mnemonicToAccount`, then cleared. It is never put in React state, never sent to a server action, never stored, never logged. Only the signature goes to the server. **Keep it that way.** SECURITY.md promises this to users.
 - The app FID is the user's own FID (or a throwaway account's). Registration tries `sponsored_by_neynar: true` first, then falls back to unsponsored.
 - Approval: QR on desktop, "Open in Farcaster" button (new tab) on phones. The pending request id is kept in `sessionStorage` so iOS unloading the tab mid-approval doesn't lose it, and the page re-checks on `visibilitychange`.
-- Once approved, a signed (HMAC) httpOnly cookie connects that device. The done screen shows `SIGNER_UUID` and `MY_FID` to paste into Vercel so every device is connected.
-- `lib/viewer.ts` resolution order: env `SIGNER_UUID` + `MY_FID`, then the setup cookie, then `MY_FID` alone (read-only), else redirect to `/setup`.
+- Once approved, a signed (HMAC) httpOnly cookie connects that device and identifies the account used for posts.
+- `lib/viewer.ts` resolution order: setup cookie (write access), then optional `MY_FID` (read-only), else redirect to `/setup`. Deployment-wide `SIGNER_UUID` is not used for writing.
 
 ## Env vars
 
@@ -67,7 +67,7 @@ public/                     icons (favicon, PWA, maskable), manifest, brand imag
 | --- | --- |
 | `NEYNAR_API_KEY` | required |
 | `APP_PASSWORD` | required in production (middleware fails closed without it) |
-| `SIGNER_UUID`, `MY_FID` | filled in after `/setup` |
+| `MY_FID` | optional read-only account context |
 | `PINNED_CHANNELS` | default favorites until the user picks; comma separated, no slashes |
 | `MIN_USER_SCORE` | default for the quality dial (0 to 1); the dial overrides it per device |
 | `GOOGLE_AI_API_KEY` | optional; enables the manually requested Gemini digest |
@@ -137,7 +137,7 @@ npm run check:themes
 NEYNAR_API_KEY=x npm run build
 ```
 
-For UI changes, screenshot the real pages at phone width in light and dark (and a couple of color themes; set the `selfcaster_prefs` cookie to `{"theme":"x","mode":"dark"}` to pin one). The easiest way: run a small mock Neynar server, start the dev server with `NEYNAR_API_BASE` pointing at it plus `MY_FID`/`SIGNER_UUID`, and drive it with Playwright. Also check that no page scrolls sideways at 390px (`document.documentElement.scrollWidth` equals the viewport width).
+For UI changes, screenshot the real pages at phone width in light and dark (and a couple of color themes; set the `selfcaster_prefs` cookie to `{"theme":"x","mode":"dark"}` to pin one). The easiest way: run a small mock Neynar server, start the dev server with `NEYNAR_API_BASE` pointing at it plus optional `MY_FID`, and drive it with Playwright. Also check that no page scrolls sideways at 390px (`document.documentElement.scrollWidth` equals the viewport width).
 
 ## Roadmap
 
