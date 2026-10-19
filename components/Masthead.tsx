@@ -7,6 +7,7 @@ import { logout } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
 import { NotificationLink } from "@/components/NotificationLink";
 import { ListeningDock } from "@/components/ListeningDock";
+import { ProfileQuickMenu } from "@/components/ProfileQuickMenu";
 import { DEFAULT_FEED_NAMES, type FeedNames } from "@/lib/prefs-shared";
 
 const I = {
@@ -44,7 +45,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; aiEnabled?: boolean }) {
+export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES, animatedProfilesEnabled = false }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; animatedProfilesEnabled?: boolean }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
@@ -70,7 +71,7 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
           {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           <ListeningDock personalTracks={audioTracks} />
           <NotificationLink icon={I.bell} />
-          {icon("/profile", "Profile and analytics", I.you)}
+          <ProfileQuickMenu animatedProfilesEnabled={animatedProfilesEnabled} />
           {icon("/me", "Settings", I.settings)}
           <button type="button" className="icon-btn" aria-label="Sign out" title="Sign out" onClick={() => setConfirmSignOut(true)}>
             {I.lock}

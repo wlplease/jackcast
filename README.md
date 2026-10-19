@@ -8,6 +8,8 @@
 
 > **Jackcaster** is the app name; **Jackcast** is the repository name. This is an open-source, single-owner fork built on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). It keeps the original project's MIT license and credits, while adding optional features for this deployment. It is independent and is not an official Selfcaster release. See [FORK-NOTES.md](./FORK-NOTES.md) for maintenance details and [RELEASE-NOTES.md](./RELEASE-NOTES.md) for the current change summary.
 
+**Jump to:** [Setup](#setup) · [Keys](#environment-variables-required-and-optional) · [Everyday how-tos](#everyday-how-tos) · [GIPHY setup](#gifs-and-memes-in-the-composer) · [Paid profile art](#paid-profile-art-and-credits) · [FAQ](#faq) · [Security](./SECURITY.md)
+
 <p align="center">
   <img src="./docs/screenshot-light.png" width="300" alt="Jackcast feed, light">
   &nbsp;
@@ -36,7 +38,6 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 ## What you get
 
 - **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Following and Top Friends can append more posts as you scroll. Posts shared by people you follow appear in their own Recasts tab.
-- **Saved for later.** Bookmark up to 30 casts into a private reading list stored in this browser's settings. Remove saved posts whenever you want.
 - **A dedicated Media feed.** Browse images, videos, and audio shared by people you follow, with a filter for each type. Sparse media pages continue through a small, bounded number of feed pages as you scroll.
 - **Favorite channels.** Search every channel you follow, pick a few, and reorder them with accessible move controls. The same order appears in your feed tabs and composer.
 - **Top Friends.** Keep a private chronological feed of up to 50 accounts. Settings can batch-add the 20 most active people you follow over 90 days and a broad curated roster spanning protocol, builders, creators, community, mini apps, and ecosystem teams, or you can pick people manually. Activity checks stay bounded and cached; Neynar feed batching respects its 10-FID limit. Your selected list stays on this device and out of Following and Custom.
@@ -44,7 +45,7 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 - **Profiles.** Browse posts or media, pin one cast on your Jackcaster profile, set an optional Farcaster profile cover (Neynar Pro required to update the cover), and optionally create a Grok profile image or silent animated profile clip with onchain credits. The flow is: connect a Base wallet and check credits, buy a pack, generate an image or animation, preview it, choose **Use result · continue to save**, then confirm with **Save profile changes**. Animation creation and upgrades require a currently approved Farcaster signer connected on that device; a deployment-wide signer alone cannot unlock them. The server records the Farcaster FID, wallet, action, transaction, and timestamps in replay-protected Blob records and deployment logs. It does not use Firebase Anonymous Auth to claim Farcaster identity. Each generation attempt consumes one onchain credit, including provider failures. Grok creates silent MP4 clips; its video-edit endpoint accepts MP4 sources for upgrades. GIF and WebM profile files are not sent to that endpoint; users can create a supported still image and animate that result instead. Review the result and save it yourself; the edit form never changes your Farcaster profile without your confirmation. See the [animation-credit contract notes](./contracts/README.md) and deployed Base address/ABI in [`contracts/deployments/base-mainnet.json`](./contracts/deployments/base-mainnet.json). Video PFP rendering depends on the Farcaster client; Jackcaster displays MP4 avatars itself.
 - **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context, a GIPHY picker, and a photo meme maker with custom captions. Casts published through Jackcaster include a visible `Casted from https://jackcaster.vercel.app` source line, including replies and each thread post. Share opens a cast composer with the original cast embedded; Jackcaster uses Farcaster's native composer in its host and Jackcaster's compose screen in a regular browser.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
-- **Around the network map.** Share an optional broad place by typing a region or requesting a coarse GPS pin. GPS is rounded on your device and shown for review before anything is saved. Exact coordinates are not sent to Jackcaster's app server or written to Firebase; after confirmation, only the rounded grid goes directly from your browser to the shared Firebase project. A confirmed place and public Farcaster profile details are visible to Firebase-authenticated clients, including anonymous sessions, so treat map pins as public and self-reported. You can remove your pin at any time. No location is added to casts; the map is a stylized overview, not for navigation. See [SECURITY.md](./SECURITY.md) for details.
+- **Around the network globe.** Share one city and country from a bundled GeoNames gazetteer. Search for a real city or use GPS to match the nearest listed city on your device. Exact coordinates stay in the browser and are discarded; Firebase stores only the selected city, country, GeoNames ID, and public profile details after you confirm. Pins are public and can be removed. A valid city match does not prove the person is physically there: browser GPS can be spoofed, and Firebase Anonymous Auth does not prove a Farcaster FID. The globe uses bundled Natural Earth boundaries and works without a map API key. See [SECURITY.md](./SECURITY.md) and [the Firebase rules guide](./docs/FIREBASE-SHARED-RULES.md).
 - **Your filters.** Mute words or phrases to quiet recurring topics, or mute an `@handle` to hide that account and posts mentioning it. A quality dial can also hide low-score accounts. These controls are optional and can be reversed in Settings.
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in Settings → Feed controls if you want every post shown separately.
 - **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
@@ -88,7 +89,7 @@ Keep secrets in Vercel Environment Variables or an ignored local `.env.local`; n
 | `XAI_API_KEY` or `REACT_APP_GROK_API_KEY` | Optional | Enables paid Grok image and animation generation on `/me/edit`. The app accepts your existing `REACT_APP_GROK_API_KEY`, but `XAI_API_KEY` is the clearer name. Both are server-only here; never rename this to `NEXT_PUBLIC_*`. Grok receives the user prompt and, for animation, the user's profile image. A confirmed Base credit-use transaction and wallet signature are required per result. |
 | `GROK_REQUEST_BLOB_ACCESS` | Optional | Defaults to `public` for the connected Vercel Blob store. Set to `private` only if that Blob store is private; the server uses a unique, create-only record to prevent replaying a generation credit. Vercel Blob must be configured for profile uploads and one-use request locks. |
 | `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` | Optional pair | Enables digest read-aloud. The key and voice ID stay server-side. Audio is generated only when requested. |
-| `NEXT_PUBLIC_FIREBASE_CONFIG` | Optional | Public Firebase Web App config JSON for the shared arcade leaderboard, GIPHY cooldown, and community map. Alternatively set the four `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, and `NEXT_PUBLIC_FIREBASE_APP_ID` variables. Enable Anonymous Auth and merge the isolated collection rules in [the shared Firebase guide](./docs/FIREBASE-SHARED-RULES.md). These are public web-app values, never Firebase Admin credentials. |
+| `NEXT_PUBLIC_FIREBASE_CONFIG` | Optional | Public Firebase Web App config JSON for the shared arcade leaderboard, GIPHY cooldown, and community globe. Alternatively set the four `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, and `NEXT_PUBLIC_FIREBASE_APP_ID` variables. Enable Anonymous Auth and merge the isolated collection rules in [the shared Firebase guide](./docs/FIREBASE-SHARED-RULES.md). These are public web-app values, never Firebase Admin credentials. |
 | `GIPHY_APP` | Optional | Server-only GIPHY app key for the free shared GIF search. Jackcaster never sends this key to browsers. A Firestore transaction allows one shared search every 45 seconds globally (at most 80/hour) and one shared search per persistent anonymous browser session every five minutes. Users can instead save their own GIPHY key in the picker; it stays in that browser and goes directly to GIPHY, never to Jackcaster's server. |
 | `PINNED_CHANNELS` | Optional | Comma-separated default channel IDs, without leading slashes. Users can change their tabs in Settings. |
 | `MIN_USER_SCORE` | Optional | Default Neynar user-quality filter, from `0` to `1`; defaults to `0`. Users may adjust their own setting. |
@@ -158,7 +159,19 @@ All optional settings are in [`.env.example`](./.env.example).
 
 ### GIFs and memes in the composer
 
-The composer includes a photo caption maker that works locally, plus GIPHY search. Free shared search is first-come-first-served: an atomic Firestore transaction grants one search every 45 seconds globally (at most 80/hour), and each persistent browser session can claim once every five minutes so one session cannot win every slot. It uses the operator's server-only Vercel `GIPHY_APP` key and fails closed if the Firebase cooldown cannot be checked. **`GIPHY_APP` alone is not enough:** shared search also requires the Firebase Web config, Firebase Authentication's Anonymous provider enabled, and the isolated Firestore rules in [the shared Firebase guide](./docs/FIREBASE-SHARED-RULES.md). If the picker reports `auth/admin-restricted-operation` or says Anonymous sign-in is disabled, enable it in Firebase Console → Authentication → Sign-in method → Anonymous, then save. Return to the picker and choose **Check Firebase again**; changing this provider does not require a Vercel redeploy. If you cannot enable Anonymous Auth, a user can save their own GIPHY key in the picker; it stays in that browser and calls GIPHY directly, without going through Jackcaster. The local photo meme maker does not need Firebase. No Firebase Admin SDK or service-account key is used. Search uses G-rated results and displays GIPHY attribution.
+The composer has a GIF search and a photo meme maker. A selected GIF is attached to a cast as its direct GIPHY media URL; Jackcaster displays it inline. The meme maker draws captions on a photo in your browser and attaches the finished image. It does not need a GIPHY key or Firebase.
+
+#### Choose how GIF search gets its key
+
+| Option | What to configure | How it works |
+| --- | --- | --- |
+| **Shared free search** | Operator adds `GIPHY_APP` to Vercel and configures Firebase Web values, Anonymous Auth, and the Jackcaster Firestore rules. | The GIPHY key stays on the server. One search is allowed globally every 45 seconds; each persistent anonymous browser session can use the shared search once every five minutes. |
+| **Your personal GIPHY key** | In the picker, open **Use your own GIPHY key**, paste a key from the [GIPHY developer dashboard](https://developers.giphy.com/dashboard/), and choose **Save key on this device**. | The key is saved in this browser's local storage and calls GIPHY directly, so it does not use the shared cooldown. Its usage counts against that key's own GIPHY quota. Remove it before using a shared device. |
+| **No search key** | Nothing. | The local photo meme maker still works. Shared search stays unavailable until the operator configures it; it does not silently use a personal key. |
+
+Shared search needs **all** of `GIPHY_APP`, Firebase Web App config, Firebase Anonymous sign-in, and the narrow shared Firestore rules. See [FIREBASE-SHARED-RULES.md](./docs/FIREBASE-SHARED-RULES.md). Add `GIPHY_APP` as a server-side Vercel variable—never `NEXT_PUBLIC_GIPHY_APP`. Firebase uses the public Web SDK; Jackcaster does not use Firebase Admin or a service-account key.
+
+If Firebase reports `auth/admin-restricted-operation` or `auth/operation-not-allowed`, enable **Authentication → Sign-in method → Anonymous** in Firebase Console. Then return to the picker and choose **Check Firebase again**. If the shared search says it is cooling down, the timer is shared by everyone; a personal key uses its own provider quota instead. The 45-second global slot caps the shared pool at 80 searches per hour, and the five-minute session window discourages one browser from taking every turn. Firebase Anonymous IDs can be reset by clearing site data, so this is a fairness limit, not strong anti-abuse identity verification. Vercel edge protections are a separate deployment setting. Search results are G-rated and include GIPHY attribution.
 
 ### Optional Gemini catch-up
 
@@ -167,6 +180,77 @@ This feature is off unless you choose to enable it. You do not need an AI key to
 To add spoken playback, also set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`. Choose a voice available to that key. Jackcast sends ElevenLabs only the generated digest, caps it at 2,400 characters, and allows one audio generation attempt per page visit. The MP3 is not saved by Jackcast; it is held in the browser until you leave the page, with an option to download it. ElevenLabs usage is billed separately; review [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) and set limits in your ElevenLabs account. The integration follows ElevenLabs' [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert). See [FORK-NOTES.md](./FORK-NOTES.md) for how this personal fork differs from upstream and how to maintain it.
 
 To disable the digest and audio, remove `GOOGLE_AI_API_KEY` and redeploy. To keep the text digest but disable audio, remove either ElevenLabs variable and redeploy.
+
+### Paid profile art and credits
+
+The profile studio is optional and appears only when the operator configures `XAI_API_KEY` (or the server-side compatibility name `REACT_APP_GROK_API_KEY`). It also needs Vercel Blob for generated media and replay protection, the configured Base credit contract, and a wallet that supports Base. See [contracts/README.md](./contracts/README.md) for the deployed address, current contract defaults, owner controls, and limits.
+
+1. Open the profile icon, choose **Animate your profile**, or go to **Edit profile** and open the Profile Studio.
+2. Choose **Connect wallet**. Jackcaster reads the live USDC price and credit balance from the Base contract. This step does not buy anything.
+3. Choose **Buy credits** after the amount is displayed. The wallet may ask for an exact USDC approval and then a separate purchase confirmation. Check both transactions before approving.
+4. Enter a prompt and choose **Create image**, **Animate profile**, or **Upgrade animation**. Each confirmed attempt uses one contract credit. A provider or upload failure does not automatically refund it.
+5. Preview the result, choose **Use this**, then choose **Save profile changes** to update Farcaster. The generated result is not applied to your profile before you save.
+
+Credits belong to the connected wallet and are read directly from Base; Firebase is not used for credit balances. Reconnect the same wallet to see its balance on another device. A still image can be animated; animation editing accepts MP4 input. Creating or upgrading animation and saving a new profile image require the user's approved Farcaster signer on that device. The connected wallet separately approves Base transactions. You can use Jackcaster's social features without connecting a wallet.
+
+The contract's default personal purchase is 1 USDC for 3 paid plus 2 bonus credits (5 total), but the contract owner can change future price and pack settings within its bounds or pause sales. The studio reads the current values; rely on what the wallet shows before confirming. xAI generation is billed to the deployment operator separately from the onchain USDC purchase. Every attempt consumes a credit even if xAI fails. Review [SECURITY.md](./SECURITY.md) and the [contract guide](./contracts/README.md) before enabling paid generation for others.
+
+### Everyday how-tos
+
+- **Choose a feed:** use the feed tabs below the Jackcaster wordmark. Following, Friends, Leaders, Recasts, Media, and Custom are separate. Add Friends and edit Custom in **Settings → Friends and custom**. Your selected accounts and feed names are saved in this browser.
+- **Keep reading:** scroll down to append more posts, or use **Load more** if automatic loading pauses. Each feed keeps its own reading position. The AI catch-up panel is opened from its icon and does not replace the normal feed.
+- **Post:** choose the composer, write a cast, then attach a photo, GIF, link, quote, or thread. You can remove attachments before posting. Jackcaster adds its source attribution to casts it publishes. Review the cast text and attachments before selecting **Cast**.
+- **Use the AI digest:** open the AI icon, create a digest from the loaded Following posts, open its source posts, then **Redo digest** or **Clear digest** when needed. The most recent successful digest is saved in this browser per FID. Google receives the selected public cast text and metadata only when you request or redo a digest.
+- **Open a Mini App:** select an app to open it in Farcaster's native surface when Jackcaster is running there; otherwise it opens in Jackcaster's browser preview. In the browser, minimize it to the tray to keep its session while you navigate. Host-only wallet and compose actions are not available in an ordinary browser preview.
+- **Set up the community globe:** configure Firebase Web values, Anonymous Auth, and the updated map rules. The bundled city gazetteer and globe data need no API key or geocoder service. GPS lookup and city search happen locally; after confirmation, Firebase receives city, country, GeoNames ID, and public Farcaster profile fields. Pins are optional and public to users of the shared Firebase project. A browser cannot prove physical presence, so explain the self-reporting limit to users. See [SECURITY.md](./SECURITY.md) and [the Firebase rules guide](./docs/FIREBASE-SHARED-RULES.md).
+- **Review your profile:** open the profile icon for your profile and stats, editing, and (when configured) the animation studio. The 7/30/90-day profile ranges filter the displayed analytics; they do not change Farcaster data.
+- **Change app settings:** open the gear icon. Theme, feed names, Friends, Custom, filters, music, account connection, sharing, donations, and developer tools are collected there.
+
+## FAQ
+
+### Is Jackcaster the original Selfcaster app?
+
+No. Jackcaster is this repository's open-source fork of [GenuineJack/Selfcaster](https://github.com/GenuineJack/selfcaster), maintained separately by its operator. The original app is [selfcaster.xyz](https://selfcaster.xyz/), and the original creator's profile is [@genuinejack](https://farcaster.xyz/genuinejack). Jackcaster keeps the upstream MIT license and attribution. See [FORK-NOTES.md](./FORK-NOTES.md) before merging upstream changes.
+
+### Does this repository push code or deploy my Vercel app?
+
+No. Changes here stay in your local checkout until you choose to commit, push, or deploy them. Jackcaster does not push to GitHub or deploy to Vercel automatically. Review the diff, then use your own Git and Vercel workflow.
+
+### Which keys are required, and which are optional?
+
+For a basic production instance, set `NEYNAR_API_KEY` and a strong `APP_PASSWORD`. `MY_FID` and `SIGNER_UUID` are optional; together they configure the operator's Neynar signer for the deployment. Otherwise connect at `/setup`. All provider features are optional. The [environment table](#environment-variables-required-and-optional) describes each variable and where it belongs.
+
+### Which values are secrets?
+
+Keep `NEYNAR_API_KEY`, `APP_PASSWORD`, `SIGNER_UUID`, `GIPHY_APP`, `GOOGLE_AI_API_KEY`, `ELEVENLABS_API_KEY`, and `XAI_API_KEY` (or `REACT_APP_GROK_API_KEY`) in Vercel's server environment or an ignored local `.env.local`. Do not add `NEXT_PUBLIC_` to them. Firebase Web App config is intentionally public and is limited by Firebase Authentication and Firestore rules; it is not an admin credential. Never add a Firebase service account, wallet private key, or recovery phrase to this project.
+
+### How do GIF search and the meme maker work?
+
+The shared GIPHY search uses the server-side `GIPHY_APP` key and a Firestore cooldown: one shared search every 45 seconds globally, plus a per-anonymous-browser fairness delay. This needs Firebase Web config, Anonymous sign-in, and the three narrow shared rules in [FIREBASE-SHARED-RULES.md](./docs/FIREBASE-SHARED-RULES.md). The cooldown is a fairness limit, not strong bot protection. A user can save a personal GIPHY key in the picker; it stays in that browser and calls GIPHY directly, using that key's quota instead of the shared pool. GIFs are attached as image media in the cast. The photo meme maker runs locally and needs neither GIPHY nor Firebase.
+
+### What if Firebase says Anonymous sign-in is disabled?
+
+In Firebase Console, open **Authentication → Sign-in method**, enable **Anonymous**, and save. Then check that the app's public Firebase Web config belongs to that project and that the Jackcaster collection rules were merged into the shared rules file. Jackcaster uses Firebase Web SDK and Firestore rules; it does not require Firebase Admin or service-account credentials. Keep any other apps' rules when merging.
+
+### How does the globe use location?
+
+City search uses the bundled offline GeoNames city list. GPS coordinates are read and matched to the nearest listed city in the browser, then discarded; they are never written to Firebase. After you confirm, the shared record contains the city and country, a GeoNames place ID, and public profile fields. Anyone allowed to read that Firebase collection can see the pin. Browser GPS can be spoofed, and the offline city match verifies that a place exists, not that a user is physically there or that the submitted Farcaster FID matches the anonymous Firebase session. Remove a pin in the Map tab whenever you want. The globe and city search do not make external geocoding or tile requests. See the data attributions in [`public/data/ATTRIBUTION.md`](./public/data/ATTRIBUTION.md).
+
+### Do I need Firebase for USDC credits or paid profile animation?
+
+No. Credit balances and purchases are read from the deployed Base contract and belong to the connected wallet. Firebase is not the credit ledger. Paid generation also needs the operator's server-side xAI key and Vercel Blob for uploads and replay protection. Check the contract address and current price in the wallet before buying; xAI usage is a separate operator cost. Each generation attempt spends one credit, even if the provider fails. The generated image or clip is only applied after the user previews it and confirms **Save profile changes**. See [contracts/README.md](./contracts/README.md) and the [profile art guide above](#paid-profile-art-and-credits).
+
+### Why is the AI digest missing, or why does it use old posts?
+
+The digest appears only when `GOOGLE_AI_API_KEY` is configured. It analyzes posts already loaded in Following and saves the latest successful digest in the browser per FID. Reopening it does not call Google again; select **Redo digest** to send a fresh sample. Google receives the selected public cast text and metadata only after you run or redo the digest. Audio additionally requires both ElevenLabs variables. See [Neynar request budgets](./docs/NEYNAR-USAGE.md) for feed pulls and the optional provider notes above for AI costs.
+
+### Why can't a Mini App use my wallet or Farcaster actions in a browser?
+
+The normal browser preview does not provide Farcaster host privileges. Wallet prompts, native cast composition, and other host actions are available only when Jackcaster is opened in a supporting Farcaster Mini App host. The browser preview can display and navigate the app, but it cannot impersonate those host capabilities.
+
+### What should I do if feeds, notifications, or media stop loading?
+
+Refresh once and check the visible service status. A 503 or quota error can come from Neynar or a provider; do not keep retrying rapidly. Check the server logs and the relevant provider dashboard, then review the bounded request budgets in [NEYNAR-USAGE.md](./docs/NEYNAR-USAGE.md). A broken thumbnail from another domain can be blocked by that media host even while the cast itself is available.
 
 ## Getting updates
 

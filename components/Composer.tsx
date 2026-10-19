@@ -273,7 +273,7 @@ export function Composer({
           </div>
         )}
 
-        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
+        {gif && <div className="composer-gif-preview"><img src={gif.url} alt={gif.title || "Selected GIF"} /><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
 
 
         {quoted && (

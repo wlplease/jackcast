@@ -77,10 +77,10 @@ match /jackcaster_map/pins/pins/{uid} {
 
   function validPin() {
     return request.resource.data.keys().hasAll([
-        'fid', 'username', 'displayName', 'pfpUrl', 'place', 'updatedAt'
+        'fid', 'username', 'displayName', 'pfpUrl', 'cityId', 'city', 'country', 'updatedAt'
       ])
       && request.resource.data.keys().hasOnly([
-        'fid', 'username', 'displayName', 'pfpUrl', 'place', 'updatedAt', 'lat', 'lon'
+        'fid', 'username', 'displayName', 'pfpUrl', 'cityId', 'city', 'country', 'updatedAt'
       ])
       && request.resource.data.fid is int
       && request.resource.data.fid > 0
@@ -91,20 +91,15 @@ match /jackcaster_map/pins/pins/{uid} {
       && request.resource.data.displayName.size() <= 48
       && request.resource.data.pfpUrl is string
       && request.resource.data.pfpUrl.size() <= 256
-      && request.resource.data.place is string
-      && request.resource.data.place.size() > 0
-      && request.resource.data.place.size() <= 80
-      && request.resource.data.updatedAt == request.time
-      && (
-        (!request.resource.data.keys().hasAny(['lat', 'lon']))
-        || (request.resource.data.keys().hasAll(['lat', 'lon'])
-          && request.resource.data.lat is number
-          && request.resource.data.lat >= -90
-          && request.resource.data.lat <= 90
-          && request.resource.data.lon is number
-          && request.resource.data.lon >= -180
-          && request.resource.data.lon <= 180)
-      );
+      && request.resource.data.cityId is int
+      && request.resource.data.cityId > 0
+      && request.resource.data.city is string
+      && request.resource.data.city.size() > 0
+      && request.resource.data.city.size() <= 80
+      && request.resource.data.country is string
+      && request.resource.data.country.size() > 0
+      && request.resource.data.country.size() <= 80
+      && request.resource.data.updatedAt == request.time;
   }
 
   allow get, list: if signedIn();
@@ -121,7 +116,7 @@ match /jackcaster_map/pins/pins/{uid} {
 
 - `jackcaster_arcade/...`: one anonymous-user score per weekly board. Scores remain community-reported; rules cannot prove gameplay or link the Firebase UID to the submitted Farcaster FID.
 - `jackcaster_shared_limits/...`: the shared GIPHY timestamp plus one cooldown document per Firebase anonymous UID. The atomic app transaction allows one free shared search globally every 45 seconds (up to 80 requests/hour), and limits each persistent browser session to one shared search every five minutes so one session cannot repeatedly win consecutive slots. Each user record contains only `lastUsedAt`; Firebase rules prevent a user from changing their own cooldown early.
-- `jackcaster_map/...`: public, opt-in map pins. Each anonymous UID may create, update, or delete only its own pin, but Anonymous Auth is open to anyone with the public Firebase Web config, so these rules do not make pins private to Jackcaster accounts. Users review and confirm locally before the browser writes a pin. GPS coordinates are rounded in the browser first; exact GPS is not sent to Jackcaster's app server or stored. Typed places are shared as entered after confirmation and omit coordinates. Farcaster FID/profile fields are self-reported by the browser and are not identity-verified by Firebase rules.
+- `jackcaster_map/...`: public, opt-in pins with a GeoNames city ID, city name, and country. No GPS coordinates are written to Firebase. GPS is used only in the browser to match the nearest city in the bundled offline gazetteer; manual choices must come from that same real-city list. The gazetteer match verifies that the place exists, not that the user is physically there. Browser GPS can be spoofed, Anonymous Auth is open to anyone with the public Firebase Web config, and Firebase rules cannot confirm that a submitted FID belongs to that anonymous UID. Treat pins as public and self-reported. Existing pins can be deleted by their owner; old free-text / coordinate pins do not appear on the new globe.
 - Paid profile-animation audit is not stored in Firebase. Anonymous Firebase Auth cannot verify a Farcaster signer or FID, so Jackcaster uses the signed-in server session, contract events, and replay-protected Vercel Blob request records for those actions instead.
 
 Firestore combines matching `allow` rules with OR. Audit existing wildcard rules: a broad `allow write: if true` on a parent path can make any narrower rule ineffective. Do not add service-account credentials or Firebase Admin SDK to Jackcaster.

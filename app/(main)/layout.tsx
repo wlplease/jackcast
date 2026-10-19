@@ -16,7 +16,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     return (
       <SavedCastsProvider initial={prefs.savedCasts}><MiniAppSessionProvider><div className="shell">
         <FeedScrollRestoration />
-        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} />
+        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} animatedProfilesEnabled={Boolean(process.env.REACT_APP_GROK_API_KEY || process.env.XAI_API_KEY)} />
         <ArcadeDiscovery />
         <main>{children}</main>
       </div></MiniAppSessionProvider></SavedCastsProvider>
@@ -26,7 +26,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <SavedCastsProvider initial={[]}><MiniAppSessionProvider><div className="shell">
       <FeedScrollRestoration />
-      <Masthead channels={channels} customName="Custom" />
+      <Masthead channels={channels} customName="Custom" animatedProfilesEnabled={Boolean(process.env.REACT_APP_GROK_API_KEY || process.env.XAI_API_KEY)} />
       <ArcadeDiscovery />
       <main>{children}</main>
     </div></MiniAppSessionProvider></SavedCastsProvider>
