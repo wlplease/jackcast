@@ -215,7 +215,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
       <div className="ai-catchup-top">
         <div>
           <strong>Weekly AI catch-up</strong>
-          <p>Story, source posts, and activity signals from the feed you loaded.</p>
+          <p>A sourced summary of up to 40 posts from the selected range. The date span and count below show exactly what was analyzed.</p>
         </div>
         <div className="ai-catchup-actions">
           <button type="button" onClick={summarize} disabled={busy || eligibleCasts.length === 0 || !digestEnabled}>
@@ -231,7 +231,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
       </div>
       {digestEnabled && eligibleCasts.length === 0 && <p className="field-hint">No posts are available for this range yet. Load more feed posts or choose a range with recent activity, then try again.</p>}
       {digest && <div className="ai-digest-content" aria-live="polite">
-        {savedAt > 0 && <small className="digest-saved-note">Saved on this device · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(savedAt)}. Refreshing will keep this digest; choose Redo digest to use newer posts.</small>}
+        {savedAt > 0 && <small className="digest-saved-note">Saved on this device · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(savedAt)}. This digest covers {digestSources.length} {scope === "week" ? "posts from the last seven days" : "loaded posts"} ({sampleLabel}); choose Redo digest to use newer posts.</small>}
         <div className="digest-metrics" aria-label="Activity snapshot">
           <div><strong>{digestSources.length}</strong><span>posts</span></div><div><strong>{analytics.people.length ? new Set(digestSources.map((cast) => cast.fid)).size : 0}</strong><span>people</span></div><div><strong>{analytics.likes.toLocaleString()}</strong><span>likes</span></div><div><strong>{analytics.recasts.toLocaleString()}</strong><span>recasts</span></div><div><strong>{analytics.replies.toLocaleString()}</strong><span>replies</span></div>
         </div>

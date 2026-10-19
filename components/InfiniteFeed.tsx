@@ -23,6 +23,9 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const cursorRef = useRef(cursor);
   const requestInFlight = useRef(false);
   const sentinel = useRef<HTMLDivElement>(null);
+  const aiDialog = useRef<HTMLDivElement>(null);
+  const aiClose = useRef<HTMLButtonElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   const path = usePathname();
   const search = useSearchParams();
   const router = useRouter();
@@ -125,15 +128,31 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
 
   useEffect(() => {
     if (!aiOpen) return;
+    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => aiClose.current?.focus());
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         const params = new URLSearchParams(window.location.search);
         params.delete("ai");
         router.replace(`${path}${params.size ? `?${params}` : ""}`, { scroll: false });
       }
+      if (event.key === "Tab" && aiDialog.current) {
+        const focusable = [...aiDialog.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((item) => item.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+      previousFocus.current?.focus();
+    };
   }, [aiOpen, path, router]);
 
   function closeAi() {
@@ -151,7 +170,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   return <>
     {aiOpen && <div className="ai-overlay" role="dialog" aria-modal="true" aria-label="AI catch-up">
       <button className="ai-overlay-backdrop" type="button" onClick={closeAi} aria-label="Close AI catch-up" />
-      <div className="ai-overlay-panel"><button className="ai-overlay-x" type="button" onClick={closeAi} aria-label="Close AI catch-up">×</button>
+      <div className="ai-overlay-panel" ref={aiDialog}><button ref={aiClose} className="ai-overlay-x" type="button" onClick={closeAi} aria-label="Close AI catch-up">×</button>
         {digestLoading && <p className="field-hint" role="status">Loading recent Following posts for the seven-day catch-up…</p>}
         {digestLoadError && <p className="form-error" role="alert">{digestLoadError} <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Retry</button></p>}
         {digestLoadMore && !digestLoading && <p className="field-hint">More recent posts may be available. <button type="button" onClick={() => setDigestLoadAttempt((attempt) => attempt + 1)}>Load more recent posts</button></p>}
