@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { login } from "@/app/actions";
-import { Wordmark } from "@/components/Wordmark";
 import { LandingWalkthrough } from "@/components/LandingWalkthrough";
+import { ShareJackcasterButton } from "@/components/ShareJackcasterButton";
 
 const DEPLOY_URL = "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup";
 
@@ -17,10 +17,22 @@ export default function LoginPage() {
           <span className="login-portal-status"><i aria-hidden="true" />PRIVATE INSTANCE</span>
         </header>
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
-          <span className="login-eyebrow">YOUR FARCASTER, YOUR WAY</span>
-          <h2 id="login-deploy-title">Your feed, your way.</h2>
-          <p className="login-deploy-intro"><span>A personal, open-source client for your feeds, circles, and discoveries.</span></p>
+          <span className="login-eyebrow">A PERSONAL FARCASTER CLIENT</span>
+          <h2 id="login-deploy-title">Make room for the parts of Farcaster you care about.</h2>
+          <p className="login-deploy-intro"><span>Jackcaster is an open-source, single-owner client built on GenuineJack&apos;s Selfcaster. Shape your timelines, follow conversations, and find Mini Apps and media in one place. This is the maintainer&apos;s private instance; deploy your own copy to connect your account.</span></p>
           <LandingWalkthrough />
+          <section className="login-what" aria-labelledby="login-what-title">
+            <div className="login-what-heading"><span className="login-eyebrow">THE CLIENT, AT A GLANCE</span><h3 id="login-what-title">A more personal way to follow the network</h3></div>
+            <article><span aria-hidden="true">↕</span><div><h4>Feeds with a purpose</h4><p>Keep Following chronological. Give Friends, custom lists, Top Accounts, channels, and Recasts their own views.</p></div></article>
+            <article><span aria-hidden="true">✎</span><div><h4>Read, reply, and create</h4><p>Compose posts, replies, quotes, and threads; keep drafts on your device and browse posts, profiles, and media.</p></div></article>
+            <article><span aria-hidden="true">▣</span><div><h4>Explore beyond the feed</h4><p>Discover Mini Apps, play supported media inline, review profile activity, and choose a soundtrack while you browse.</p></div></article>
+            <article><span aria-hidden="true">⚙</span><div><h4>Your copy, your choices</h4><p>Each deployment is for one owner. Feed preferences stay in that browser. Gemini catch-up, audio, GIF search, the map, and paid profile artwork are optional and may use separate services or incur costs.</p></div></article>
+            <p className="login-what-note">Jackcaster is an independent fork, not an official Selfcaster release. It keeps the original project&apos;s MIT license and attribution. Read the <a href="https://github.com/wlplease/jackcast#setup" target="_blank" rel="noreferrer">setup guide</a> and <a href="https://github.com/wlplease/jackcast/blob/main/SECURITY.md" target="_blank" rel="noreferrer">security notes</a>.</p>
+          </section>
+          <section className="login-share" aria-labelledby="login-share-title">
+            <div><span className="login-eyebrow">PASS IT ALONG</span><h3 id="login-share-title">Tell your corner of Farcaster</h3><p>Choose an intro, make it sound like you, then share it with the Jackcaster link attached.</p></div>
+            <ShareJackcasterButton full />
+          </section>
           <div className="login-deploy-divider"><span>YOUR OWN COPY · 3 STEPS</span><i aria-hidden="true" /></div>
           <ol>
             <li><span>1</span><div><strong>Deploy your copy</strong><small>Scroll to the Vercel button below and click it. Add your Neynar API key and a private app password, scroll down, then select <b>Deploy</b>.</small></div></li>
