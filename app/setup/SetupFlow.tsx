@@ -201,7 +201,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
   if (step.kind === "intro") {
     return (
       <section className="setup-card">
-        <span className="setup-eyebrow">WELCOME TO JACKCASTER</span>
+        <span className="setup-eyebrow">FARCASTER, ON YOUR TERMS</span>
         <h1>Choose how to get started</h1>
         <p>
           Browse public casts without connecting anything. Connect Farcaster only when you want to post, like, or reply.

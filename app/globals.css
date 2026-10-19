@@ -1217,6 +1217,8 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .login-deploy { position: relative; overflow: hidden; background: radial-gradient(ellipse at 100% 0%, var(--accent-soft), transparent 52%), var(--card); }
 .login-eyebrow { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 11px; color: var(--accent); font: 10px var(--mono); font-weight: 700; letter-spacing: .1em; }
 .login-deploy > p { max-width: 48ch; margin: 9px 0 16px; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+.login-deploy-intro strong { display: block; margin-bottom: 5px; color: var(--ink); font-family: var(--display); font-size: clamp(18px, 2.5vw, 22px); letter-spacing: -.025em; line-height: 1.2; }
+.login-deploy-intro span { display: block; }
 .login-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 7px; margin-bottom: 16px; }
 .login-feature-grid > span { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 11px; border: 1px solid var(--rule); border-radius: 12px; background: color-mix(in srgb, var(--paper) 78%, transparent); transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }
 .login-feature-grid > span:hover { transform: translateY(-2px); border-color: var(--rule-strong); box-shadow: 0 8px 20px color-mix(in srgb, var(--ink) 7%, transparent); }

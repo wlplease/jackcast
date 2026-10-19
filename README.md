@@ -2,7 +2,7 @@
 
 <h1 align="center">Jackcaster</h1>
 
-<p align="center">A personal Farcaster client built on Selfcaster.<br>Chronological feeds, no algorithm, hosted on your own Vercel.</p>
+<p align="center"><strong>Farcaster, on your terms.</strong><br>A personal client built on Selfcaster, with chronological feeds and useful tools.</p>
 
 <p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup"><img src="https://vercel.com/button" alt="Deploy your own Jackcaster with Vercel"></a></p>
 
