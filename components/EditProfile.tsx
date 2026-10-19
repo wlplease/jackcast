@@ -7,10 +7,11 @@ import Link from "next/link";
 import { uploadImage } from "@/lib/upload-client";
 import { updateProfile } from "@/app/(main)/me/actions";
 import { prepareAvatar, randomName } from "@/lib/image";
+import { GrokProfileMaker } from "@/components/GrokProfileMaker";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string } }) {
+export function EditProfile({ initial, fid, grokEnabled }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; grokEnabled: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -90,6 +91,8 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
           <p className="field-hint">Photos are cropped to a centered square. Animated GIFs keep all frames and display in the round avatar crop (up to 10 MB).</p>
         </div>
       </div>
+
+      {grokEnabled && <GrokProfileMaker fid={fid} onUse={(url) => { setPfp(url); setPreview(null); setError(null); }} />}
 
       <label className="field">
         <span className="field-label">

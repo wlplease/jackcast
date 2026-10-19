@@ -797,6 +797,20 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .text-input { width: 100%; padding: 10px 12px; font: inherit; font-size: 16px; border-radius: 10px; border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink); outline: none; resize: vertical; }
 .text-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--accent-soft); }
 .edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.grok-maker { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--card); }
+.grok-maker-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.grok-maker-heading > div { display: grid; gap: 5px; }
+.grok-maker-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.grok-maker-status { overflow-wrap: anywhere; }
+.grok-maker-result { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); }
+.grok-maker-result img { width: 88px; height: 88px; flex: none; border-radius: 50%; object-fit: cover; background: var(--rule); }
+.grok-maker-result > div { display: grid; justify-items: start; gap: 7px; min-width: 0; }
+@media (max-width: 560px) {
+  .grok-maker { padding: 12px; }
+  .grok-maker-heading { display: grid; }
+  .grok-maker-actions { display: grid; grid-template-columns: 1fr; }
+  .grok-maker-actions .btn { width: 100%; }
+}
 
 /* Settings: switch, channel tab picker */
 .toggle-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
