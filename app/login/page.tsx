@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { login } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
+import { LandingWalkthrough } from "@/components/LandingWalkthrough";
 
 const DEPLOY_URL = "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup";
 
@@ -16,14 +17,10 @@ export default function LoginPage() {
           <span className="login-portal-status"><i aria-hidden="true" />PRIVATE INSTANCE</span>
         </header>
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
-          <span className="login-eyebrow">OPEN SOURCE · YOUR OWN RULES</span>
-          <h2 id="login-deploy-title">Want your own Jackcaster?</h2>
-          <p className="login-deploy-intro"><strong>Farcaster, on your terms.</strong><span>Chronological feeds, your people, and useful tools in one personal client. Deploy a separate copy to connect your own account.</span></p>
-          <div className="login-feature-grid" aria-label="Jackcaster features">
-            <span><i className="login-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h10M5 18h7" /></svg></i><b>01 / READ</b><strong>Feeds in order</strong><small>No engagement ranking</small></span>
-            <span><i className="login-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" /><path d="M3.5 19c.5-3 2.3-4.5 5.5-4.5s5 1.5 5.5 4.5M17 5.5a3 3 0 0 1 0 5.8M17 15c2.1.5 3.2 1.8 3.5 4" /></svg></i><b>02 / PEOPLE</b><strong>Your circles</strong><small>Friends and custom feeds</small></span>
-            <span><i className="login-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5" /><rect x="14" y="4" width="6" height="6" rx="1.5" /><rect x="4" y="14" width="6" height="6" rx="1.5" /><path d="M14 17h6M17 14v6" /></svg></i><b>03 / DISCOVER</b><strong>More to explore</strong><small>Mini Apps, media, and tools</small></span>
-          </div>
+          <span className="login-eyebrow">YOUR FARCASTER, YOUR WAY</span>
+          <h2 id="login-deploy-title">Your feed, your way.</h2>
+          <p className="login-deploy-intro"><span>A personal, open-source client for your feeds, circles, and discoveries.</span></p>
+          <LandingWalkthrough />
           <div className="login-deploy-divider"><span>YOUR OWN COPY · 3 STEPS</span><i aria-hidden="true" /></div>
           <ol>
             <li><span>1</span><div><strong>Deploy your copy</strong><small>Scroll to the Vercel button below and click it. Add your Neynar API key and a private app password, scroll down, then select <b>Deploy</b>.</small></div></li>
