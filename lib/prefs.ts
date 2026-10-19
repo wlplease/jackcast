@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_TABS, normalizeMute, type Prefs } from "./prefs-shared";
+import { BUILTIN_FEED_ORDER, CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_TABS, normalizeMute, type BuiltinFeedKey, type Prefs } from "./prefs-shared";
 import { MODES, THEME_IDS, type Mode, type ThemeId } from "./themes";
 
 export const PREFS_COOKIE = "selfcaster_prefs";
@@ -27,6 +27,12 @@ export function parsePrefs(raw: string | undefined): Prefs {
       const clean = typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, 18) : "";
       return [key, clean || fallback];
     })) as Prefs["feedNames"];
+    const feedOrder = Array.isArray(p.feedOrder)
+      ? [...new Set(p.feedOrder.filter((key): key is BuiltinFeedKey => BUILTIN_FEED_ORDER.includes(key as BuiltinFeedKey)))].concat(BUILTIN_FEED_ORDER.filter((key) => !p.feedOrder!.includes(key)))
+      : BUILTIN_FEED_ORDER;
+    const hiddenFeeds = Array.isArray(p.hiddenFeeds)
+      ? [...new Set(p.hiddenFeeds.filter((key): key is BuiltinFeedKey => BUILTIN_FEED_ORDER.includes(key as BuiltinFeedKey) && key !== "following"))]
+      : [];
     const cleanPeople = (value: unknown, limit: number) => Array.isArray(value)
       ? value
           .map((entry) => ({ fid: Number(entry?.fid), username: String(entry?.username ?? "").trim().toLowerCase().replace(/^@/, "") }))
@@ -68,7 +74,7 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const savedCasts = Array.isArray(p.savedCasts)
       ? Array.from(new Set(p.savedCasts.filter((hash): hash is string => typeof hash === "string" && /^0x[0-9a-f]{40}$/i.test(hash)).map((hash) => hash.toLowerCase()))).slice(0, MAX_SAVED_CASTS)
       : [];
-    return { feedNames, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, audioTracks, theme, mode };
+    return { feedNames, feedOrder, hiddenFeeds, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, audioTracks, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

@@ -12,6 +12,7 @@ import { DonationPanel } from "@/components/DonationPanel";
 import { FeedNamesForm } from "@/components/FeedNamesForm";
 import { ShareJackcasterButton } from "@/components/ShareJackcasterButton";
 import { CopyIntroLinkButton } from "@/components/CopyIntroLinkButton";
+import { FeedNavigationForm } from "@/components/FeedNavigationForm";
 
 const SETTINGS = [
   { href: "#appearance", icon: "◐", title: "Appearance", detail: "Themes and light or dark mode" },
@@ -53,6 +54,7 @@ export default async function SettingsPage() {
     <nav className="settings-shortcuts" aria-label="Settings sections">{SETTINGS.map((section) => <a key={section.href} href={section.href} className="settings-shortcut"><span className="settings-shortcut-icon" aria-hidden="true">{section.icon}</span><span><strong>{section.title}</strong><small>{section.detail}</small></span><span aria-hidden="true">›</span></a>)}</nav>
     <section className="me-section" id="appearance"><div className="me-section-head"><h2>Appearance</h2><span className="meta">this device</span></div><ThemeForm initialTheme={prefs.theme} initialMode={prefs.mode} /></section>
     <section className="me-section" id="feeds"><div className="me-section-head"><h2>Channel tabs</h2><span className="meta">this device</span></div><ChannelTabsForm followed={followed} current={currentTabs} /></section>
+    <section className="me-section" id="feed-navigation"><div className="me-section-head"><h2>Built-in feed tabs</h2><span className="meta">this device</span></div><FeedNavigationForm initialOrder={prefs.feedOrder} initialHidden={prefs.hiddenFeeds} /></section>
     <section className="me-section" id="labels"><div className="me-section-head"><h2>Feed names</h2><span className="meta">this device</span></div><FeedNamesForm initial={prefs.feedNames} /></section>
     <section className="me-section" id="friends"><div className="me-section-head"><h2>Friends</h2><span className="meta">this device · up to 50</span></div><FriendsFeedForm initial={prefs.friends} /></section>
     <section className="me-section" id="custom-feed"><div className="me-section-head"><h2>Custom feed</h2><span className="meta">this device</span></div><CustomFeedNameForm initial={prefs.customName} /><CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} /></section>

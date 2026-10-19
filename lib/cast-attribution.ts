@@ -13,5 +13,5 @@ export function withCastAttribution(text: string): string {
 
 /** True when the visible source line identifies this cast as published through Jackcast. */
 export function isJackcastAttributed(text: string): boolean {
-  return /Casted from\s+https:\/\/jackcast\.vercel\.app\/?/i.test(text);
+  return /Casted from\s+https:\/\/jackcast(?:er)?\.vercel\.app\/?/i.test(text);
 }

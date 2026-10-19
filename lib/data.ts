@@ -8,6 +8,7 @@ import { getPrefs, effectiveMinScore } from "./prefs";
 import { applyFilters } from "./filters";
 import { MAX_TOP_ACCOUNTS } from "./prefs-shared";
 import { CURATED_TOP_ACCOUNTS } from "./top-account-roster";
+import { isJackcastAttributed } from "./cast-attribution";
 
 export type MiniAppSummary = { title: string; url: string; image?: string; author?: string; authorFid?: number; description?: string; category?: string };
 export type MiniAppsOverview = { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number };
@@ -112,6 +113,17 @@ export async function followingFeed(cursor?: string, limit = 30): Promise<Page> 
   const res = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor });
   const filtered = await clean(res.casts.filter((cast) => !friendFids.has(cast.author.fid)), fid);
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+}
+
+/** The connected account's own casts carrying Jackcast's explicit source attribution. */
+export async function jackcastFeed(cursor?: string, limit = 30): Promise<Page> {
+  const { fid } = await viewerOrThrow();
+  const page = await neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: true, limit, cursor });
+  return {
+    casts: page.casts.map(asCast).filter((cast) => isJackcastAttributed(cast.text)),
+    cursor: page.next?.cursor ?? null,
+    hidden: 0,
+  };
 }
 
 export async function channelFeed(channelId: string, cursor?: string, limit = 30): Promise<Page> {

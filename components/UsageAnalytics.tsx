@@ -4,7 +4,7 @@ import { track } from "@vercel/analytics";
 import { Analytics, type BeforeSend } from "@vercel/analytics/next";
 
 const PAGE_ROUTES = new Set([
-  "/", "/friends", "/top", "/recasts", "/mini-apps", "/media", "/circle",
+  "/", "/friends", "/top", "/recasts", "/sent", "/mini-apps", "/media", "/circle",
   "/search", "/notifications", "/profile", "/map", "/me", "/dev", "/setup",
   "/login", "/compose", "/compose/thread", "/arcade",
 ]);
@@ -25,7 +25,7 @@ const anonymizePageView: BeforeSend = (event) => {
 };
 
 type UsageEvent =
-  | { name: "feed_open"; feed: "following" | "friends" | "leaders" | "recasts" | "mini_apps" | "media" | "custom" | "channel" }
+  | { name: "feed_open"; feed: "following" | "friends" | "leaders" | "recasts" | "sent" | "mini_apps" | "media" | "custom" | "channel" }
   | { name: "cast_published"; kind: "cast" | "reply" | "quote" }
   | { name: "cast_deleted" }
   | { name: "mini_app_opened" | "digest_created" }

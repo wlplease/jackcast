@@ -79,8 +79,8 @@ function errMessage(e: unknown, action: "cast" | "reaction" = "cast"): string {
   const message = typeof value.message === "string" ? value.message : "";
   if (status === 401 || status === 403) return "Neynar rejected the request. Check your Farcaster connection at /setup.";
   if (status === 429) return "Neynar rate limit reached. Wait a little and try again.";
-  if (status >= 500) return "Neynar is temporarily unavailable. Try again shortly.";
-  if (/fetch failed|network|timed? ?out/i.test(message)) return "Couldn't reach Neynar. Your account data is unchanged; try again shortly.";
+  if (status >= 500) return "The cast result is unclear because Neynar is temporarily unavailable. Your draft is still here. Check Sent before retrying to avoid a duplicate.";
+  if (/fetch failed|network|timed? ?out/i.test(message)) return "The cast result is unclear because the connection ended before confirmation. Your draft is still here. Check Sent before retrying to avoid a duplicate.";
   return action === "reaction" ? "Couldn't update that reaction. Check your connection and try again." : "Couldn't publish the cast. Check your connection and try again.";
 }
 

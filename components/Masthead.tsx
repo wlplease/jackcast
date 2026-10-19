@@ -8,7 +8,7 @@ import { Wordmark } from "@/components/Wordmark";
 import { NotificationLink } from "@/components/NotificationLink";
 import { ListeningDock } from "@/components/ListeningDock";
 import { ProfileQuickMenu } from "@/components/ProfileQuickMenu";
-import { DEFAULT_FEED_NAMES, type FeedNames } from "@/lib/prefs-shared";
+import { BUILTIN_FEED_ORDER, DEFAULT_FEED_NAMES, type BuiltinFeedKey, type FeedNames } from "@/lib/prefs-shared";
 import { trackUsage } from "@/components/UsageAnalytics";
 
 const I = {
@@ -46,12 +46,12 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames }) {
+export function Masthead({ channels, customName, audioTracks = [], feedNames = DEFAULT_FEED_NAMES, feedOrder = BUILTIN_FEED_ORDER, hiddenFeeds = [] }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; feedNames?: FeedNames; feedOrder?: BuiltinFeedKey[]; hiddenFeeds?: BuiltinFeedKey[] }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
     <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined} onClick={() => {
-      const feed = href === "/" ? "following" : href === "/friends" ? "friends" : href === "/top" ? "leaders" : href === "/recasts" ? "recasts" : href === "/mini-apps" ? "mini_apps" : href === "/media" ? "media" : href === "/circle" ? "custom" : "channel";
+      const feed = href === "/" ? "following" : href === "/friends" ? "friends" : href === "/top" ? "leaders" : href === "/recasts" ? "recasts" : href === "/sent" ? "sent" : href === "/mini-apps" ? "mini_apps" : href === "/media" ? "media" : href === "/circle" ? "custom" : "channel";
       trackUsage({ name: "feed_open", feed });
     }}>
       {label}
@@ -83,13 +83,15 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
         </nav>
       </div>
       <nav className="tabs" aria-label="Feeds">
-        {tab("/", feedNames.following)}
-        {tab("/friends", feedNames.friends)}
-        {tab("/top", feedNames.leaders)}
-        {tab("/recasts", feedNames.recasts)}
-        {tab("/mini-apps", feedNames.miniApps)}
-        {tab("/media", feedNames.media)}
-        {tab("/circle", customName)}
+        {feedOrder.filter((key) => !hiddenFeeds.includes(key)).map((key) => {
+          const tabs: Record<BuiltinFeedKey, [string, string]> = {
+            following: ["/", feedNames.following], friends: ["/friends", feedNames.friends], leaders: ["/top", feedNames.leaders],
+            recasts: ["/recasts", feedNames.recasts], sent: ["/sent", "Sent"], miniApps: ["/mini-apps", feedNames.miniApps],
+            media: ["/media", feedNames.media], custom: ["/circle", customName],
+          };
+          const [href, label] = tabs[key];
+          return tab(href, label);
+        })}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
       {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>

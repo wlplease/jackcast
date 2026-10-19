@@ -9,7 +9,7 @@ import { groupRepeatedLinks } from "@/lib/feed-groups";
 import { CaughtUpProvider, SeenLine } from "@/components/CaughtUp";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, live, mediaKind = "all", audioEnabled, digestEnabled }: { initial: Page; canWrite: boolean; viewerFid: number; mutes: string[]; groupLinks: boolean; live?: string; mediaKind?: string; audioEnabled: boolean; digestEnabled: boolean }) {
+export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, live, mediaKind = "all", audioEnabled, digestEnabled, emptyTitle = "Your feed is empty", emptyBody = "Load more casts or check back later." }: { initial: Page; canWrite: boolean; viewerFid: number; mutes: string[]; groupLinks: boolean; live?: string; mediaKind?: string; audioEnabled: boolean; digestEnabled: boolean; emptyTitle?: string; emptyBody?: string }) {
   const [casts, setCasts] = useState(initial.casts);
   const [cursor, setCursor] = useState(initial.cursor);
   const [busy, setBusy] = useState(false);
@@ -19,6 +19,8 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const [digestLoadError, setDigestLoadError] = useState("");
   const [digestLoadMore, setDigestLoadMore] = useState(false);
   const [digestLoadAttempt, setDigestLoadAttempt] = useState(0);
+  const [sentKind, setSentKind] = useState<"all" | "casts" | "replies">("all");
+  const [sentRange, setSentRange] = useState<"all" | "7d" | "30d">("all");
   const castsRef = useRef(casts);
   const cursorRef = useRef(cursor);
   const requestInFlight = useRef(false);
@@ -93,7 +95,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     setBusy(true);
     setError("");
     try {
-      const feed = path === "/friends" ? "friends" : path === "/media" ? "media" : path === "/top" ? "top" : "following";
+      const feed = path === "/friends" ? "friends" : path === "/media" ? "media" : path === "/top" ? "top" : path === "/sent" ? "jackcast" : "following";
       const mediaQuery = feed === "media" ? `&type=${encodeURIComponent(mediaKind)}` : "";
       const response = await fetch(`/api/feed/${feed}?cursor=${encodeURIComponent(cursor)}${mediaQuery}`);
       if (!response.ok) throw new Error("Couldn't load more casts. Try again.");
@@ -162,9 +164,11 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     router.replace(`${path}${suffix}`, { scroll: false });
   }
 
-  const archiveCount = casts.length > 180 ? casts.length - 120 : 0;
-  const earlierCasts = casts.slice(0, archiveCount);
-  const activeCasts = casts.slice(archiveCount);
+  const sentCutoff = sentRange === "all" ? 0 : Date.now() - (sentRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
+  const visibleCasts = path === "/sent" ? casts.filter((cast) => (sentKind === "all" || (sentKind === "replies" ? Boolean(cast.parent_hash) : !cast.parent_hash)) && (sentCutoff === 0 || Date.parse(cast.timestamp) >= sentCutoff)) : casts;
+  const archiveCount = visibleCasts.length > 180 ? visibleCasts.length - 120 : 0;
+  const earlierCasts = visibleCasts.slice(0, archiveCount);
+  const activeCasts = visibleCasts.slice(archiveCount);
   const list = groupLinks ? groupRepeatedLinks(activeCasts) : activeCasts.map((cast) => [cast]);
   const earlierList = earlierOpen ? (groupLinks ? groupRepeatedLinks(earlierCasts) : earlierCasts.map((cast) => [cast])) : [];
   return <>
@@ -179,6 +183,14 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     </div>}
     <CaughtUpProvider feed={live ?? path} newest={initial.casts[0]?.timestamp ?? null}>
     <div className="infinite-feed">
+      {path === "/sent" && <div className="sent-feed-filters" aria-label="Filter sent casts">
+        <label>Show <select value={sentKind} onChange={(event) => setSentKind(event.target.value as typeof sentKind)}><option value="all">Posts and replies</option><option value="casts">Posts only</option><option value="replies">Replies only</option></select></label>
+        <label>When <select value={sentRange} onChange={(event) => setSentRange(event.target.value as typeof sentRange)}><option value="all">Any time</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
+        <span className="meta">{visibleCasts.length} shown from {casts.length} loaded</span>
+      </div>}
+      {casts.length === 0 && cursor && <p className="field-hint" role="status">Looking through recent posts…</p>}
+      {casts.length === 0 && !cursor && <div className="empty"><h2>{emptyTitle}</h2><p>{emptyBody}</p></div>}
+      {casts.length > 0 && visibleCasts.length === 0 && <div className="empty"><h2>No matches in the loaded posts</h2><p>Load more posts or change these filters.</p></div>}
       {earlierCasts.length > 0 && <details className="feed-archive" onToggle={(event) => setEarlierOpen(event.currentTarget.open)}><summary>{earlierOpen ? "Hide" : "Show"} {earlierCasts.length} earlier loaded casts</summary>{earlierOpen && <div>{earlierList.map((group) => <div className="feed-group" key={group[0].hash}><CastCard cast={group[0]} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />{group.length > 1 && <details className="expandable-casts"><summary>{group.length - 1} more with this link</summary>{group.slice(1).map((cast) => <CastCard key={cast.hash} cast={cast} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} />)}</details>}</div>)}</div>}</details>}
       {earlierCasts.length > 0 && activeCasts.length > 0 && <SeenLine above={activeCasts[0].timestamp} below={earlierCasts[earlierCasts.length - 1].timestamp} />}
       {list.map((group, index) => <Fragment key={group[0].hash}>
@@ -190,7 +202,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
       </Fragment>)}
       <div ref={sentinel} className="feed-load-sentinel" aria-hidden="true" />
       {cursor && <div className="feed-load-more">{error && <p className="form-error" role="status">{error}</p>}<button className="more" type="button" onClick={() => void loadMore()} disabled={busy}>{busy ? "Loading more…" : "Load more casts"}</button></div>}
-      {!cursor && casts.length > 0 && <p className="feed-end">You’re all caught up.</p>}
+      {!cursor && visibleCasts.length > 0 && <p className="feed-end">You’re all caught up.</p>}
     </div>
     </CaughtUpProvider>
   </>;

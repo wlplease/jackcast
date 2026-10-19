@@ -16,7 +16,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     return (
       <SavedCastsProvider initial={prefs.savedCasts}><MiniAppSessionProvider><div className="shell">
         <FeedScrollRestoration />
-        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} />
+        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} feedOrder={prefs.feedOrder} hiddenFeeds={prefs.hiddenFeeds} />
         <ArcadeDiscovery />
         <main>{children}</main>
       </div></MiniAppSessionProvider></SavedCastsProvider>

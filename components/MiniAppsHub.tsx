@@ -23,6 +23,7 @@ function AppGrid({ apps, saved, onSaved, onLaunch, emptyMessage = "No apps are l
 export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved, feedTitle = "Mini Apps" }: { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number; initialSaved: Prefs["savedMiniApps"]; feedTitle?: string }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MiniAppSummary[] | null>(null);
+  const [resultsQuery, setResultsQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
@@ -61,7 +62,7 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved, feedT
     try {
       const result = await loadMiniAppSearch(term);
       if (!result.ok) setError(result.error);
-      else setResults(result.apps);
+      else { setResults(result.apps); setResultsQuery(term); }
     } catch {
       setError("Mini app search is unavailable right now. Try again shortly.");
     } finally { setSearching(false); }
@@ -80,7 +81,7 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved, feedT
     {error && <p className="form-error miniapp-error" role="status">{error} <button type="button" className="linkish" disabled={searching || query.trim().length < 2} onClick={() => void runSearch(query.trim())}>{searching ? "Searching…" : "Try again"}</button></p>}
     {recentApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Recently opened</h2><button type="button" className="linkish" onClick={() => { setRecentApps([]); try { localStorage.removeItem(RECENT_KEY); } catch {} }}>Clear</button></div><AppGrid apps={recentApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
     {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Favorites</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
-    {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage="No matches. Try a different name or search term." /></section>}
+    {results && <section className="me-section"><div className="me-section-head"><h2>Results for “{resultsQuery}”</h2><button type="button" className="linkish" onClick={() => { setResults(null); setResultsQuery(""); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage="No matches. Try a different name or search term." /></section>}
     <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button type="button" key={value} className={category === value ? "active" : ""} aria-pressed={category === value} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage={weekly.length ? "No apps match this category. Choose another category or search the catalog." : "The weekly catalog is empty right now. Try refreshing or search for an app by name."} /></section>
     <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} emptyMessage="There are no personalized suggestions yet. Search the catalog or check back later." /></section>
   </>;
