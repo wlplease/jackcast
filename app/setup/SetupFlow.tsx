@@ -192,6 +192,8 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           Add <code>NEYNAR_API_KEY</code> to your environment variables (Vercel, Settings, Environment Variables), redeploy,
           then come back here.
         </p>
+        <p className="setup-security-note"><strong>For the instance operator:</strong> Neynar is a server key. Don’t paste it into this page or share it with users.</p>
+        <Link className="quiet setup-skip" href="/">Return to Jackcaster</Link>
       </section>
     );
   }
@@ -199,21 +201,30 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
   if (step.kind === "intro") {
     return (
       <section className="setup-card">
-        <h1>Connect your account</h1>
+        <span className="setup-eyebrow">WELCOME TO JACKCASTER</span>
+        <h1>Choose how to get started</h1>
         <p>
-          To post from here, Farcaster needs your account to approve a key for this app. It takes two taps and you only do
-          it once.
+          Browse public casts without connecting anything. Connect Farcaster only when you want to post, like, or reply.
         </p>
+        <p className="setup-upstream-credit">Jackcaster is an independent fork of <a href="https://selfcaster.xyz/" target="_blank" rel="noreferrer">Selfcaster</a>, the original open-source Farcaster client by <a href="https://farcaster.xyz/genuinejack" target="_blank" rel="noreferrer">@genuinejack</a>.</p>
+        <div className="setup-options">
+          <div><strong>Neynar service key</strong><span>Required by the instance operator for Farcaster data and posting setup. It stays server-side; users should never enter it here.</span></div>
+          <div><strong>AI and voice keys</strong><span>Google Gemini and ElevenLabs are optional and configured by the instance operator. They are not needed to browse or post.</span></div>
+          <div><strong>Farcaster connection</strong><span>Optional posting access. You can connect later from Settings → Account and connection.</span></div>
+          <div><strong>Wallet</strong><span>Optional and separate from Farcaster. Connect later in Settings → Wallet, only when you choose an onchain feature.</span></div>
+          <div><strong>GIF search</strong><span>Optional. Add your own GIPHY key later in the composer’s GIF picker. It stays in this browser if you choose to save it.</span></div>
+        </div>
+        <div className="setup-security-note"><strong>Posting setup has an extra security step.</strong> It asks you to enter your Farcaster recovery phrase on this page to sign one request locally. The phrase is not sent to Jackcaster’s server, but entering a recovery phrase into any web page carries risk. Continue only if you trust this instance; read-only browsing needs no phrase. Never enter wallet or provider API secrets here.</div>
         <ol className="how">
-          <li>Paste your recovery phrase. This page uses it to sign one request, right here in your browser.</li>
-          <li>Approve in the Farcaster app. Scan a QR code on a computer, or just tap a button on your phone.</li>
-          <li>You&apos;re in. Revoke it anytime in Farcaster settings.</li>
+          <li>Start a Farcaster signer request for this device.</li>
+          <li>Review and approve that request in the Farcaster app.</li>
+          <li>Revoke Jackcaster’s signer access anytime in Farcaster settings.</li>
         </ol>
         <button className="btn wide" onClick={() => setStep({ kind: "phrase" })}>
-          Get started
+          Continue to posting setup
         </button>
-        <Link className="quiet" href="/">
-          Skip for now and browse read-only
+        <Link className="quiet setup-skip" href="/">
+          Browse read-only — I’ll set this up later
         </Link>
       </section>
     );
@@ -226,7 +237,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
         <Steps at={0} />
         <h1>Sign the request</h1>
         <p>
-          It&apos;s in the Farcaster app&apos;s settings, usually under Advanced. Look for &quot;recovery phrase.&quot;
+          This optional flow uses your Farcaster recovery phrase to sign a single request in this browser, then clears the input. Only the signature is sent to the server. A compromised page or browser extension could still expose what you type, so continue only if you trust this instance. Otherwise, go back and browse read-only.
         </p>
         <label className="sr-only" htmlFor="phrase">
           Recovery phrase

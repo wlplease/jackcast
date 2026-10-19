@@ -335,14 +335,10 @@ export async function topAccountsSnapshot(fid: number): Promise<TopAccountsSnaps
   return { leaders: knownLeaders, active: activity.people, scanned: activity.scanned, complete: activity.complete, generatedAt: activity.generatedAt };
 }
 
-/** Chronological posts from a small curated roster and the viewer's 90-day top accounts. */
-export async function topAccountsFeed(cursor?: string, limit = 30): Promise<Page & { snapshot: TopAccountsSnapshot }> {
-  const { fid } = await viewerOrThrow();
-  const snapshot = await topAccountsSnapshot(fid);
-  const accounts = new Map<number, { fid: number }>();
-  for (const person of [...snapshot.leaders, ...snapshot.active]) accounts.set(person.fid, { fid: person.fid });
-  const page = await peopleFeed([...accounts.values()], cursor, limit, new Set([fid]));
-  return { ...page, snapshot };
+/** Chronological posts from the shared curated Farcaster roster; never personalized by follow graph. */
+export async function topAccountsFeed(cursor?: string, limit = 30): Promise<Page> {
+  const leaders = await curatedTopAccountsCached();
+  return peopleFeed(leaders, cursor, limit);
 }
 
 export type SavedFriendActivity = { fid: number; username: string; posts: number; followers: number };

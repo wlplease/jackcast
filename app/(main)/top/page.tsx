@@ -9,8 +9,8 @@ export default async function TopAccountsPage({ searchParams }: { searchParams: 
   try {
     const page = await topAccountsFeed(cursor);
     return <>
-      <section className="section-head top-feed-head"><div><h1>{prefs.feedNames.leaders}</h1><p>Recent posts from Farcaster leaders and your most active follows, newest first.</p></div></section>
-      <Feed page={page} basePath="/top" canWrite={viewer.canWrite} viewerFid={viewer.fid} live="top" emptyTitle="No recent posts from these accounts" emptyBody="New posts will appear here as the leaders and active accounts in your network cast." />
+      <section className="section-head top-feed-head"><div><h1>{prefs.feedNames.leaders}</h1><p>Recent posts from a shared Farcaster leaders roster, newest first. Your follows do not change this feed.</p></div></section>
+      <Feed page={page} basePath="/top" canWrite={viewer.canWrite} viewerFid={viewer.fid} live="top" emptyTitle="No recent posts from this roster" emptyBody="New posts will appear here as these Farcaster leaders cast." />
     </>;
   } catch (error) { return <SetupBanner error={error} />; }
 }

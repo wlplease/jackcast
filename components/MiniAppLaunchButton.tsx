@@ -30,7 +30,7 @@ export function MiniAppLaunchButton({ app, onLaunch }: { app: { url: string; tit
       openMiniApp({ ...app, url: target.toString() });
     } catch {
       onLaunch?.(app);
-      openMiniApp({ ...app, url: target.toString() }, "Farcaster native launch was unavailable. Showing the browser preview instead.");
+      openMiniApp({ ...app, url: target.toString() });
     } finally { setBusy(false); }
   }
 

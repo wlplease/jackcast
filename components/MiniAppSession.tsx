@@ -3,8 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { pauseBackgroundAudio } from "@/lib/audio-focus";
 
-type MiniApp = { url: string; title: string; sameOrigin: boolean; notice?: string };
-type MiniAppSession = { openMiniApp: (app: { url: string; title: string }, notice?: string) => void };
+type MiniApp = { url: string; title: string; sameOrigin: boolean };
+type MiniAppSession = { openMiniApp: (app: { url: string; title: string }) => void };
 const MiniAppSessionContext = createContext<MiniAppSession | null>(null);
 
 export function useMiniAppSession() {
@@ -17,12 +17,12 @@ export function MiniAppSessionProvider({ children }: { children: React.ReactNode
   const [active, setActive] = useState<MiniApp | null>(null);
   const [minimized, setMinimized] = useState(false);
 
-  const openMiniApp = useCallback((app: { url: string; title: string }, notice?: string) => {
+  const openMiniApp = useCallback((app: { url: string; title: string }) => {
     try {
       const url = new URL(app.url);
       if (url.protocol !== "https:" || url.username || url.password) return;
       pauseBackgroundAudio();
-      setActive({ url: url.toString(), title: app.title.slice(0, 80), sameOrigin: url.origin === window.location.origin, notice });
+      setActive({ url: url.toString(), title: app.title.slice(0, 80), sameOrigin: url.origin === window.location.origin });
       setMinimized(false);
     } catch { /* Launch buttons validate URLs and show the validation message. */ }
   }, []);
@@ -58,7 +58,6 @@ export function MiniAppSessionProvider({ children }: { children: React.ReactNode
               <a href={active.url} target="_blank" rel="noopener noreferrer" className="miniapp-viewer-external" aria-label={`Open ${active.title} in a new tab`}>↗</a>
             </div>
           </header>
-          <div className="miniapp-viewer-note" role="status">{active.notice || "Browser preview · Some apps need the Farcaster host for wallet and native actions."}</div>
           <iframe
             className="miniapp-viewer-frame"
             src={active.url}

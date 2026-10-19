@@ -155,7 +155,7 @@ export function CastActions(props: {
         {Icon.reply}
         {props.replies > 0 && compact(props.replies)}
       </Link>
-      <button
+      {props.canWrite ? <button
         className={`act${state.recasted ? " recasted" : ""}`}
         onClick={() => toggle("recast")}
         disabled={!props.canWrite || busy !== null}
@@ -164,13 +164,13 @@ export function CastActions(props: {
       >
         {Icon.recast}
         {state.recasts > 0 && compact(state.recasts)}
-      </button>
+      </button> : <Link className="act" href="/setup" aria-label="Connect to recast" title="Connect to recast">{Icon.recast}{state.recasts > 0 && compact(state.recasts)}</Link>}
       {props.canWrite && (
         <Link className="act" href={`/compose?quote=${props.hash}`} aria-label="Quote cast" title="Quote">
           {Icon.quote}
         </Link>
       )}
-      <button
+      {props.canWrite ? <button
         className={`act${state.liked ? " liked" : ""}`}
         onClick={() => toggle("like")}
         disabled={!props.canWrite || busy !== null}
@@ -179,7 +179,7 @@ export function CastActions(props: {
       >
         {Icon.like(state.liked)}
         {state.likes > 0 && compact(state.likes)}
-      </button>
+      </button> : <Link className="act" href="/setup" aria-label="Connect to like" title="Connect to like">{Icon.like(false)}{state.likes > 0 && compact(state.likes)}</Link>}
       <button type="button" className="act" onClick={shareCast} aria-label="Share as a cast" title="Share as a cast">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" /></svg>
       </button>

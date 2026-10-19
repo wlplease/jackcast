@@ -4,7 +4,23 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type GifItem = { id: string; url: string; preview: string; title: string; sourceUrl?: string };
-type GiphyItem = { id: string; title?: string; url?: string; images?: { original?: { url?: string }; fixed_width_small?: { url?: string } } };
+type GiphyImage = { url?: string };
+type GiphyItem = { id: string; title?: string; url?: string; images?: { original?: GiphyImage; downsized_large?: GiphyImage; fixed_width?: GiphyImage; fixed_width_small?: GiphyImage } };
+
+function directGifUrl(value?: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !/\.gif$/i.test(url.pathname)) return null;
+    if (/^media\d*\.giphy\.com$/i.test(url.hostname)) {
+      // GIPHY's cid/tracking query is unnecessary for its public media path and can
+      // push a valid image embed over Farcaster's URL length limit.
+      url.search = "";
+      url.hash = "";
+    }
+    return url.href.length <= 256 ? url.href : null;
+  } catch { return null; }
+}
 
 const GIF_CATEGORIES = [
   { label: "Trending", query: "" },
@@ -91,17 +107,17 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       const data = await response.json() as { data?: GiphyItem[]; meta?: { status?: number } };
       if (!response.ok) throw new Error("GIF search is temporarily unavailable. Try again in a moment.");
       const nextItems = (data.data ?? []).flatMap((item) => {
-        const full = item.images?.original?.url;
+        const full = [item.images?.original?.url, item.images?.downsized_large?.url, item.images?.fixed_width?.url, item.images?.fixed_width_small?.url]
+          .map(directGifUrl).find((url): url is string => Boolean(url));
         const preview = item.images?.fixed_width_small?.url;
         if (!full || !preview || !item.id) return [];
         try {
-          const fullUrl = new URL(full);
           const previewUrl = new URL(preview);
           const pageUrl = item.url ? new URL(item.url) : undefined;
           const isGiphyHost = (hostname: string) => hostname === "giphy.com" || hostname.endsWith(".giphy.com");
-          if (fullUrl.protocol !== "https:" || previewUrl.protocol !== "https:" || !isGiphyHost(fullUrl.hostname) || !isGiphyHost(previewUrl.hostname)) return [];
+          if (previewUrl.protocol !== "https:" || !isGiphyHost(new URL(full).hostname) || !isGiphyHost(previewUrl.hostname)) return [];
           if (pageUrl && (pageUrl.protocol !== "https:" || !isGiphyHost(pageUrl.hostname))) return [];
-          return [{ id: item.id, url: fullUrl.href, preview: previewUrl.href, title: (item.title || "GIF").slice(0, 120), sourceUrl: pageUrl?.href }];
+          return [{ id: item.id, url: full, preview: previewUrl.href, title: (item.title || "GIF").slice(0, 120), sourceUrl: pageUrl?.href }];
         } catch { return []; }
       });
       setItems((current) => append ? [...current, ...nextItems.filter((item) => !current.some((saved) => saved.id === item.id))] : nextItems);
@@ -201,7 +217,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
         </div>)}</div>}
         {!error && hasMore && <button type="button" className="gif-load-more" disabled={loading} onClick={() => void search(category && !query ? GIF_CATEGORIES.find((item) => item.label === category)?.query ?? query : query, true)}>{loading ? "Loading…" : "Load more GIFs"}</button>}
         {!loading && !error && items.length === 0 && <p className="gif-picker-message">No GIFs found. Try another search.</p>}
-        <label className="gif-paste">Or paste a GIF link<input type="url" placeholder="https://…" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const input = event.currentTarget; try { const url = new URL(input.value); if (url.protocol !== "https:") throw new Error(); onSelect({ url: url.href, preview: url.href, title: "GIF" }); setOpen(false); } catch { setError("Paste a valid HTTPS GIF link."); } } }} /></label>
+        <label className="gif-paste">Or paste a direct GIF image URL<input type="url" placeholder="https://…/image.gif" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const input = event.currentTarget; const url = directGifUrl(input.value.trim()); if (url) { onSelect({ url, preview: url, title: "GIF" }); setOpen(false); } else { setError("Use GIF search or paste a direct HTTPS .gif image URL. Share-page links do not embed as animations."); } } }} /></label>
         <small className="gif-attribution">Powered By GIPHY</small>
       </> : <div className="meme-maker">
         <button type="button" className="meme-image-button" onClick={() => fileRef.current?.click()}>{imagePreview ? <img src={imagePreview} alt="Meme source preview" /> : <span>Choose a photo for your meme</span>}</button>
