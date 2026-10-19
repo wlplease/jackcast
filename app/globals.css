@@ -151,24 +151,6 @@ main { flex: 1; width: min(100%, 760px); min-width: 0; margin: 0 auto; }
 .confirm-icon svg { width: 20px; height: 20px; }
 .confirm-dialog h2 { margin: 16px 0 6px; font-family: var(--display); font-size: 21px; }
 .confirm-dialog p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
-.profile-quick-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow-y: auto; padding: 20px; background: rgb(13 18 17 / 48%); backdrop-filter: blur(5px); }
-.profile-quick-dialog { position: relative; width: min(100%, 440px); padding: 26px; border: 1px solid var(--rule-strong); border-radius: 22px; background: var(--paper); box-shadow: 0 28px 90px rgb(0 0 0 / 28%); }
-.profile-quick-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--rule); border-radius: 50%; color: var(--ink-2); background: var(--card); font-size: 23px; cursor: pointer; }
-.profile-quick-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; color: var(--accent); background: var(--accent-soft); }
-.profile-quick-icon svg { width: 24px; height: 24px; }
-.profile-quick-kicker { margin: 18px 0 6px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
-.profile-quick-dialog h2 { margin: 0 38px 7px 0; font-family: var(--display); font-size: 24px; line-height: 1.15; }
-.profile-quick-dialog > p:not(.profile-quick-kicker) { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
-.profile-quick-options { display: grid; gap: 8px; margin: 18px 0 14px; }
-.profile-quick-options > a, .profile-quick-unavailable { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 13px; color: var(--ink); background: var(--card); text-decoration: none; }
-.profile-quick-options > a:hover { border-color: var(--accent); transform: translateY(-1px); }
-.profile-quick-options span { display: grid; gap: 3px; min-width: 0; }
-.profile-quick-options strong, .profile-quick-unavailable strong { font-size: 13px; }
-.profile-quick-options small, .profile-quick-unavailable small { color: var(--ink-3); font-size: 11px; line-height: 1.4; }
-.profile-quick-options b { flex: 0 0 auto; color: var(--accent); font-size: 21px; }
-.profile-quick-options > .profile-quick-featured { border-color: color-mix(in srgb, var(--accent) 38%, var(--rule)); background: linear-gradient(135deg, var(--accent-soft), var(--card) 72%); }
-.profile-quick-unavailable { display: grid; gap: 3px; opacity: .72; }
-.profile-quick-credit-note { padding-top: 12px; border-top: 1px solid var(--rule); font-size: 11px !important; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
 .confirm-actions form { margin: 0; }
 .confirm-actions .btn { min-height: 40px; }
