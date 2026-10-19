@@ -4,7 +4,9 @@
 
 <p align="center">A personal Farcaster client built on Selfcaster.<br>Chronological feeds, no algorithm, hosted on your own Vercel.</p>
 
-<p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=NEYNAR_API_KEY%20is%20your%20key%20from%20dev.neynar.com.%20APP_PASSWORD%20locks%20your%20client%3A%20anyone%20with%20it%20can%20post%20as%20you%2C%20so%20make%20it%20long.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D"><img src="https://vercel.com/button" alt="Deploy Jackcast with Vercel"></a></p>
+<p align="center"><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast&project-name=jackcast&repository-name=jackcast&env=NEYNAR_API_KEY,APP_PASSWORD&envDescription=Add%20your%20Neynar%20API%20key%20and%20choose%20a%20private%20password%20for%20your%20own%20Jackcaster%20deployment.&envLink=https%3A%2F%2Fgithub.com%2Fwlplease%2Fjackcast%23setup"><img src="https://vercel.com/button" alt="Deploy your own Jackcaster with Vercel"></a></p>
+
+This live site is the maintainer's private instance. To use Jackcaster with your own Farcaster account, use **Deploy with Vercel** to create your own GitHub repository and separate Vercel deployment. You will need your own Neynar API key and a private password; connect your Farcaster account in your deployment's setup flow.
 
 > **Jackcaster** is the app name; **Jackcast** is the repository name. This is an open-source, single-owner fork built on [Selfcaster by GenuineJack](https://github.com/GenuineJack/selfcaster). It keeps the original project's MIT license and credits, while adding optional features for this deployment. It is independent and is not an official Selfcaster release. See [FORK-NOTES.md](./FORK-NOTES.md) for maintenance details and [RELEASE-NOTES.md](./RELEASE-NOTES.md) for the current change summary.
 
@@ -80,7 +82,7 @@ Keep secrets in Vercel Environment Variables or an ignored local `.env.local`; n
 | Variable | Required? | Purpose and notes |
 | --- | --- | --- |
 | `NEYNAR_API_KEY` | Yes | Server-only Neynar access for Farcaster profiles, feeds, and actions. Get it from [Neynar](https://dev.neynar.com). Never use a `NEXT_PUBLIC_` prefix. |
-| `APP_PASSWORD` | Yes in production | Locks this single-owner instance. Use a long unique password and share it only with trusted users: anyone who can enter can use the connected posting account. Local development can run without it. |
+| `APP_PASSWORD` | Yes in production | Locks your deployment. Use a long, unique password and do not share it: anyone who enters can act through the signer configured for that deployment. Local development can run without it. |
 | `MY_FID` | Recommended | Your numeric Farcaster ID. Needed with `SIGNER_UUID` for all devices to use the server-configured connected account; by itself, it enables read-only mode. |
 | `SIGNER_UUID` | Optional | Server-side Neynar signer identifier. Pair with `MY_FID` to post from every device. Alternatively connect at `/setup`; that stores a signed, device-specific connection cookie. Never expose the signer UUID publicly. |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Enables direct Vercel Blob photo uploads for an existing token-based store. For newer stores use `BLOB_STORE_ID` plus `BLOB_WEBHOOK_PUBLIC_KEY` instead. |
@@ -107,10 +109,10 @@ Sign up at [dev.neynar.com](https://dev.neynar.com) and create an API key.
 
 ### 2. Click Deploy
 
-Hit the **Deploy with Vercel** button above. Vercel will:
+Hit the **Deploy with Vercel** button above and sign in to GitHub and Vercel when prompted. Vercel will:
 
-1. make your own copy of this repo in your GitHub,
-2. create a public Blob store for your photos,
+1. copy this repository into your GitHub account,
+2. create a Vercel project linked to your copy,
 3. ask for two values:
 
 | Var | Value |
@@ -118,7 +120,7 @@ Hit the **Deploy with Vercel** button above. Vercel will:
 | `NEYNAR_API_KEY` | your key from step 1 |
 | `APP_PASSWORD` | something long. Anyone with it can post as you. |
 
-Then it builds and gives you a URL.
+Then it builds and gives you a URL for your own Jackcaster. Each deploy is separate: it has its own password, settings, and Farcaster connection. Photo uploads are optional; connect a Vercel Blob store later from **Storage** if you want them.
 
 ### 3. Connect your account at `/setup`
 
@@ -207,6 +209,18 @@ The contract's default personal purchase is 1 USDC for 3 paid plus 2 bonus credi
 - **Change app settings:** open the gear icon. Theme, feed names, Friends, Custom, filters, music, account connection, sharing, donations, and developer tools are collected there.
 
 ## FAQ
+
+### Can I sign in to the maintainer's live Jackcaster with my own account?
+
+No. The live site is a private, single-owner deployment. Use the **Deploy with Vercel** button at the top of this README or on the login page to create your own GitHub repository and Vercel app. Add your Neynar API key, choose your own `APP_PASSWORD`, then connect your Farcaster account in `/setup`. The Deploy Button starts Vercel's project flow and clones the source repository into the Git provider account you choose; you still need your own GitHub and Vercel accounts and provider key. See [Vercel's Deploy Button guide](https://vercel.com/docs/deploy-button) for details.
+
+### Why doesn't this login ask me for a Neynar key?
+
+`NEYNAR_API_KEY` belongs to the deployment operator and is configured as a server-side Vercel secret before the app is deployed. It is not a per-user sign-in credential. For your own account, deploy your own repository copy and enter your key in Vercel; then connect Farcaster on your deployment. The recovery phrase is used later in `/setup` to sign one request in your browser. Never enter the Neynar key into the recovery-phrase form.
+
+### Can an NFT pass unlock the live shared node?
+
+Not in this version. The current password gate is for the private owner deployment. A public shared node would need wallet-based access checks and separate per-user Farcaster signers; sharing the owner's password or signer would let others act as the owner.
 
 ### Is Jackcaster the original Selfcaster app?
 

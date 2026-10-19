@@ -58,7 +58,10 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   const suggestions = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     if (query.length < 2 || selectedCity) return [];
-    return cities.filter((city) => `${city.name}, ${city.country}`.toLocaleLowerCase().includes(query)).slice(0, 8);
+    return cities
+      .filter((city) => `${city.name}, ${city.country}`.toLocaleLowerCase().includes(query))
+      .sort((a, b) => Number(!a.name.toLocaleLowerCase().startsWith(query)) - Number(!b.name.toLocaleLowerCase().startsWith(query)))
+      .slice(0, 8);
   }, [cities, search, selectedCity]);
 
   useEffect(() => {
@@ -168,16 +171,103 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   }, [citiesById, visiblePins]);
   const hasLegacyMyPin = Boolean(myPin && !citiesById.has(myPin.cityId));
 
-  return <div className="network-map-page">
-    <header className="section-head"><div><span className="map-eyebrow">JACKCASTER COMMUNITY</span><h1>Network globe</h1><p>Real cities shared by Jackcaster users. Add one verified city and remove it whenever you want.</p></div><strong className="map-count">{visiblePins.length} {visiblePins.length === 1 ? "person" : "people"}</strong></header>
-    <section className="map-privacy-card"><div><strong>Choose a city to share</strong><p>Search the free, offline city list or use GPS to find the nearest listed city on this device. Exact GPS stays in your browser; only the city and country are shared. A place match confirms the city exists, not that a person is physically there. Browser GPS and Firebase Anonymous Auth can be spoofed.</p></div>
-      {hasLegacyMyPin ? <div className="map-your-pin"><span>Older pin hidden because it did not use a verified city.</span><button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove old pin</button></div> : visibleMyPin ? <div className="map-your-pin"><span>📍 {visibleMyPin.city}, {visibleMyPin.country}</span><button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove my pin</button></div> : reviewPin && selectedCity ? <div className="map-pin-review"><strong>Review before sharing</strong><p>{selectedCity.name}, {selectedCity.country}</p><small>{locationMethod === "gps" ? "Matched on this device to the nearest city in the offline gazetteer. GPS coordinates are not uploaded." : "Selected from the offline gazetteer. This verifies the city name and map point, not your presence there."}</small><div className="map-pin-form"><button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedCity(null); setSearch(""); setReviewPin(false); }}>Cancel</button><button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Confirm city"}</button></div></div> : <div className="map-pin-form map-city-picker"><div className="map-city-search"><input value={search} onChange={(event) => { setSearch(event.target.value); setSelectedCity(null); setReviewPin(false); setLocationMethod("city"); }} maxLength={100} placeholder="Search a real city or country" aria-label="Search verified cities" role="combobox" aria-expanded={suggestions.length > 0} aria-controls="map-city-options" autoComplete="off" />{suggestions.length > 0 && <div className="map-city-options" id="map-city-options" role="listbox">{suggestions.map((city) => <button key={city.id} type="button" role="option" aria-selected="false" onClick={() => { setSelectedCity(city); setSearch(`${city.name}, ${city.country}`); setReviewPin(true); setLocationMethod("city"); }}>{city.name}<small>{city.country}</small></button>)}</div>}</div><button type="button" className="btn ghost sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding…" : "Use GPS"}</button></div>}
-      {error && <p className="map-error" role="status">{error}</p>}
-    </section>
-    {!geoReady ? <p className="map-empty">Loading the local world and city data…</p> : <section className="network-globe-card" aria-label="Spinning globe of shared cities">{topology ? <SpinningGlobe topology={topology} groups={cityGroups} /> : <p className="map-empty">Globe data is unavailable.</p>}<div className="globe-caption"><strong>{cityGroups.length.toLocaleString()} cities</strong><span>Drag to turn the globe · dots mark shared cities</span></div></section>}
-    {!ready ? <p className="map-empty">Loading community pins…</p> : visiblePins.length === 0 ? <p className="map-empty">No cities shared yet. Add yours if you’d like to appear on the globe.</p> : <section className="map-pin-list" aria-label="People on the globe"><h2>Across the network</h2>{visiblePins.map((pin) => <article className="map-pin-row" key={pin.id}><span className="map-avatar">{pin.pfpUrl ? <img src={pin.pfpUrl} alt="" /> : "↟"}</span><span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · {pin.city}, {pin.country}</small></span><a href={`/u/${encodeURIComponent(pin.username)}`} aria-label={`Open @${pin.username}'s profile`}>Profile ↗</a></article>)}</section>}
-    <small className="map-attribution">City data: <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a> · Globe boundaries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a></small>
-  </div>;
+  return (
+    <div className="network-map-page">
+      <header className="section-head">
+        <div>
+          <span className="map-eyebrow">JACKCASTER COMMUNITY</span>
+          <h1>Network globe</h1>
+        <p>City spots users choose to share. Add a city from the offline gazetteer and remove it whenever you want.</p>
+        </div>
+        <strong className="map-count">{visiblePins.length === 300 ? "300+" : visiblePins.length} {visiblePins.length === 1 ? "person" : "people"}</strong>
+      </header>
+
+      <section className="map-privacy-card">
+        <div>
+          <strong>Choose a city to share</strong>
+          <p>Search the free, offline city list or use GPS to find the nearest listed city on this device. Exact GPS stays in your browser; only the city and country are shared. A place match confirms the city exists, not that a person is physically there. Browser GPS and Firebase Anonymous Auth can be spoofed.</p>
+        </div>
+        {hasLegacyMyPin ? (
+          <div className="map-your-pin">
+            <span>Older pin hidden because it did not use a verified city.</span>
+            <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove old pin</button>
+          </div>
+        ) : visibleMyPin ? (
+          <div className="map-your-pin">
+            <span>📍 {visibleMyPin.city}, {visibleMyPin.country}</span>
+            <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove my pin</button>
+          </div>
+        ) : reviewPin && selectedCity ? (
+          <div className="map-pin-review">
+            <strong>Review before sharing</strong>
+            <p>{selectedCity.name}, {selectedCity.country}</p>
+            <small>{locationMethod === "gps" ? "Matched on this device to the nearest city in the offline gazetteer. GPS coordinates are not uploaded." : "Selected from the offline gazetteer. This verifies the city name and map point, not your presence there."}</small>
+            <div className="map-pin-form">
+              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedCity(null); setSearch(""); setReviewPin(false); }}>Cancel</button>
+              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Confirm city"}</button>
+            </div>
+          </div>
+        ) : (
+          <div className="map-pin-form map-city-picker">
+            <div className="map-city-search">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setSelectedCity(null); setReviewPin(false); setLocationMethod("city"); }}
+                maxLength={100}
+                placeholder="Search a real city or country"
+                aria-label="Search verified cities"
+                autoComplete="off"
+              />
+              {suggestions.length > 0 && (
+                <div className="map-city-options" role="group" aria-label="Matching cities">
+                  {suggestions.map((city) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      onClick={() => { setSelectedCity(city); setSearch(`${city.name}, ${city.country}`); setReviewPin(true); setLocationMethod("city"); }}
+                    >
+                      {city.name}<small>{city.country}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button type="button" className="btn ghost sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding…" : "Use GPS"}</button>
+          </div>
+        )}
+        {error && <p className="map-error" role="status">{error}</p>}
+      </section>
+
+      {!geoReady ? (
+        <p className="map-empty">Loading the local world and city data…</p>
+      ) : (
+        <section className="network-globe-card" aria-label="Spinning globe of shared cities">
+          {topology ? <SpinningGlobe topology={topology} groups={cityGroups} /> : <p className="map-empty">Globe data is unavailable.</p>}
+          <div className="globe-caption"><strong>{cityGroups.length.toLocaleString()} cities</strong><span>Drag to turn the globe · dots mark shared cities</span></div>
+        </section>
+      )}
+
+      {!ready ? (
+        <p className="map-empty">Loading community pins…</p>
+      ) : visiblePins.length === 0 ? (
+        <p className="map-empty">No cities shared yet. Add yours if you’d like to appear on the globe.</p>
+      ) : (
+        <section className="map-pin-list" aria-label="People on the globe">
+          <h2>Across the network</h2>
+          {visiblePins.map((pin) => (
+            <article className="map-pin-row" key={pin.id}>
+              <span className="map-avatar">{pin.pfpUrl ? <img src={pin.pfpUrl} alt="" /> : "↟"}</span>
+              <span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · {pin.city}, {pin.country}</small></span>
+              <a href={`/u/${encodeURIComponent(pin.username)}`} aria-label={`Open @${pin.username}'s profile`}>Profile ↗</a>
+            </article>
+          ))}
+        </section>
+      )}
+
+      <small className="map-attribution">City data: <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a> · Globe boundaries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a></small>
+    </div>
+  );
 }
 
 function SpinningGlobe({ topology, groups }: { topology: WorldTopology; groups: { city: City; pins: PinRow[] }[] }) {

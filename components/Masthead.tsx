@@ -85,7 +85,6 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
         {tab("/recasts", feedNames.recasts)}
         {tab("/mini-apps", feedNames.miniApps)}
         {tab("/media", feedNames.media)}
-        {tab("/map", "Map")}
         {tab("/circle", customName)}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>

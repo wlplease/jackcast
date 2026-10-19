@@ -679,19 +679,13 @@ html[data-previews="off"] .cast .embeds { display: none; }
 /* Caught-up + new casts */
 .seen-line { display: flex; align-items: center; gap: 12px; padding: 14px 18px; font-size: 12.5px; font-weight: 500; color: var(--accent); border-bottom: 1px solid var(--rule); background: var(--accent-soft); }
 .seen-line::before, .seen-line::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--brand) 45%, transparent); }
-.ai-catchup { scroll-margin-top: 112px; margin: 12px 18px; padding: 14px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--card); }.ai-catchup { margin: 0; padding: 18px; border-color: var(--rule); border-radius: 16px; background: var(--paper); box-shadow: 0 18px 60px #0003; }
-.ai-catchup-top { padding-bottom: 13px; border-bottom: 1px solid var(--rule); }
-.ai-catchup-top strong { font-family: var(--display); font-size: 18px; letter-spacing: var(--display-tracking); }
-.ai-catchup-top p { margin-top: 4px; font-size: 12.5px; }
-.ai-catchup > small { line-height: 1.5; }
-.ai-overlay-panel { width: min(100%, 640px); }
-.ai-overlay .ai-catchup { max-height: calc(100dvh - 120px); overflow-y: auto; }
-.ai-catchup-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ai-catchup-top strong { font-size: 14px; }
-.ai-catchup-top p { margin: 2px 0 0; color: var(--ink-2); font-size: 12px; }
+.ai-catchup { scroll-margin-top: 112px; margin: 0; padding: 18px; border: 1px solid var(--rule); border-radius: 16px; background: var(--paper); box-shadow: 0 18px 60px #0003; }
+.ai-catchup-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid var(--rule); }
+.ai-catchup-top strong { font-family: var(--display); font-size: 16px; letter-spacing: var(--display-tracking); }
+.ai-catchup-top p { margin: 4px 0 0; color: var(--ink-2); font-size: 12px; }
 .ai-catchup-top button { flex: none; padding: 7px 11px; border: 0; border-radius: 999px; background: var(--brand); color: var(--on-brand); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .ai-catchup-top button:disabled { opacity: .55; cursor: wait; }
-.ai-catchup > small { display: block; margin-top: 8px; color: var(--ink-3); font-size: 10.5px; }
+.ai-catchup > small { display: block; margin-top: 8px; color: var(--ink-3); font-size: 10.5px; line-height: 1.5; }
 .ai-catchup-summary { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); white-space: pre-wrap; font-size: 13px; line-height: 1.55; }
 .ai-catchup-audio { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .ai-catchup-audio button { padding: 7px 11px; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -1181,3 +1175,34 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .theme-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .theme-card.on .theme-name::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--brand); }
 .theme-note { font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+
+.site-footer-map { display: flex !important; width: auto !important; min-width: 54px; padding: 0 8px; gap: 5px; color: var(--accent) !important; }
+.site-footer-map svg { width: 16px !important; height: 16px !important; }
+.site-footer-map span { font-size: 10px; font-weight: 650; }
+.site-footer-map:hover { border-color: var(--rule) !important; background: var(--accent-soft) !important; }
+@media (max-width: 520px) { .site-footer-map { min-width: 30px; width: 30px !important; padding: 0 !important; } .site-footer-map span { display: none; } }
+.login-layout { display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); gap: 18px; width: min(100%, 820px); align-items: stretch; }
+.login-card, .login-deploy { min-width: 0; padding: clamp(22px, 4vw, 34px); border: 1px solid var(--rule); border-radius: 22px; background: var(--paper); box-shadow: 0 18px 55px rgb(0 0 0 / 6%); }
+.login-card { display: flex; flex-direction: column; justify-content: center; }
+.login-card .wordmark { justify-content: flex-start; margin: 0 0 28px; }
+.login-card h1, .login-deploy h2 { margin: 0; font-family: var(--display); font-size: clamp(22px, 3vw, 29px); font-weight: 700; letter-spacing: -.035em; line-height: 1.1; }
+.login-intro { margin: 8px 0 20px; color: var(--ink-2); font-size: 13px; }
+.login-card form { display: grid; gap: 10px; }
+.login-card form .btn { min-height: 44px; }
+.login-deploy { position: relative; overflow: hidden; background: radial-gradient(ellipse at 100% 0%, var(--accent-soft), transparent 52%), var(--card); }
+.login-eyebrow { display: inline-block; margin-bottom: 12px; color: var(--accent); font: 10px var(--mono); font-weight: 700; letter-spacing: .11em; }
+.login-deploy > p { max-width: 42ch; margin: 10px 0 20px; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+.login-deploy ol { display: grid; gap: 13px; margin: 0 0 22px; padding: 0; list-style: none; }
+.login-deploy li { display: flex; align-items: flex-start; gap: 10px; }
+.login-deploy li > span { display: grid; flex: none; place-items: center; width: 25px; height: 25px; border: 1px solid var(--rule-strong); border-radius: 50%; color: var(--accent); background: var(--paper); font-size: 11px; font-weight: 700; }
+.login-deploy li div { display: grid; gap: 2px; }
+.login-deploy li strong { color: var(--ink); font-size: 12px; }
+.login-deploy li small { color: var(--ink-2); font-size: 11px; line-height: 1.4; }
+.login-deploy-button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 9px 14px; border: 1px solid var(--ink); border-radius: 11px; color: #fff; background: #111; font-size: 13px; font-weight: 700; transition: transform 140ms ease, background 140ms ease; }
+.login-deploy-button:hover { transform: translateY(-1px); background: #292929; }
+.login-deploy-button svg { width: 17px; height: 17px; }
+.login-deploy-button span, .login-source-link span { margin-left: auto; }
+.login-source-link { display: flex; align-items: center; gap: 8px; margin-top: 11px; color: var(--accent); font-size: 12px; font-weight: 650; }
+.login-source-link:hover { text-decoration: underline; }
+.login-deploy-note { display: block; margin-top: 18px; color: var(--ink-3); font-size: 10px; line-height: 1.45; }
+@media (max-width: 620px) { .login { align-content: start; padding: 20px 14px 28px; } .login-layout { grid-template-columns: 1fr; width: min(100%, 460px); gap: 12px; } .login-card, .login-deploy { padding: 22px; border-radius: 18px; } .login-card .wordmark { margin-bottom: 20px; } }
