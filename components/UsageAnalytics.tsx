@@ -2,6 +2,7 @@
 
 import { track } from "@vercel/analytics";
 import { Analytics, type BeforeSend } from "@vercel/analytics/next";
+import { usePathname } from "next/navigation";
 
 const PAGE_ROUTES = new Set([
   "/", "/friends", "/top", "/recasts", "/sent", "/mini-apps", "/media", "/circle",
@@ -45,5 +46,8 @@ export function trackUsage(event: UsageEvent) {
 }
 
 export function UsageAnalytics() {
+  const pathname = usePathname();
+  // Keep third-party analytics off the page where a user may enter a recovery phrase.
+  if (pathname === "/setup") return null;
   return <Analytics beforeSend={anonymizePageView} />;
 }

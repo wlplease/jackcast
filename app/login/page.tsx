@@ -37,7 +37,7 @@ export default function LoginPage() {
           <div className="login-deploy-divider"><span>YOUR OWN COPY · 3 STEPS</span><i aria-hidden="true" /></div>
           <ol>
             <li><span>1</span><div><strong>Deploy your copy</strong><small>Scroll to the Vercel button below and click it. Add your Neynar API key and a private app password, scroll down, then select <b>Deploy</b>.</small></div></li>
-            <li><span>2</span><div><strong>Connect Farcaster</strong><small>After launch, open your app&apos;s Setup and approve its Farcaster signer. Your recovery phrase signs that approval in your browser; this is separate from connecting an EVM wallet. Never enter the phrase in Vercel.</small></div></li>
+            <li><span>2</span><div><strong>Connect Farcaster</strong><small>After launch, open your app&apos;s Setup and approve its Farcaster signer. Setup currently asks for the Farcaster account custody-wallet phrase to sign one request in your browser. This is separate from the app&apos;s optional wallet-connect flow. Never enter the phrase in Vercel.</small></div></li>
             <li><span>3</span><div><strong>Add optional extras</strong><small>Set up Gemini AI or shared GIF search (GIPHY plus Upstash) in Vercel when you want them.</small></div></li>
           </ol>
           <a className="login-deploy-button" href={DEPLOY_URL} target="_blank" rel="noreferrer">

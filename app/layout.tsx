@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "@fontsource-variable/bricolage-grotesque/index.css";
 import "@fontsource-variable/geist/index.css";
 import "@fontsource-variable/geist-mono/index.css";
@@ -41,13 +42,14 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const prefs = await getPrefs();
   const { theme, mode } = prefs;
   return (
     <html lang="en" data-theme={theme} data-mode={mode} data-density={prefs.density} data-previews={prefs.showPreviews ? "on" : "off"}>
       <head>
         {/* The chosen theme, rendered on the server so the first paint is already right. */}
-        <style id="sc-theme" dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
+        <style id="sc-theme" nonce={nonce} dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
       </head>
       <body>
         <MiniAppHostReady />

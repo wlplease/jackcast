@@ -6,19 +6,25 @@ For production bot protection and Vercel Firewall setup, see the [Vercel deploym
 
 ## Your recovery phrase
 
-Farcaster requires every new app key to be approved with a signature from your account's custody wallet. `/setup` makes that signature in your browser:
+Posting requires a Farcaster signer authorized by the custody wallet for your Farcaster account. Identity sign-in by itself does not grant posting permission. This clone currently requests the custody signature in the browser; it does not have a supported approval flow that avoids entering the Farcaster account recovery phrase. That phrase controls the account's custody wallet and may control onchain assets. This is separate from the app's optional wallet-connect flow for Base transactions. If you are unsure what your phrase controls, do not enter it.
+
+Before continuing, use only a deployment you control on a trusted, updated device and browser. Read-only browsing does not need a phrase. The setup page displays this warning before the input and again beside it.
+
+`/setup` makes the signer authorization signature in your browser:
 
 - The phrase is read straight from a password field, used once by [viem](https://viem.sh)'s `mnemonicToAccount` to sign a single key request, and the field is wiped.
 - It is never put in app state, never sent to the server, never written to storage, and never logged. Only the resulting signature leaves the page.
-- The code is in [`app/setup/SetupFlow.tsx`](./app/setup/SetupFlow.tsx), around `phraseRef`. Read it before you paste anything.
+- The input is password-masked and cleared on submit, page hide, page exit, and component unmount. Failed attempts do not retain the phrase for retry.
+- `/setup` has a route-specific Content Security Policy with a fresh per-request nonce for app scripts, no frames, no external connections, no objects, and no third-party analytics. The page uses only the app's bundled code and same-origin server actions while the phrase is entered.
+- The code is in [`app/setup/SetupFlow.tsx`](./app/setup/SetupFlow.tsx) and [`middleware.ts`](./middleware.ts). Read it before entering anything.
 
 If you'd rather not use your main phrase at all, create a separate Farcaster account just to request the key, and approve it from your main account.
 
 ### What this code review can confirm
 
-In this repository's setup flow, the phrase is read from the password input in `app/setup/SetupFlow.tsx`, used by `viem` in the browser to derive the custody address and sign typed data, and the input is cleared before the network calls. The server actions in `app/setup/actions.ts` accept the derived address, signer request details, and signature; they do not accept a mnemonic. The pending request saved to `sessionStorage` contains the signer UUID, approval URL, and sponsorship flag, not the phrase.
+In this repository's setup flow, the phrase is read from the password input in `app/setup/SetupFlow.tsx`, used by `viem` in the browser to derive the custody address and sign typed data, and the input is cleared before network calls. The server actions in `app/setup/actions.ts` accept the derived address, signer request details, and signature; they do not accept a mnemonic. The pending request saved to `sessionStorage` contains the signer UUID, approval URL, and sponsorship flag, not the phrase. The setup CSP is enforced by `middleware.ts`; the theme style receives the request nonce from `app/layout.tsx`. Analytics does not render on `/setup`.
 
-This is evidence about the checked-in source code only. It cannot prove which code was served by a live deployment, what browser extensions or injected scripts were present, or what happened on a particular device. For a deployment you control, compare its deployed source/revision to this code and use a clean, updated browser with extensions disabled for sensitive setup. If the phrase was entered into an untrusted clone, an unexpected page, or a device/browser you do not control, treat it as exposed and move funds to a new wallet; revoking the Farcaster signer alone does not rotate the wallet phrase.
+This is evidence about the checked-in source code only. It cannot prove which code was served by a live deployment, what browser extensions or injected scripts were present, or what happened on a particular device. CSP reduces some script-injection risk but is not proof that a page or device is safe. For a deployment you control, compare its deployed source/revision to this code and use a clean, updated browser with extensions disabled for sensitive setup. If the phrase was entered into an untrusted clone, an unexpected page, or a device/browser you do not control, treat it as exposed and move funds to a new wallet; revoking the Farcaster signer alone does not rotate the wallet phrase.
 
 ## Your password
 
@@ -34,7 +40,7 @@ One route is public on purpose: `/i/...`, which serves photos you've already pos
 
 To cut off access: revoke the app in Farcaster settings (connected apps), and rotate your Neynar key at dev.neynar.com.
 
-Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Baseline response headers allow geolocation only to Jackcaster itself for the opt-in map; the referrer policy sends origins without page paths. A full Content Security Policy remains open because the app depends on inline theme styles, embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
+Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Baseline response headers allow geolocation only to Jackcaster itself for the opt-in map; the referrer policy sends origins without page paths, and `/setup` uses `no-referrer`. A strict, nonce-based CSP is enforced on `/setup`; a compatible policy for the full app remains separate because it uses dynamic embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
 
 ## Usage analytics
 

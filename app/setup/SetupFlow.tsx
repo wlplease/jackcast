@@ -47,6 +47,22 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
   );
   const [error, setError] = useState<string | null>(null);
   const phraseRef = useRef<HTMLInputElement>(null);
+  const signingRef = useRef(false);
+
+  useEffect(() => {
+    const clearPhrase = () => {
+      if (phraseRef.current) phraseRef.current.value = "";
+    };
+    window.addEventListener("pagehide", clearPhrase);
+    window.addEventListener("beforeunload", clearPhrase);
+    document.addEventListener("visibilitychange", clearPhrase);
+    return () => {
+      clearPhrase();
+      window.removeEventListener("pagehide", clearPhrase);
+      window.removeEventListener("beforeunload", clearPhrase);
+      document.removeEventListener("visibilitychange", clearPhrase);
+    };
+  }, []);
 
   // On a phone you bounce out to the Farcaster app to approve. iOS sometimes unloads the
   // browser tab while you're gone, so keep the pending request in this tab's session storage
@@ -102,64 +118,79 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
   }, [step]);
 
   async function sign() {
+    if (signingRef.current) return;
+    signingRef.current = true;
     setError(null);
-    // Read straight from the input, then wipe it. The phrase is never put in React state,
-    // never sent to the server, and never stored.
-    const raw = phraseRef.current?.value ?? "";
+    // Read straight from the input and clear the DOM field before doing any work.
+    // The phrase is never put in React state, sent to the server, or stored.
+    let raw = phraseRef.current?.value ?? "";
     if (phraseRef.current) phraseRef.current.value = "";
-    const phrase = raw.trim().toLowerCase().split(/\s+/).join(" ");
-
-    let account;
+    let phrase = raw.trim().toLowerCase().split(/\s+/).join(" ");
+    raw = "";
+    let account: ReturnType<typeof mnemonicToAccount> | undefined;
     try {
       account = mnemonicToAccount(phrase);
     } catch {
       setError("That doesn't look like a valid 12 or 24 word recovery phrase.");
+      phrase = "";
+      signingRef.current = false;
       return;
     }
+    phrase = "";
 
-    setStep({ kind: "working", label: "Finding your account" });
-    const acct = await findAccount(account.address);
-    if (!acct.ok) {
-      setError(acct.error);
-      setStep({ kind: "phrase" });
-      return;
-    }
-
-    setStep({ kind: "working", label: `Requesting a key for @${acct.username}` });
-    const signer = await startSigner();
-    if (!signer.ok) {
-      setError(signer.error);
-      setStep({ kind: "phrase" });
-      return;
-    }
-
-    const deadline = Math.floor(Date.now() / 1000) + 86400;
-    const signature = await account.signTypedData({
-      domain: SIGNED_KEY_REQUEST_DOMAIN,
-      types: SIGNED_KEY_REQUEST_TYPES,
-      primaryType: "SignedKeyRequest",
-      message: {
-        requestFid: BigInt(acct.fid),
-        key: signer.publicKey as `0x${string}`,
-        deadline: BigInt(deadline),
-      },
-    });
-    account = undefined;
-
-    setStep({ kind: "working", label: "Registering with Neynar" });
-    const reg = await registerSigner({ signerUuid: signer.signerUuid, appFid: acct.fid, deadline, signature });
-    if (!reg.ok) {
-      setError(reg.error);
-      setStep({ kind: "phrase" });
-      return;
-    }
-
-    const pending = { signerUuid: signer.signerUuid, approvalUrl: reg.approvalUrl, sponsored: reg.sponsored };
     try {
-      sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-    } catch {}
-    const qr = await QRCode.toDataURL(reg.approvalUrl, QR_OPTS);
-    setStep({ kind: "approve", ...pending, qr });
+      setStep({ kind: "working", label: "Finding your account" });
+      const acct = await findAccount(account.address);
+      if (!acct.ok) {
+        setError(acct.error);
+        setStep({ kind: "phrase" });
+        return;
+      }
+
+      setStep({ kind: "working", label: `Requesting a key for @${acct.username}` });
+      const signer = await startSigner();
+      if (!signer.ok) {
+        setError(signer.error);
+        setStep({ kind: "phrase" });
+        return;
+      }
+
+      const deadline = Math.floor(Date.now() / 1000) + 86400;
+      const signature = await account.signTypedData({
+        domain: SIGNED_KEY_REQUEST_DOMAIN,
+        types: SIGNED_KEY_REQUEST_TYPES,
+        primaryType: "SignedKeyRequest",
+        message: {
+          requestFid: BigInt(acct.fid),
+          key: signer.publicKey as `0x${string}`,
+          deadline: BigInt(deadline),
+        },
+      });
+      account = undefined;
+
+      setStep({ kind: "working", label: "Registering with Neynar" });
+      const reg = await registerSigner({ signerUuid: signer.signerUuid, appFid: acct.fid, deadline, signature });
+      if (!reg.ok) {
+        setError(reg.error);
+        setStep({ kind: "phrase" });
+        return;
+      }
+
+      const pending = { signerUuid: signer.signerUuid, approvalUrl: reg.approvalUrl, sponsored: reg.sponsored };
+      try {
+        sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+      } catch {}
+      const qr = await QRCode.toDataURL(reg.approvalUrl, QR_OPTS);
+      setStep({ kind: "approve", ...pending, qr });
+    } catch {
+      setError("Setup could not finish. Your phrase was cleared; please start again.");
+      setStep({ kind: "phrase" });
+    } finally {
+      account = undefined;
+      raw = "";
+      phrase = "";
+      signingRef.current = false;
+    }
   }
 
   if (!hasApiKey) {
@@ -191,7 +222,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           <div><strong>Farcaster connection</strong><span>Optional posting access. You can connect later from Settings → Account and connection.</span></div>
           <div><strong>GIF search</strong><span>Browse the built-in GIF library with a shared cooldown. You do not need to create or enter a GIPHY account key.</span></div>
         </div>
-        <div className="setup-security-note"><strong>Posting setup has an extra security step.</strong> It asks you to enter your Farcaster recovery phrase on this page to sign one request locally. The phrase is not sent to Jackcaster’s server, but entering a recovery phrase into any web page carries risk. Continue only if you trust this instance; read-only browsing needs no phrase. Never enter wallet or provider API secrets here.</div>
+        <div className="setup-security-note" role="note"><strong>Security warning: read this before continuing.</strong> Posting setup asks for the recovery phrase for your Farcaster account&apos;s custody wallet to sign one request in this browser. It is not sent to Jackcaster&apos;s server, but any webpage can be risky, and that phrase may control onchain assets. Continue only on a deployment you control, using a trusted, updated device and browser. A compromised page, browser extension, or device could still expose it. Read-only browsing needs no phrase. If you are unsure what the phrase controls, do not enter it.</div>
         <ol className="how">
           <li>Start a Farcaster signer request for this device.</li>
           <li>Review and approve that request in the Farcaster app.</li>
@@ -214,7 +245,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
         <Steps at={0} />
         <h1>Sign the request</h1>
         <p>
-          This optional flow uses your Farcaster recovery phrase to sign a single request in this browser, then clears the input. Only the signature is sent to the server. A compromised page or browser extension could still expose what you type, so continue only if you trust this instance. Otherwise, go back and browse read-only.
+          <strong>Only continue if this is your own deployment and you trust this device and browser.</strong> This optional flow uses the recovery phrase for your Farcaster account&apos;s custody wallet to sign one request in this browser, then clears the input. Only the signature is sent to the server. That phrase may control onchain assets; a compromised page or browser extension could expose it. This is separate from the app&apos;s wallet-connect flow. If you are unsure what the phrase controls, leave this page and browse read-only.
         </p>
         <label className="sr-only" htmlFor="phrase">
           Recovery phrase

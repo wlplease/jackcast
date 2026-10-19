@@ -25,7 +25,7 @@ This document tracks review findings and implementation decisions for this repos
 | Medium | Upload route parses arbitrary JSON before its error handler and returns exception messages. | Bound request body size, handle malformed JSON consistently, return generic client errors, and keep diagnostic details in server logs. Confirm Blob SDK callback validation remains enabled. | Done (body cap and generic errors) |
 | Medium | Signer setup accepts signer request data from the browser. | Validate UUID, FID, deadline, and signature shapes before forwarding them to Neynar. | Done (input validation) |
 | Medium | Server actions can return raw Neynar messages to the browser. | Map expected upstream errors to safe, actionable messages without credentials or user secrets. | Done (cast, reaction, profile, signer setup) |
-| Low | Security headers are not explicitly configured in `next.config.ts`. | Add baseline headers. Keep CSP as a separate change after testing inline styles, embeds, media, and setup flow against a restrictive policy. | Done (baseline headers); CSP open |
+| Low | Security headers are not explicitly configured in `next.config.ts`. | Add baseline headers. Keep the full-app CSP separate; enforce a strict nonce-based policy on the sensitive setup route. | Done (baseline headers and setup-only CSP); full-app CSP open |
 
 ## Product and design improvements
 
@@ -218,3 +218,11 @@ When implementing an item:
 - **Why:** Give the operator aggregate feature-use counts while reducing accidental collection of usernames, cast hashes, or private search terms; coordinate password guessing attempts across serverless instances when shared storage is available.
 - **Verification:** `npm run typecheck`, `npm run check:themes`, and `npm run build` passed. `git diff --check` passed. `npm audit --omit=dev` reports six moderate advisories in the SDK's transitive Solana dependencies; npm currently reports no fix.
 - **Remaining:** Vercel Firewall enforcement is configured in the deployment dashboard, not source. Redis fallback remains process-local during outages. Signer creation and paid provider endpoints still need durable cost limits; CSP requires a separate compatibility review.
+
+### 2026-10-19 — Hardened Farcaster recovery-phrase setup
+
+- **Changed:** Added prominent warnings before the phrase field and directly beside it; clarified this is the Farcaster account custody-wallet phrase and it may control onchain assets. Kept the input password-masked and added clearing on submit, visibility change, page exit, unmount, and failed attempts.
+- **Changed:** Added a route-specific, nonce-based CSP for `/setup` that permits only same-origin app scripts/connections, blocks frames and objects, restricts form/base targets, and uses `no-referrer`. Added the nonce to the inline theme style and removed third-party analytics from setup.
+- **Why:** Minimize phrase retention and reduce the chance a user enters it into an untrusted clone or that injected third-party code can read it during setup.
+- **Verification:** `npm run typecheck` and production build passed. `git diff --check` passed. A local setup response returned the expected nonce CSP, `no-referrer`, a nonce on the theme style, and no analytics marker.
+- **Limit:** This is a source and local-response check, not verification of the live deployment, browser extensions, or runtime network activity. Farcaster posting still requires custody-wallet authorization; identity sign-in alone does not authorize a posting signer. A safer no-phrase signer approval flow remains a future integration if Farcaster/Neynar provides a supported route.
