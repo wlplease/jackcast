@@ -11,9 +11,10 @@ export const maxDuration = 60;
 
 const baseClient = createPublicClient({ chain: base, transport: http("https://mainnet.base.org", { timeout: 15_000 }) });
 const apiKey = () => process.env.GOOGLE_AI_API_KEY;
-const ANIMATION_MODEL = "veo-3.1-lite-generate-preview";
+const ANIMATION_MODEL = "gemini-omni-1.1-flash";
 const IMAGE_MODEL = "gemini-nano-banana-2.1";
 const VIDEO_EDIT_MODEL = "gemini-omni-1.1-flash";
+const LEGACY_ANIMATION_MODEL = "veo-3.1-lite-generate-preview";
 const GOOGLE_API = "https://generativelanguage.googleapis.com/v1beta";
 
 async function providerError(response: Response): Promise<string> {
@@ -53,7 +54,7 @@ function fail(error: string, status: number) {
 async function generateImage(prompt: string, key: string): Promise<{ bytes: Buffer; contentType: string; ext: "png" | "jpg" }> {
   const response = await fetch(`${GOOGLE_API}/interactions`, {
     method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+    headers: { "x-goog-api-key": key, "Content-Type": "application/json", "Api-Revision": "2026-05-20" },
     body: JSON.stringify({ model: IMAGE_MODEL, input: `Create a polished, square Farcaster profile picture. ${prompt}. No text, no watermark.`, response_format: { type: "image", aspect_ratio: "1:1", image_size: "1K" } }),
     signal: AbortSignal.timeout(45_000),
     cache: "no-store",
@@ -97,34 +98,39 @@ async function readRemoteMedia(url: string, maxBytes: number, allowedTypes: stri
   return { bytes, mimeType: declared };
 }
 
-async function startAnimation(sourceImage: string, prompt: string, key: string): Promise<string> {
-  const source = await readRemoteMedia(sourceImage, 10 * 1024 * 1024, ["image/png", "image/jpeg", "image/webp"]);
-  const start = await fetch(`${GOOGLE_API}/models/${ANIMATION_MODEL}:predictLongRunning`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ instances: [{ prompt: `Create a short, polished profile animation from this portrait. ${prompt} Preserve the exact identity, face, expression, clothing, and framing. Keep the face centered, sharp, unobstructed, and recognizable inside a circular avatar crop. Use subtle natural motion, one continuous shot, no cuts, camera movement, text, or logos. Keep the scene quiet with no speech or music.` , image: { inlineData: { mimeType: source.mimeType, data: source.bytes.toString("base64") } } }], parameters: { aspectRatio: "9:16", durationSeconds: "4", resolution: "720p", personGeneration: "allow_adult" } }),
-    signal: AbortSignal.timeout(20_000),
-    cache: "no-store",
-  });
-  if (!start.ok) throw new Error(`Google could not start the animation (${await providerError(start)}).`);
-  const job = await start.json() as { name?: string };
-  if (!job.name || !/^models\/[^\s]{1,240}\/operations\/[^\s]{1,240}$/.test(job.name)) throw new Error("Google returned an invalid animation job.");
-  return job.name;
-}
-
-async function generateAnimationUpgrade(sourceVideo: string, prompt: string, key: string): Promise<Buffer> {
-  const source = await readRemoteMedia(sourceVideo, 4 * 1024 * 1024, ["video/mp4"]);
+async function startVideoGeneration(mode: "animate" | "upgrade", sourceUrl: string, prompt: string, key: string): Promise<string> {
+  const source = mode === "animate"
+    ? await readRemoteMedia(sourceUrl, 10 * 1024 * 1024, ["image/png", "image/jpeg", "image/webp"])
+    : await readRemoteMedia(sourceUrl, 4 * 1024 * 1024, ["video/mp4"]);
+  const instruction = mode === "animate"
+    ? `Create a short polished profile animation from this portrait. ${prompt} Preserve the exact identity, face, expression, clothing, and framing. Keep the face centered, sharp, unobstructed, and recognizable inside a circular avatar crop. Use subtle natural motion, one continuous shot, no cuts, camera movement, text, or logos. Keep the scene quiet with no speech or music.`
+    : `Refine this animated profile image: ${prompt}. Preserve the same identity, face, expression, clothing and framing. Keep the face clear and centered in a circular avatar crop. Use subtle motion, one continuous shot, no cuts, no text, no speech, no music. Keep everything else the same.`;
+  const input = mode === "animate"
+    ? [{ type: "image", data: source.bytes.toString("base64"), mime_type: source.mimeType }, { type: "text", text: instruction }]
+    : [{ type: "video", data: source.bytes.toString("base64"), mime_type: source.mimeType }, { type: "text", text: instruction }];
   const start = await fetch(`${GOOGLE_API}/interactions`, {
     method: "POST",
     headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: VIDEO_EDIT_MODEL, input: [{ type: "video", data: source.bytes.toString("base64"), mime_type: source.mimeType }, { type: "text", text: `Refine this animated profile image: ${prompt}. Preserve the same identity, face, expression, clothing and framing. Keep the face clear and centered in a circular avatar crop. Use subtle motion, one continuous shot, no cuts, no text, no speech, no music. Keep everything else the same.` }], response_format: { type: "video", resolution: "360p" }, generation_config: { video_config: { task: "edit" } } }),
-    signal: AbortSignal.timeout(55_000),
+    body: JSON.stringify({
+      model: mode === "animate" ? ANIMATION_MODEL : VIDEO_EDIT_MODEL,
+      input,
+      background: true,
+      store: true,
+      response_format: { type: "video", aspect_ratio: "9:16", resolution: "360p", delivery: "uri" },
+      ...(mode === "upgrade" ? { generation_config: { video_config: { task: "edit" } } } : { generation_config: { video_config: { task: "image_to_video" } } }),
+    }),
+    signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });
-  if (!start.ok) throw new Error(`Google could not edit the animation (${await providerError(start)}).`);
-  const interaction = await start.json() as { output_video?: { data?: string }; steps?: { type?: string; content?: { type?: string; data?: string }[] }[] };
-  const encoded = interaction.output_video?.data ?? interaction.steps?.flatMap((step) => step.type === "model_output" ? step.content ?? [] : []).find((part) => part.type === "video")?.data;
-  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("Google did not return a usable video. Try a new animation from a still image.");
+  if (!start.ok) throw new Error(`Google could not start this video (${await providerError(start)}).`);
+  const job = await start.json() as { id?: string; status?: string; output_video?: { data?: string; uri?: string }; steps?: { type?: string; content?: { type?: string; data?: string; uri?: string }[] }[] };
+  if (!job.id || !/^v1_[A-Za-z0-9_+=/-]{8,512}$/.test(job.id)) throw new Error("Google returned an invalid video job.");
+  if (job.status === "failed" || job.status === "cancelled") throw new Error("Google rejected the video generation request.");
+  return job.id;
+}
+
+function decodeVideo(encoded?: string): Buffer {
+  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("Google did not return a usable video file.");
   const bytes = Buffer.from(encoded, "base64");
   if (bytes.length < 12 || bytes.length > 30 * 1024 * 1024 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("Google returned an invalid MP4 file.");
   return bytes;
@@ -139,6 +145,46 @@ async function downloadVideo(videoUrl: string): Promise<Buffer> {
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length < 12 || bytes.length > 30 * 1024 * 1024 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("Google returned an invalid MP4 file.");
   return bytes;
+}
+
+async function getInteractionVideo(interactionId: string, key: string): Promise<{ status: "processing" } | { status: "failed"; error: string } | { status: "complete"; bytes: Buffer }> {
+  const response = await fetch(`${GOOGLE_API}/interactions/${encodeURIComponent(interactionId)}`, {
+    headers: { "x-goog-api-key": key, "Api-Revision": "2026-05-20" },
+    signal: AbortSignal.timeout(12_000),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Google interaction status check failed (${await providerError(response)}).`);
+  const interaction = await response.json() as {
+    status?: string;
+    error?: { message?: string } | string;
+    output_video?: { data?: string; uri?: string };
+    steps?: { type?: string; content?: { type?: string; data?: string; uri?: string }[] }[];
+  };
+  if (interaction.status === "in_progress" || interaction.status === "queued" || interaction.status === "requires_action") return { status: "processing" };
+  if (interaction.status !== "completed") {
+    const detail = typeof interaction.error === "string" ? interaction.error : interaction.error?.message;
+    return { status: "failed", error: safeFailureMessage(new Error(detail || `Google finished the job as ${interaction.status || "incomplete"}.`)) };
+  }
+
+  const video = interaction.output_video ?? interaction.steps?.flatMap((step) => step.type === "model_output" ? step.content ?? [] : []).find((part) => part.type === "video");
+  if (video?.uri) {
+    const fileUrl = new URL(video.uri);
+    const fileId = fileUrl.pathname.match(/\/v1beta\/files\/([^/:]+)/)?.[1];
+    if (fileId && fileUrl.hostname === "generativelanguage.googleapis.com") {
+      const fileResponse = await fetch(`${GOOGLE_API}/files/${encodeURIComponent(fileId)}`, {
+        headers: { "x-goog-api-key": key },
+        signal: AbortSignal.timeout(8_000),
+        cache: "no-store",
+      });
+      if (!fileResponse.ok) throw new Error(`Google video file check failed (${await providerError(fileResponse)}).`);
+      const file = await fileResponse.json() as { state?: string };
+      if (file.state === "FAILED") return { status: "failed", error: "Google could not finish preparing the animation video." };
+      if (file.state !== "ACTIVE") return { status: "processing" };
+    }
+    return { status: "complete", bytes: await downloadVideo(video.uri) };
+  }
+  if (video?.data) return { status: "complete", bytes: decodeVideo(video.data) };
+  return { status: "failed", error: "Google marked the animation complete but did not return an MP4 video." };
 }
 
 export async function POST(request: Request) {
@@ -245,28 +291,28 @@ export async function POST(request: Request) {
       });
     } catch { return fail("This credit was already used or secure request storage failed. Check your profile before spending another credit.", 409); }
 
-    if (mode === "animate") {
+    if (mode !== "image") {
       try {
-        const providerRequestId = await startAnimation(animationSource!, prompt.trim(), key);
+        const sourceUrl = mode === "animate" ? animationSource! : videoSource!;
+        const providerRequestId = await startVideoGeneration(mode, sourceUrl, prompt.trim(), key);
         await put(lockPath, JSON.stringify({ ...auditRecord, status: "processing", providerRequestId }), {
           access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
         });
         return NextResponse.json({ processing: true, requestId: requestHex }, { status: 202, headers: { "Cache-Control": "no-store" } });
       } catch (error) {
         const failureMessage = safeFailureMessage(error);
-        console.error("Google profile animation could not start:", failureMessage);
+        console.error("Google profile video could not start:", failureMessage);
         await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_start_failed", failureMessage, completedAt: Date.now() }), {
           access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
         }).catch(() => {});
         const detail = error instanceof Error && /^(Google could not start)/.test(error.message) ? ` ${safeFailureMessage(error)}` : "";
-        return fail(`Google could not start this animation.${detail} The onchain credit was spent for this attempt.`, 502);
+        return fail(`Google could not start this ${mode === "upgrade" ? "upgrade" : "animation"}.${detail} The onchain credit was spent for this attempt.`, 502);
       }
     }
 
     let generated: { bytes: Buffer; contentType: string; ext: "png" | "jpg" | "mp4" };
     try {
-      if (mode === "upgrade") generated = { bytes: await generateAnimationUpgrade(videoSource!, prompt.trim(), key), contentType: "video/mp4", ext: "mp4" };
-      else generated = await generateImage(prompt.trim(), key);
+      generated = await generateImage(prompt.trim(), key);
     } catch (error) {
       console.error("Google profile media generation failed:", error instanceof Error ? error.message : "unknown error");
       await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_generation_failed", completedAt: Date.now() }), {
@@ -339,11 +385,38 @@ export async function GET(request: Request) {
         const detail = typeof record.failureMessage === "string" ? ` ${record.failureMessage.slice(0, 280)}` : "";
         return fail(`Google could not complete this animation.${detail} The onchain credit was spent for this attempt.`, 502);
       }
-      if (typeof record.providerRequestId !== "string" || !/^models\/veo-3\.1-lite-generate-preview\/operations\/[^\s]{1,240}$/.test(record.providerRequestId)) {
-        return fail("The animation job is not available to resume. Check the profile before spending another credit.", 409);
-      }
+      const providerRequestId = record.providerRequestId;
+      const isGoogleInteraction = typeof providerRequestId === "string" && /^v1_[A-Za-z0-9_+=/-]{8,512}$/.test(providerRequestId);
+      const isLegacyOperation = typeof providerRequestId === "string" && new RegExp(`^models/${LEGACY_ANIMATION_MODEL}/operations/[^\\s]{1,240}$`).test(providerRequestId);
+      if (!isGoogleInteraction && !isLegacyOperation) return fail("The animation job is not available to resume. Check the profile before spending another credit.", 409);
       const key = apiKey();
       if (!key) return fail("Google AI is not configured on this deployment. The animation job remains saved.", 503);
+      if (isGoogleInteraction) {
+        try {
+          const result = await getInteractionVideo(providerRequestId!, key);
+          if (result.status === "processing") return NextResponse.json({ processing: true, requestId }, { status: 202, headers: { "Cache-Control": "no-store" } });
+          if (result.status === "failed") {
+            await put(lockPath, JSON.stringify({ ...record, status: "failed", failure: "provider_generation_failed", failureMessage: result.error, completedAt: Date.now() }), {
+              access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
+            }).catch(() => {});
+            return fail(`Google could not complete this animation: ${result.error}. The onchain credit was spent for this attempt.`, 502);
+          }
+          const mediaPath = `pfp/jackcaster-${viewer.fid}-${requestId.slice(2)}.mp4`;
+          const blob = await put(mediaPath, result.bytes, {
+            access: blobAccess, addRandomSuffix: true, allowOverwrite: false, contentType: "video/mp4", cacheControlMaxAge: 31_536_000,
+          });
+          const mediaUrl = blobAccess === "private" ? `${new URL(request.url).origin}/i/${blob.pathname}` : blob.url;
+          await put(lockPath, JSON.stringify({ ...record, status: "completed", mediaUrl, mediaType: "video", completedAt: Date.now() }), {
+            access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
+          });
+          console.info("Jackcaster profile video completed", JSON.stringify({ fid: viewer.fid, wallet, requestId, mode: record.mode, at: new Date().toISOString() }));
+          return NextResponse.json({ mediaUrl, mediaType: "video", requestId }, { headers: { "Cache-Control": "no-store" } });
+        } catch (error) {
+          const detail = safeFailureMessage(error);
+          console.error("Google profile video status check failed:", detail);
+          return fail(`Couldn't check or save this animation right now: ${detail}. Its job remains saved; try checking again.`, 503);
+        }
+      }
       const statusResponse = await fetch(`${GOOGLE_API}/${record.providerRequestId}`, {
         headers: { "x-goog-api-key": key },
         signal: AbortSignal.timeout(8_000),
