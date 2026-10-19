@@ -59,7 +59,7 @@ async function send(provider: EIP1193Provider, from: Address, to: Address, data:
   return hash as Hex;
 }
 
-export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse }: { fid: number; farcasterSignedIn: boolean; currentPfpUrl: string; onUse: (url: string) => void }) {
+export function ProfileMediaMaker({ fid, farcasterSignedIn, videoEnabled, currentPfpUrl, onUse }: { fid: number; farcasterSignedIn: boolean; videoEnabled: boolean; currentPfpUrl: string; onUse: (url: string) => void }) {
   const [style, setStyle] = useState<(typeof animationStyles)[number]["id"]>("auto");
   const [prompt, setPrompt] = useState("");
   const [credits, setCredits] = useState<bigint | null>(null);
@@ -200,6 +200,7 @@ export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse
     busyRef.current = true;
     setBusy(true); setMessage("");
     try {
+      if (mode !== "image" && !videoEnabled) throw new Error("Profile animation is paused until this deployment is confirmed for paid Gemini video. No credit was used. The deployment owner must enable Google AI video access first.");
       if (mode !== "image" && !farcasterSignedIn) throw new Error("Connect your Farcaster account on this device before creating or upgrading an animation.");
       const state = await refresh(walletAddress ?? undefined);
       if (state.balance < 1n) throw new Error("No credits in this wallet. Buy a pack to create more profile media.");
@@ -265,6 +266,8 @@ export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse
     <section className="grok-maker" id="grok-profile-studio" aria-label="AI profile media generator">
     <div className="grok-maker-heading"><div><strong>Profile studio</strong><p className="field-hint">Choose a look, preview your animation, and save only when it feels right.</p></div><span className="meta">Base · USDC</span></div>
     <button type="button" className="grok-offer-reopen" onClick={() => setIntroOpen(true)}>How it works</button>
+    {currentPfpUrl && <div className="grok-maker-current"><span className="grok-maker-current-image">{currentPfpIsMp4 || currentPfpIsWebm ? <video src={currentPfpUrl} autoPlay muted loop playsInline aria-label="Your current animated Farcaster profile picture" /> : <img src={currentPfpUrl} alt="Your current Farcaster profile picture" />}</span><span><small>YOUR PROFILE NOW</small><strong>Current profile picture</strong><span className="field-hint">It stays in place until you preview and save a new one.</span></span></div>}
+    {!videoEnabled && <p className="field-hint grok-maker-status" role="note">Video generation is paused to protect your credits. The deployment owner must enable Gemini Omni video on a paid Google AI project, then set <code>GOOGLE_AI_VIDEO_ENABLED=true</code>. Existing saved jobs can still be resumed.</p>}
     <fieldset className="grok-style-picker" aria-label="Choose an animation style">
       <legend>Pick an animation style <span className="meta">Auto is ready to use</span></legend>
       <div className="grok-style-grid">{animationStyles.map((item) => <button key={item.id} type="button" className={`grok-style-card${style === item.id ? " selected" : ""}`} aria-pressed={style === item.id} onClick={() => setStyle(item.id)}><span className="grok-style-icon" aria-hidden="true">{item.icon}</span><span><strong>{item.title}</strong><small>{item.note}</small></span></button>)}</div>
@@ -289,7 +292,7 @@ export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse
     {!farcasterSignedIn && <p className="field-hint grok-maker-status" role="note">Connect your Farcaster account on this device to animate or upgrade a profile video. <Link href="/setup">Connect Farcaster</Link>. Buying credits and image creation do not enable animation access.</p>}
     {message && <p className="field-hint grok-maker-status" role="status">{message}</p>}
     {pendingAnimation && !busy && <button type="button" className="btn sm" onClick={resumeAnimation}>Resume animation</button>}
-    {generatedUrl && <div className="grok-maker-result"><div className="grok-maker-preview">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="Animated profile preview" /> : <img src={generatedUrl} alt="Generated profile image preview" />}</div><div><span className="grok-result-kicker">YOUR PREVIEW</span><strong>{generatedType === "video" ? "Your animation is ready" : "Your artwork is ready"}</strong><p className="field-hint">It won’t change your Farcaster profile until you apply it and save.</p><button type="button" className="btn sm" disabled={busy} onClick={() => onUse(generatedUrl)}>Use on my profile</button></div></div>}
+    {generatedUrl && <div className="grok-maker-result"><div className="grok-maker-compare">{currentPfpUrl && <div><small>BEFORE</small><span className="grok-maker-preview">{currentPfpIsMp4 || currentPfpIsWebm ? <video src={currentPfpUrl} autoPlay muted loop playsInline aria-label="Current profile picture" /> : <img src={currentPfpUrl} alt="Current profile picture" />}</span></div>}<div><small>NEW</small><span className="grok-maker-preview">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="New animated profile preview" /> : <img src={generatedUrl} alt="New profile image preview" />}</span></div></div><div><span className="grok-result-kicker">YOUR PREVIEW</span><strong>{generatedType === "video" ? "Your animation is ready" : "Your artwork is ready"}</strong><p className="field-hint">Your current picture stays live until you choose <strong>Use on my profile</strong> and save.</p><button type="button" className="btn sm" disabled={busy} onClick={() => onUse(generatedUrl)}>Use on my profile</button></div></div>}
     <p className="field-hint">1 credit per try, even if it fails. Your prompt and selected image go to Google AI and may be retained under the project&apos;s policy. Access checks can&apos;t confirm remaining quota; Google may still reject a generation.</p>
     </section>
   </>;

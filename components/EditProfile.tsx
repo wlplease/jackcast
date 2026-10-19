@@ -11,7 +11,7 @@ import { ProfileMediaMaker } from "@/components/ProfileMediaMaker";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial, fid, farcasterSignedIn, profileStudioEnabled, profileStudioSetupMessage }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; profileStudioEnabled: boolean; profileStudioSetupMessage?: string }) {
+export function EditProfile({ initial, fid, farcasterSignedIn, profileStudioEnabled, profileStudioVideoEnabled, profileStudioSetupMessage }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; profileStudioEnabled: boolean; profileStudioVideoEnabled: boolean; profileStudioSetupMessage?: string }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -100,7 +100,7 @@ export function EditProfile({ initial, fid, farcasterSignedIn, profileStudioEnab
       </div>
 
       {profileStudioSetupMessage && <div className="env-box" role="status"><strong>Paid profile studio is off</strong><p>{profileStudioSetupMessage}</p></div>}
-      {profileStudioEnabled && <ProfileMediaMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
+      {profileStudioEnabled && <ProfileMediaMaker fid={fid} farcasterSignedIn={farcasterSignedIn} videoEnabled={profileStudioVideoEnabled} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
 
       <label className="field">
         <span className="field-label">

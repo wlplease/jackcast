@@ -207,6 +207,7 @@ export async function POST(request: Request) {
   if (typeof signature !== "string" || !/^0x[0-9a-f]{130,132}$/i.test(signature)) return fail("Wallet authorization is required.", 400);
   if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 1_000) return fail("Describe the image or motion in 1–1,000 characters.", 400);
   if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
+  if (mode !== "image" && process.env.GOOGLE_AI_VIDEO_ENABLED !== "true") return fail("Profile video is paused until the deployment owner confirms paid Gemini Omni video access. No credit was used. Enable GOOGLE_AI_VIDEO_ENABLED=true only after upgrading the Google AI project and checking its quota.", 503);
   if (mode !== "image") {
     if (viewer.source !== "setup" || !viewer.signerUuid) return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);
     try {
@@ -414,6 +415,9 @@ export async function GET(request: Request) {
         } catch (error) {
           const detail = safeFailureMessage(error);
           console.error("Google profile video status check failed:", detail);
+          if (/429:.*(?:Free Tier|0 requests per day|quota|rate limit)/i.test(detail)) {
+            return fail("Google reports that Gemini Omni video has no available quota for this project (the Free Tier limit is 0 requests per day). The saved job is preserved; no new Jackcaster credit is needed to resume it. Upgrade the Google AI project to a paid tier, confirm video quota at https://ai.dev/rate-limit, then choose Resume animation.", 503);
+          }
           return fail(`Couldn't check or save this animation right now: ${detail}. Its job remains saved; try checking again.`, 503);
         }
       }
@@ -461,6 +465,7 @@ export async function GET(request: Request) {
 
   const key = apiKey();
   if (!key) return fail("Google AI is not configured on this deployment. No credit was used.", 503);
+  if (mode !== "image" && process.env.GOOGLE_AI_VIDEO_ENABLED !== "true") return fail("Profile video is paused until the deployment owner confirms paid Gemini Omni video access. No credit was used. Enable GOOGLE_AI_VIDEO_ENABLED=true only after upgrading the Google AI project and checking its quota.", 503);
   if (!process.env.BLOB_READ_WRITE_TOKEN && !(process.env.BLOB_STORE_ID && process.env.BLOB_WEBHOOK_PUBLIC_KEY)) {
     return fail("Vercel Blob is not configured to save the animation. No credit was used.", 503);
   }
@@ -472,7 +477,9 @@ export async function GET(request: Request) {
       cache: "no-store",
     });
     if (!modelResponse.ok) {
-      const advice = modelResponse.status === 401
+      const advice = mode !== "image" && modelResponse.status === 429
+        ? "Google has no available video quota for this project. No Jackcaster credit was used. Upgrade the Google AI project and confirm Gemini Omni video quota before trying again."
+        : modelResponse.status === 401
         ? "Check that GOOGLE_AI_API_KEY is active and the Gemini API is enabled for its project."
         : modelResponse.status === 403
           ? "Check that the Google project has billing enabled and access to this video model."

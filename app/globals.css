@@ -839,6 +839,13 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .grok-maker { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--card); }
 .grok-maker-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .grok-maker-heading > div { display: grid; gap: 5px; }
+.grok-maker-current { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 13px; background: var(--paper); }
+.grok-maker-current > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.grok-maker-current small, .grok-maker-compare small { color: var(--ink-3); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.grok-maker-current strong { font-size: 13px; }
+.grok-maker-current .field-hint { margin: 0; }
+.grok-maker-current-image { display: grid; flex: none; width: 56px; aspect-ratio: 1; place-items: center; overflow: hidden; border: 2px solid var(--paper); border-radius: 50%; background: var(--rule); box-shadow: 0 0 0 1px var(--rule-strong); }
+.grok-maker-current-image img, .grok-maker-current-image video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .grok-style-picker { display: grid; gap: 9px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .grok-style-picker legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin-bottom: 8px; color: var(--ink); font-size: 13px; font-weight: 750; }
 .grok-style-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -856,7 +863,10 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .grok-maker-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .grok-maker-status { overflow-wrap: anywhere; }
 .grok-maker-result { display: grid; grid-template-columns: 156px minmax(0, 1fr); align-items: center; gap: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--rule)); border-radius: 16px; background: radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent 58%), var(--paper); }
+.grok-maker-compare { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+.grok-maker-compare > div { display: grid; justify-items: center; gap: 6px; min-width: 0; }
 .grok-maker-preview { display: grid; width: 148px; aspect-ratio: 1; place-items: center; padding: 4px; border-radius: 50%; background: conic-gradient(from 30deg, var(--brand), color-mix(in srgb, var(--brand) 20%, white), var(--accent), var(--brand)); box-shadow: 0 8px 28px color-mix(in srgb, var(--brand) 22%, transparent); }
+.grok-maker-compare .grok-maker-preview { width: 68px; }
 .grok-maker-preview img, .grok-maker-preview video { display: block; width: 100%; height: 100%; border: 3px solid var(--paper); border-radius: 50%; object-fit: cover; background: var(--rule); }
 .grok-maker-result > div:last-child { display: grid; justify-items: start; gap: 8px; min-width: 0; }
 .grok-result-kicker { color: var(--brand); font-size: 10px; font-weight: 850; letter-spacing: .12em; }
@@ -870,6 +880,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
   .grok-maker-actions .btn { width: 100%; }
   .grok-maker-result { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .grok-maker-result > div:last-child { justify-items: center; }
+  .grok-maker-compare .grok-maker-preview { width: 84px; }
 }
 
 /* Settings: switch, channel tab picker */
