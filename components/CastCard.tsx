@@ -69,6 +69,7 @@ export function CastCard({
         <Embeds embeds={cast.embeds} />
         <CastActions
           hash={cast.hash}
+          text={cast.text}
           authorFid={a.fid}
           replies={cast.replies?.count ?? 0}
           likes={cast.reactions?.likes_count ?? 0}

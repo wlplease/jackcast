@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { pauseBackgroundAudio } from "@/lib/audio-focus";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 type MiniApp = { url: string; title: string; sameOrigin: boolean };
 type MiniAppSession = { openMiniApp: (app: { url: string; title: string }) => void };
@@ -23,6 +24,7 @@ export function MiniAppSessionProvider({ children }: { children: React.ReactNode
       if (url.protocol !== "https:" || url.username || url.password) return;
       pauseBackgroundAudio();
       setActive({ url: url.toString(), title: app.title.slice(0, 80), sameOrigin: url.origin === window.location.origin });
+      trackUsage({ name: "mini_app_opened" });
       setMinimized(false);
     } catch { /* Launch buttons validate URLs and show the validation message. */ }
   }, []);

@@ -24,4 +24,4 @@ Challenge behavior is controlled in the Vercel dashboard, not by this repository
 
 ## Know the limits
 
-The login failure counter in `app/actions.ts` is process-local. Vercel can run multiple serverless instances, so this counter is a useful fallback, not a durable global lockout. Use Vercel's edge challenge and, if your plan provides it, edge rate limiting for stronger bot and password-guessing resistance. Rotate the app password and provider keys if you suspect they were exposed.
+Login uses an atomic Upstash counter across serverless instances when the Upstash REST URL and token are configured. If Redis is absent or unavailable, it falls back to a process-local counter, so keep the Vercel edge challenge and add an edge rate limit on `/login` when your plan supports it. Rotate the app password and provider keys if you suspect they were exposed.

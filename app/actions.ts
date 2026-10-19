@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { createHmac } from "node:crypto";
 import { neynar } from "@/lib/neynar";
 import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
 import type { PostCastReqBodyEmbeds } from "@neynar/nodejs-sdk/build/api";
@@ -19,6 +20,58 @@ export type ActionResult = { ok: true; hash?: string } | { ok: false; error: str
 
 type LoginWindow = { failures: number; resetAt: number; blockedUntil: number };
 const loginWindows = new Map<string, LoginWindow>();
+
+const LOGIN_LIMIT_SCRIPT = `
+local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+if current >= tonumber(ARGV[1]) then return {0, redis.call('PTTL', KEYS[1]), current} end
+local next = redis.call('INCR', KEYS[1])
+if next == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[2]) end
+return {1, redis.call('PTTL', KEYS[1]), next}
+`;
+
+function loginRedisConfig(): { url: string; token: string } | null {
+  const rawUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!rawUrl || !token) return null;
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "https:" && url.hostname.endsWith(".upstash.io")
+      ? { url: url.toString().replace(/\/$/, ""), token }
+      : null;
+  } catch { return null; }
+}
+
+async function reserveSharedLoginAttempt(fingerprint: string): Promise<boolean | null> {
+  const config = loginRedisConfig();
+  if (!config) return null;
+  try {
+    const response = await fetch(config.url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.token}`, "content-type": "application/json" },
+      body: JSON.stringify(["EVAL", LOGIN_LIMIT_SCRIPT, 1, `jackcaster:login:v1:${fingerprint}`, "5", String(15 * 60_000)]),
+      signal: AbortSignal.timeout(2500),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const result = await response.json() as { result?: unknown; error?: string };
+    if (result.error || !Array.isArray(result.result)) return null;
+    return Number(result.result[0]) === 1;
+  } catch { return null; }
+}
+
+async function clearSharedLoginAttempts(fingerprint: string) {
+  const config = loginRedisConfig();
+  if (!config) return;
+  try {
+    await fetch(config.url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.token}`, "content-type": "application/json" },
+      body: JSON.stringify(["DEL", `jackcaster:login:v1:${fingerprint}`]),
+      signal: AbortSignal.timeout(1500),
+      cache: "no-store",
+    });
+  } catch { /* A successful login should not fail because counter cleanup did. */ }
+}
 
 function errMessage(e: unknown, action: "cast" | "reaction" = "cast"): string {
   const value = e && typeof e === "object" ? e as { status?: unknown; response?: { status?: unknown }; message?: unknown } : {};
@@ -154,23 +207,49 @@ export async function react(input: {
   }
 }
 
+/** Delete only a cast verified to belong to the signer connected on this device. */
+export async function deleteOwnCast(input: { hash: string }): Promise<ActionResult> {
+  if (!input || typeof input.hash !== "string" || !/^0x[0-9a-f]{40}$/i.test(input.hash)) {
+    return { ok: false, error: "That cast link is not valid." };
+  }
+  const viewer = await getViewer();
+  if (!viewer?.canWrite || !viewer.signerUuid) return { ok: false, error: "Connect your Farcaster account before deleting a cast." };
+  try {
+    const response = await neynar().fetchBulkCasts({ casts: [input.hash] });
+    const cast = response.result.casts[0];
+    if (!cast) return { ok: false, error: "That cast could not be found." };
+    if (cast.author.fid !== viewer.fid) return { ok: false, error: "You can only delete your own casts." };
+    const deletion = await neynar().deleteCast({ signerUuid: viewer.signerUuid, targetHash: input.hash });
+    if (deletion.success === false) return { ok: false, error: "Farcaster did not confirm the deletion. Refresh the feed and check the cast before trying again." };
+    revalidateTag("own-profile-analytics");
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/429/.test(message)) return { ok: false, error: "Neynar is rate limiting deletions. Wait a little and try again." };
+    return { ok: false, error: "Couldn't delete this cast. Check your Farcaster connection and try again." };
+  }
+}
+
 export async function login(_prev: string | null, form: FormData): Promise<string | null> {
   const expected = await sessionToken();
   if (!expected) redirect("/");
   const now = Date.now();
   const requestHeaders = await headers();
   const address = requestHeaders.get("x-real-ip") ?? "unknown";
-  // Keep the password out of the map key; use a per-deployment keyed digest of the client address.
-  const source = new TextEncoder().encode(`${process.env.APP_PASSWORD}:${address}`);
-  const keyBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", source.buffer as ArrayBuffer));
-  const key = Array.from(keyBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  // Use an HMAC fingerprint so neither the password nor raw IP is stored in Redis.
+  const key = createHmac("sha256", process.env.APP_PASSWORD!).update(`jackcaster:login:${address}`).digest("hex");
+  const sharedAllowed = await reserveSharedLoginAttempt(key);
+  if (sharedAllowed === false) return "Too many attempts. Wait 15 minutes and try again.";
+
   let window = loginWindows.get(key);
-  if (window && now >= window.resetAt) {
+  if (sharedAllowed === null && window && now >= window.resetAt) {
     loginWindows.delete(key);
     window = undefined;
   }
-  if (window && now < window.blockedUntil) return "Too many attempts. Wait 15 minutes and try again.";
+  if (sharedAllowed === null && window && now < window.blockedUntil) return "Too many attempts. Wait 15 minutes and try again.";
   if (form.get("password") !== process.env.APP_PASSWORD) {
+    if (sharedAllowed === true) return "Wrong password";
     const next = window ?? { failures: 0, resetAt: now + 15 * 60_000, blockedUntil: 0 };
     next.failures += 1;
     if (next.failures >= 5) {
@@ -185,6 +264,7 @@ export async function login(_prev: string | null, form: FormData): Promise<strin
     return next.blockedUntil > now ? "Too many attempts. Wait 15 minutes and try again." : "Wrong password";
   }
   loginWindows.delete(key);
+  if (sharedAllowed === true) await clearSharedLoginAttempts(key);
   const jar = await cookies();
   jar.set(SESSION_COOKIE, expected, {
     httpOnly: true,

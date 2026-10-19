@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 type GifItem = { id: string; url: string; preview: string; title: string; sourceUrl?: string };
 type SearchResult = { items?: GifItem[]; hasMore?: boolean; retryAfterMs?: number; scope?: "global" | "session" | null; error?: string };
@@ -140,6 +141,7 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
         nextItems = data.items ?? [];
         more = Boolean(data.hasMore) && nextOffset + nextItems.length < 90;
       }
+      trackUsage({ name: "gif_search", source: personalKey ? "personal" : "shared" });
       setItems((current) => append ? [...current, ...nextItems.filter((item) => !current.some((saved) => saved.id === item.id))] : nextItems);
       setOffset((current) => append ? current + nextItems.length : nextItems.length);
       setHasMore(more);

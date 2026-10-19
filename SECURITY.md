@@ -24,7 +24,7 @@ This is evidence about the checked-in source code only. It cannot prove which co
 
 The middleware protects app pages and API routes; login, static assets, and the public posted-image route are exceptions. `APP_PASSWORD` gates access. The session cookie contains a versioned HMAC derived from the password; it does not contain the password itself. Anyone who obtains the cookie can replay it to access the app until the password changes or the cookie expires. Use a long, unique password and protect access to your browser and deployment. The HMAC prevents offline guessing against a stolen cookie as easily as an unkeyed hash, but it does not prevent replay.
 
-Login applies a best-effort, process-local limit of five failed attempts per client address followed by a 15-minute block. Serverless instances do not share this counter, so it is not a durable edge-level rate limit. Sessions last 90 days. Treat the cookie as a bearer credential and rotate `APP_PASSWORD` if you suspect it was exposed. Remaining limitations are tracked in [`SECURITY-PLAN.md`](./SECURITY-PLAN.md).
+Login allows five attempts per client address in a 15-minute window. When Upstash Redis is configured, an atomic shared counter coordinates this limit across serverless instances; the Redis key contains an HMAC fingerprint, not the raw IP. If Redis is absent or unavailable, the app falls back to a process-local best-effort counter, so add Vercel Firewall rate limiting for edge-wide protection. Successful login clears the shared counter. Sessions last 90 days. Treat the cookie as a bearer credential and rotate `APP_PASSWORD` if you suspect it was exposed. Remaining limitations are tracked in [`SECURITY-PLAN.md`](./SECURITY-PLAN.md).
 
 One route is public on purpose: `/i/...`, which serves photos you've already posted (from a private Blob store) so other Farcaster clients can show them. It only serves `casts/` and `pfp/` image files.
 
@@ -34,7 +34,11 @@ One route is public on purpose: `/i/...`, which serves photos you've already pos
 
 To cut off access: revoke the app in Farcaster settings (connected apps), and rotate your Neynar key at dev.neynar.com.
 
-Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Jackcaster has baseline response headers; a full Content Security Policy remains open because the app depends on inline theme styles, embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
+Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Baseline response headers allow geolocation only to Jackcaster itself for the opt-in map; the referrer policy sends origins without page paths. A full Content Security Policy remains open because the app depends on inline theme styles, embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
+
+## Usage analytics
+
+Vercel Web Analytics is included and can be enabled in the deployment dashboard. Page-view URLs are normalized before sending: profile names, cast hashes, channel names, and query strings are removed. Custom events count broad actions such as feed opens, successful casts, Mini App launches, digest generation, and GIF searches. Events contain only coarse categories (for example, feed type or whether a GIF key is personal); they never include cast text, FIDs, usernames, search terms, GIF URLs, map coordinates, or wallet addresses. Analytics reports aggregate usage, not a list of identifiable users.
 
 ## Location sharing
 

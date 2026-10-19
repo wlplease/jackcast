@@ -8,7 +8,7 @@ import { themeById, themeCss } from "@/lib/themes";
 import { BRAND } from "@/lib/brand";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MiniAppHostReady } from "@/components/MiniAppHostReady";
-import { Analytics } from "@vercel/analytics/next";
+import { UsageAnalytics } from "@/components/UsageAnalytics";
 
 export const metadata: Metadata = {
   title: BRAND.name,
@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <MiniAppHostReady />
-        <Analytics />
+        <UsageAnalytics />
         <div className="app-frame">
           <div className="app-content">{children}</div>
           <SiteFooter />

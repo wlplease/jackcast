@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { react } from "@/app/actions";
+import { deleteOwnCast, react } from "@/app/actions";
 import { savePrefs } from "@/app/(main)/me/actions";
 import { compact } from "@/lib/format";
 import { MAX_MUTES, normalizeMute } from "@/lib/prefs-shared";
 import { SaveCastButton } from "@/components/SaveCastButton";
 import { withCastAttribution } from "@/lib/cast-attribution";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 type State = { liked: boolean; recasted: boolean; likes: number; recasts: number };
 
@@ -37,6 +38,7 @@ const Icon = {
 
 export function CastActions(props: {
   hash: string;
+  text: string;
   authorFid: number;
   replies: number;
   likes: number;
@@ -61,6 +63,8 @@ export function CastActions(props: {
   const [muted, setMuted] = useState(() => Boolean(props.authorUsername && props.mutes?.includes(`@${props.authorUsername.toLowerCase()}`)));
   const [error, setError] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const router = useRouter();
   const touched = useRef(false);
 
@@ -144,6 +148,33 @@ export function CastActions(props: {
     window.location.assign(composeUrl);
   }
 
+  async function copyValue(value: string, message: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setShareMessage(message);
+    } catch {
+      setShareMessage("Clipboard access is unavailable in this browser.");
+    }
+  }
+
+  async function deleteCast() {
+    if (deleteBusy) return;
+    setDeleteBusy(true);
+    setError(null);
+    try {
+      const result = await deleteOwnCast({ hash: props.hash });
+      if (!result.ok) { setError(result.error); return; }
+      trackUsage({ name: "cast_deleted" });
+      setConfirmDelete(false);
+      setShareMessage("Cast deleted.");
+      router.refresh();
+    } catch {
+      setError("Couldn't delete this cast. Try again.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   useEffect(() => {
     if (!error) return;
     const t = setTimeout(() => setError(null), 4000);
@@ -186,17 +217,22 @@ export function CastActions(props: {
       </button>
       <SaveCastButton hash={props.hash} />
       {shareMessage && <span className="share-status" role="status">{shareMessage}</span>}
-      {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && (
-        <details className="cast-menu">
-          <summary className="act" aria-label="More cast options" title="More cast options">•••</summary>
-          <div className="cast-menu-panel">
+      <details className="cast-menu">
+        <summary className="act" aria-label="More cast options" title="More cast options">•••</summary>
+        <div className="cast-menu-panel">
+          <button type="button" onClick={() => void copyValue(props.text, "Cast text copied.")}>Copy text</button>
+          <button type="button" onClick={() => void copyValue(`https://farcaster.xyz/${props.authorUsername ? `${encodeURIComponent(props.authorUsername)}/` : "~/"}${props.hash}`, "Cast link copied.")}>Copy cast link</button>
+          {props.canWrite && props.viewerFid === props.authorFid && (confirmDelete
+            ? <div className="cast-delete-confirm" role="group" aria-label="Confirm cast deletion"><small>This permanently deletes your cast.</small><button type="button" className="cast-delete-confirm-button" onClick={() => void deleteCast()} disabled={deleteBusy}>{deleteBusy ? "Deleting…" : "Confirm delete"}</button><button type="button" onClick={() => setConfirmDelete(false)} disabled={deleteBusy}>Cancel</button></div>
+            : <button type="button" className="cast-delete-option" onClick={() => setConfirmDelete(true)}>Delete your cast…</button>)}
+          {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && <>
             <button type="button" onClick={toggleMute} disabled={muteBusy}>
               {muteBusy ? "Saving…" : muted ? `Show posts from @${props.authorUsername}` : `Hide posts from @${props.authorUsername}`}
             </button>
-            <small>Manage this in You → Filters.</small>
-          </div>
-        </details>
-      )}
+            <small>Manage mutes in You → Filters.</small>
+          </>}
+        </div>
+      </details>
       {error && (
         <span className="act-error" role="alert">
           {error}

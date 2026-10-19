@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CastView } from "@/lib/types";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 type DigestPart = { title: string; summary: string; castHashes: string[] };
 type Digest = { storyline: string; sections: DigestPart[]; insights: DigestPart[] };
@@ -122,6 +123,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
   }, [audioUrl]);
 
   async function summarize() {
+    trackUsage({ name: "digest_requested", posts: eligibleCasts.length });
     setBusy(true);
     setError("");
     try {
@@ -142,6 +144,7 @@ export function AICatchUp({ casts, viewerFid, audioEnabled = false, digestEnable
       });
       const data = await response.json() as { digest?: Digest; error?: string };
       if (!response.ok || !data.digest?.storyline || !data.digest.sections?.length) throw new Error(data.error || "Could not make a digest right now.");
+      trackUsage({ name: "digest_created" });
       const sources = eligibleCasts.map(digestSource);
       const hashes = sources.map((cast) => cast.hash.toLowerCase());
       const nextSavedAt = Date.now();

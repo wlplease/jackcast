@@ -12,6 +12,7 @@ import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 import { Avatar } from "./Avatar";
 import { GifMemePicker } from "./GifMemePicker";
 import { EmojiPicker } from "./EmojiPicker";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 const MAX_EMBEDS = 2;
 
@@ -216,6 +217,7 @@ export function Composer({
         setError(res.error);
         return;
       }
+      trackUsage({ name: "cast_published", kind: parentHash ? "reply" : quoted ? "quote" : "cast" });
       photos.forEach((p) => URL.revokeObjectURL(p.preview));
       try { localStorage.removeItem(draftKey); } catch {}
       setDraftStatus("idle");

@@ -268,6 +268,10 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .cast-menu-panel button:hover { background: var(--accent-soft); color: var(--accent); }
 .cast-menu-panel button:disabled { opacity: .55; cursor: wait; }
 .cast-menu-panel small { padding: 0 8px 3px; color: var(--ink-3); font-size: 10.5px; }
+.cast-menu-panel .cast-delete-option, .cast-menu-panel .cast-delete-confirm-button { color: #b43d38; }
+.cast-menu-panel .cast-delete-option:hover, .cast-menu-panel .cast-delete-confirm-button:hover { color: #912924; background: #b43d3814; }
+.cast-delete-confirm { display: grid; gap: 4px; padding-top: 4px; border-top: 1px solid var(--rule); }
+.cast-delete-confirm small { padding: 5px 8px 2px; color: var(--ink-2); }
 .repeat-group { border-bottom: 1px solid var(--rule); padding: 0 18px 8px 70px; }
 .repeat-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 5px 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; }
 .repeat-toggle:hover { text-decoration: underline; }

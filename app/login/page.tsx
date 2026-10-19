@@ -42,8 +42,9 @@ export default function LoginPage() {
           </div>
           <div className="login-deploy-divider"><span>LAUNCH YOUR OWN PORTAL</span><i aria-hidden="true" /></div>
           <ol>
-            <li><span>1</span><div><strong>Add your Neynar API key</strong><small>Create one at dev.neynar.com and add it privately in Vercel.</small></div></li>
-            <li><span>2</span><div><strong>Deploy your GitHub copy</strong><small>Choose a private password, then connect Farcaster in setup.</small></div></li>
+            <li><span>1</span><div><strong>Set up your Vercel copy</strong><small>Add your Neynar API key and private app password, scroll down, then choose Deploy.</small></div></li>
+            <li><span>2</span><div><strong>Connect Farcaster after launch</strong><small>In your own app&apos;s setup, approve a Farcaster app signer. The recovery phrase is used in your browser for Farcaster approval; it is not an EVM wallet connection. Never paste it into Vercel.</small></div></li>
+            <li><span>3</span><div><strong>Add extras when you want</strong><small>Google AI and GIPHY keys are optional. Add them later in Vercel and redeploy.</small></div></li>
           </ol>
           <a className="login-deploy-button" href={DEPLOY_URL} target="_blank" rel="noreferrer">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
@@ -53,7 +54,7 @@ export default function LoginPage() {
             <a href="https://github.com/wlplease/jackcast" target="_blank" rel="noreferrer">Jackcaster source <span aria-hidden="true">↗</span></a>
             <a href="https://github.com/GenuineJack/selfcaster" target="_blank" rel="noreferrer">Selfcaster original <span aria-hidden="true">↗</span></a>
           </div>
-          <small className="login-deploy-note">Your Neynar key is a server secret entered in Vercel. Never enter a recovery phrase here.</small>
+          <small className="login-deploy-note">The recovery phrase is sensitive. Use it only on the Jackcaster deployment you control; never enter it on the Vercel form or an unfamiliar site.</small>
         </aside>
         <footer className="login-portal-footer"><span>JACKCASTER PORTAL</span><span>BUILT ON OPEN-SOURCE SELFCASTER <b>↟</b></span><span>YOUR FEED. YOUR RULES.</span></footer>
       </section>

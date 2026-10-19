@@ -9,6 +9,7 @@ import { NotificationLink } from "@/components/NotificationLink";
 import { ListeningDock } from "@/components/ListeningDock";
 import { ProfileQuickMenu } from "@/components/ProfileQuickMenu";
 import { DEFAULT_FEED_NAMES, type FeedNames } from "@/lib/prefs-shared";
+import { trackUsage } from "@/components/UsageAnalytics";
 
 const I = {
   search: (
@@ -49,7 +50,10 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
-    <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined}>
+    <Link key={href} href={href} className="tab" aria-current={path === href ? "page" : undefined} onClick={() => {
+      const feed = href === "/" ? "following" : href === "/friends" ? "friends" : href === "/top" ? "leaders" : href === "/recasts" ? "recasts" : href === "/mini-apps" ? "mini_apps" : href === "/media" ? "media" : href === "/circle" ? "custom" : "channel";
+      trackUsage({ name: "feed_open", feed });
+    }}>
       {label}
     </Link>
   );
