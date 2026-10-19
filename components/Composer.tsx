@@ -11,6 +11,7 @@ import type { Author } from "@/lib/types";
 import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 import { Avatar } from "./Avatar";
 import { GifMemePicker } from "./GifMemePicker";
+import { EmojiPicker } from "./EmojiPicker";
 
 const MAX_EMBEDS = 2;
 
@@ -173,6 +174,28 @@ export function Composer({
     setError(null);
   }
 
+  function insertEmoji(emoji: string) {
+    const textarea = ref.current;
+    if (!textarea) {
+      setText((current) => `${current}${current && !/\s$/.test(current) ? " " : ""}${emoji}`);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = text.slice(0, start);
+    const after = text.slice(end);
+    const prefix = before && !/\s$/.test(before) ? " " : "";
+    const suffix = after && !/^\s/.test(after) ? " " : "";
+    const insertion = `${prefix}${emoji}${suffix}`;
+    setText(`${before}${insertion}${after}`);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const position = start + insertion.length;
+      textarea.setSelectionRange(position, position);
+      grow(textarea);
+    });
+  }
+
   function submit() {
     if (empty || over || pending || uploading) return;
     if (photos.some((p) => p.status === "error")) {
@@ -325,6 +348,7 @@ export function Composer({
             </svg>
           </button>
           <GifMemePicker disabled={slotsLeft <= 0} onSelect={selectGif} onMeme={(file) => { void addFiles([file]); }} />
+          <EmojiPicker onSelect={insertEmoji} />
           <button
             type="button"
             className="tool"
