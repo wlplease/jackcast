@@ -58,6 +58,13 @@ export async function prepareImage(file: File): Promise<Prepared> {
 
 /** Center-crops to a square for profile photos. */
 export async function prepareAvatar(file: File, size = 600): Promise<Prepared> {
+  // Keep animated avatars intact. Cropping a GIF through canvas captures only
+  // one frame; the circular avatar CSS already crops the original visually.
+  if (file.type === "image/gif") {
+    if (file.size > 10 * 1024 * 1024) throw new Error("Animated profile GIFs need to be under 10 MB.");
+    if (!file.size) throw new Error("That GIF file is empty.");
+    return { blob: file, type: "image/gif", ext: "gif", width: 0, height: 0 };
+  }
   const src = await decode(file);
   const { w, h } = dims(src);
   const side = Math.min(w, h);

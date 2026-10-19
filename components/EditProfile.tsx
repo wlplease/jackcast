@@ -76,7 +76,7 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -87,7 +87,7 @@ export function EditProfile({ initial }: { initial: { displayName: string; bio: 
           <button type="button" className="btn ghost sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? "Uploading…" : "Change photo"}
           </button>
-          <p className="field-hint">Cropped to a square from the center.</p>
+          <p className="field-hint">Photos are cropped to a centered square. Animated GIFs keep all frames and display in the round avatar crop (up to 10 MB).</p>
         </div>
       </div>
 
