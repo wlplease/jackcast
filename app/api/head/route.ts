@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { channelFeed, followingFeed, friendsFeed, customFeed } from "@/lib/data";
+import { channelFeed, followingFeed, friendsFeed, customFeed, followingMediaFeed, topAccountsFeed } from "@/lib/data";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,10 @@ export async function GET(req: Request) {
       ? await friendsFeed(undefined, LIMIT)
       : feed === "circle"
         ? await customFeed(undefined, LIMIT)
+        : feed === "media"
+          ? await followingMediaFeed("all", undefined, LIMIT)
+      : feed === "top"
+        ? await topAccountsFeed(undefined, LIMIT)
       : feed.startsWith("c:")
         ? await channelFeed(feed.slice(2), undefined, LIMIT)
         : await followingFeed(undefined, LIMIT);

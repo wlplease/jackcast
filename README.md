@@ -20,13 +20,13 @@ Selfcaster is the original Farcaster client created and maintained by [GenuineJa
 
 Jackcaster is maintained separately in [wlplease/jackcast](https://github.com/wlplease/jackcast). It is a personal fork for a single-owner deployment, with its own branding and workflow changes. It is not affiliated with or an official release from GenuineJack. Upstream Selfcaster remains the source for the original app; Jackcaster-specific additions and decisions are documented here for review and selective upstream discussion.
 
-The shared foundation includes the Farcaster client, Neynar integration, in-browser signer setup, posting, profiles, and the original project license. Jackcaster adds focused personal feeds, Recasts separation, Friends activity tools, feed controls, profile analytics, Mini Apps discovery, a dedicated settings screen, feed continuation, and the optional AI digest. These additions are maintained in this fork; they do not change Selfcaster or affect its users.
+The shared foundation includes the Farcaster client, Neynar integration, in-browser signer setup, posting, profiles, and the original project license. Jackcaster adds focused personal feeds, Recasts separation, Top Friends activity tools, feed controls, profile analytics, Mini Apps discovery, a dedicated settings screen, feed continuation, and the optional AI digest. These additions are maintained in this fork; they do not change Selfcaster or affect its users.
 
 Each deployment is hosted and configured by its operator. Neynar, Vercel, Google Gemini, and ElevenLabs are external services with their own keys, terms, availability, and possible costs. Jackcaster does not bundle their services or claim that every dependency is self-hosted. See [SECURITY.md](./SECURITY.md) and the setup guide before connecting an account.
 
 Compared with the upstream project, Jackcaster adds:
 
-- **More focused timelines:** separate Friends, Recasts, and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration. Recasts by people you follow have their own tab and stay out of the regular feeds.
+- **More focused timelines:** separate Top Friends, Top Accounts, Recasts, and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration. Recasts by people you follow have their own tab and stay out of the regular feeds.
 - **Richer profile and posting tools:** Posts and Media profile tabs, a pinned cast, optional cover editing, local drafts, and a thread composer with partial-send recovery.
 - **Optional AI catch-up:** a user-triggered Gemini digest with optional ElevenLabs speech. Provider keys stay server-side; see the privacy and cost notes below before enabling them.
 - **Fork-specific hardening and polish:** responsive feed media and page layouts, server-side input and upload bounds, safer errors, baseline security headers, and documented security decisions.
@@ -35,23 +35,23 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 
 ## What you get
 
-- **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Following and Friends can append more posts as you scroll. Posts shared by people you follow appear in their own Recasts tab.
+- **A calm Following feed.** Newest first, every time. A caught-up line where you left off, and a "new casts" pill instead of the page jumping around. Following and Top Friends can append more posts as you scroll. Posts shared by people you follow appear in their own Recasts tab.
 - **Favorite channels.** Search every channel you follow and pick a few. They become your feed tabs and the only channels in the composer.
-- **A Friends feed.** Search the accounts you already follow or scan recent Following posts to suggest active people from the last 90 days (up to 1,000 posts per scan). Suggestions are cached for a day; the weekly saved-Friends activity check is cached for a week. Review the selected list and remove people in Settings. The list is private to this app and saved on this device.
-- **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Review and edit the selected list in settings; Following, Friends, and this custom feed stay separate.
+- **Top Friends.** Keep a private chronological feed of up to 50 accounts. Settings can batch-add the 20 most active people you follow over 90 days and 20 curated Farcaster accounts, or you can pick people manually. The activity scan checks at most 1,000 posts and is cached for a day; multi-request batching respects Neynar's 10-FID feed-filter limit. The selected list stays on this device and out of Following and Custom.
+- **A custom feed.** Search accounts you already follow by name or username, add up to 20, and name the tab (for example, Builders or Local). Review and edit the selected list in settings; Following, Top Friends, and this custom feed stay separate.
 - **Profiles.** Browse posts or media, pin one cast on your Selfcaster profile, and set an optional Farcaster profile cover (Neynar Pro required to update the cover).
-- **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context.
+- **Posting that works.** Photos (up to 2, compressed on your phone first), links, quote casts, replies, threads with context, a GIF picker, and a photo meme maker with custom captions.
 - **Media inline.** Farcaster videos, YouTube, Spotify, SoundCloud, Bandcamp and archive.org play right in the feed.
 - **Your filters.** Mute words or phrases to quiet recurring topics, or mute an `@handle` to hide that account and posts mentioning it. A quality dial can also hide low-score accounts. These controls are optional and can be reversed in Settings.
 - **Repeated links grouped.** When several casts share the same destination, the newest stays in the feed and the others open underneath it. Turn this off in Settings → Feed controls if you want every post shown separately.
 - **A calmer feed.** Filter replies and Neynar-detected mini apps, keep a separate scroll position for each feed, and tap an image to expand it without leaving the timeline.
 - **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
-- **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for a concise storyline plus 2–4 sections grouped by topic, based on up to 20 loaded posts in Following. The digest stays out of the feed unless opened from the icon; its options let you redo or clear it. Optionally have ElevenLabs read it aloud. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text and author names; ElevenLabs receives only the generated digest. Audio is created on demand and kept in the browser for that visit.
+- **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for a weekly storyline, topic citations, insights, and activity analytics based on up to 40 loaded posts in Following. The digest stays out of the feed unless opened from the icon; its options let you redo or clear it. Optionally have ElevenLabs read it aloud. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text, author names, dates, and public engagement counts; ElevenLabs receives only the generated digest. Audio is created on demand and kept in the browser for that visit.
 - **Themes.** Selfcaster, Orange, Stone, Farcaster, Higher, Twitter and X, each in light and dark. Every color is contrast-checked.
 - **The rest.** Search, notifications, profiles, your posting stats, edit your profile, installable as an app on your phone.
 - **Mini Apps.** Explore Neynar's 7-day trending catalog, apps relevant to your network, and search. Open apps in Farcaster's native Mini App surface when Jackcaster is hosted there, or use the isolated in-app web preview in a regular browser. Filter by available categories, save up to six apps on this device, and see apps Neynar attributes to your FID in the Dev section, with recent-cast discovery as a fallback. Catalog data is cached for a week; your own app discovery refreshes every six hours to limit repeat API pulls. Native wallet and Farcaster actions require the official host; the browser preview does not grant those capabilities. Launch behavior follows the official [Mini App detection](https://miniapps.farcaster.xyz/docs/sdk/is-in-mini-app) and [`openMiniApp`](https://miniapps.farcaster.xyz/docs/sdk/actions/open-miniapp) SDK guidance.
-- **One settings home.** Use the gear icon for themes, channel tabs, Friends, Custom, filters, and connection details. The profile icon opens your profile and analytics.
-- **Keep reading.** Following and Friends append more posts as you scroll, with a manual Load more button if automatic loading is unavailable. The AI digest opens in its own panel from the AI icon and stays out of the post list.
+- **One settings home.** Use the gear icon for themes, channel tabs, Top Friends, Custom, filters, and connection details. The profile icon opens your profile and analytics.
+- **Keep reading.** Following and Top Friends append more posts as you scroll, with a manual Load more button if automatic loading is unavailable. The AI digest opens in its own panel from the AI icon and stays out of the post list.
 - **Service status.** When Neynar, Gemini, or ElevenLabs has a configuration, quota, or availability problem, Jackcast explains what happened and whether to check settings or try again. AI remains optional; the core app works without Google or ElevenLabs keys.
 
 What it doesn't do: DMs (on purpose), ads, an algorithm, or tracking.
@@ -123,6 +123,10 @@ Open your URL in Safari or Chrome and **Add to Home Screen**.
 - **Default tabs:** `PINNED_CHANNELS` (comma separated, no slashes) until you pick favorites in the app.
 
 All optional settings are in [`.env.example`](./.env.example).
+
+### GIFs and memes in the composer
+
+The composer includes a photo caption maker that works locally, plus GIF search powered by GIPHY. Add a GIPHY web API key as `NEXT_PUBLIC_GIPHY_API_KEY` in `.env.local` for local development (or the app's environment when you choose to deploy); GIF search is optional, and the meme maker and pasted HTTPS GIF links work without it. The picker requests G-rated GIFs and shows GIPHY attribution.
 
 ### Optional Gemini catch-up
 

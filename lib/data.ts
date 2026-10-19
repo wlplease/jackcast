@@ -6,7 +6,8 @@ import { asCast, type Author, type CastView } from "./types";
 import { getViewer, viewerOrThrow } from "./viewer";
 import { getPrefs, effectiveMinScore } from "./prefs";
 import { applyFilters } from "./filters";
-import { MAX_FRIENDS } from "./prefs-shared";
+import { MAX_TOP_ACCOUNTS } from "./prefs-shared";
+import { CURATED_TOP_ACCOUNTS } from "./top-account-roster";
 
 export type MiniAppSummary = { title: string; url: string; image?: string; author?: string; authorFid?: number; description?: string; category?: string };
 export type MiniAppsOverview = { weekly: MiniAppSummary[]; relevant: MiniAppSummary[]; generatedAt: number };
@@ -60,6 +61,14 @@ export async function clean(casts: unknown[], myFid: number) {
 }
 
 export type Page = { casts: CastView[]; cursor: string | null; hidden: number };
+export type MediaKind = "all" | "image" | "video" | "audio";
+const NEYNAR_MAX_FEED_FIDS = 10;
+
+function groupFeedFids(fids: number[]): number[][] {
+  const groups: number[][] = [];
+  for (let index = 0; index < fids.length; index += NEYNAR_MAX_FEED_FIDS) groups.push(fids.slice(index, index + NEYNAR_MAX_FEED_FIDS));
+  return groups;
+}
 
 type RecastCursor = { version: 1; recasts: string | null; direct: string | null; directDone: boolean; excluded: [string, number][] };
 
@@ -102,22 +111,38 @@ export async function channelFeed(channelId: string, cursor?: string, limit = 30
   return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
 }
 
-/** Chronological casts from the people selected for this device's private Friends feed. */
+type MultiPeopleCursor = { version: 1; groups: string; cursors: (string | null)[] };
+
+function parseMultiPeopleCursor(raw: string | undefined, groupKey: string, count: number): (string | null | undefined)[] {
+  if (!raw || raw.length > 4096) return Array(count).fill(undefined);
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<MultiPeopleCursor>;
+    if (parsed.version !== 1 || parsed.groups !== groupKey || !Array.isArray(parsed.cursors) || parsed.cursors.length !== count) return Array(count).fill(undefined);
+    return parsed.cursors.map((value) => value === null ? null : typeof value === "string" && value.length <= 4096 ? value : undefined);
+  } catch { return Array(count).fill(undefined); }
+}
+
+/** Chronological casts from a private people feed. Neynar accepts at most 10 FIDs per feed request. */
 async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30, excludeFids: Set<number> = new Set()): Promise<Page> {
   const { fid } = await viewerOrThrow();
-  const fids = people.map((person) => person.fid);
+  const fids = [...new Set(people.map((person) => person.fid).filter((personFid) => Number.isSafeInteger(personFid) && personFid > 0))];
   if (!fids.length) return { casts: [], hidden: 0, cursor: null };
-  const res = await neynar().fetchFeed({
-    feedType: "filter",
-    filterType: "fids",
-    fids,
-    viewerFid: fid,
-    withRecasts: false,
-    limit,
-    cursor,
-  });
-  const filtered = await clean(res.casts.filter((cast) => !excludeFids.has(cast.author.fid)), fid);
-  return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+  const groups = groupFeedFids(fids);
+  const groupKey = groups.map((group) => group.join(",")).join(";");
+  const cursors = parseMultiPeopleCursor(cursor, groupKey, groups.length);
+  const perGroupLimit = Math.ceil(limit / groups.length);
+  const responses = await Promise.all(groups.map((group, index) => cursors[index] === null ? Promise.resolve(null) : neynar().fetchFeed({
+    feedType: "filter", filterType: "fids", fids: group, viewerFid: fid,
+    withRecasts: false, limit: perGroupLimit, cursor: cursors[index] ?? undefined,
+  })));
+  const nextCursors = responses.map((response) => response?.next?.cursor ?? null);
+  const nextCursor = nextCursors.some(Boolean)
+    ? Buffer.from(JSON.stringify({ version: 1, groups: groupKey, cursors: nextCursors } satisfies MultiPeopleCursor)).toString("base64url")
+    : null;
+  const uniqueCasts = new Map<string, CastView>();
+  for (const response of responses) for (const cast of response?.casts ?? []) if (!excludeFids.has(cast.author.fid)) uniqueCasts.set(cast.hash, asCast(cast));
+  const filtered = await clean([...uniqueCasts.values()], fid);
+  return { casts: byTime(filtered.casts), hidden: filtered.hidden, cursor: nextCursor };
 }
 
 /** Recast-only view of the network feed. Neynar supplies casts added by the recast option, not the recaster identity. */
@@ -162,17 +187,45 @@ export async function customFeed(cursor?: string, limit = 30): Promise<Page> {
   return peopleFeed(prefs.customPeople, cursor, limit, new Set(prefs.friends.map((person) => person.fid)));
 }
 
+function embedMediaKind(embed: CastView["embeds"][number]): Exclude<MediaKind, "all"> | null {
+  const type = embed.metadata?.content_type?.toLowerCase() ?? "";
+  if (type.startsWith("video/") || embed.metadata?.video) return "video";
+  if (type.startsWith("audio/")) return "audio";
+  if (type.startsWith("image/") || embed.metadata?.image) return "image";
+  if (!embed.url) return null;
+  try {
+    const url = new URL(embed.url);
+    const path = url.pathname.toLowerCase();
+    if (/\.(mp4|webm|m3u8|mov)$/.test(path)) return "video";
+    if (/\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)$/.test(path)) return "audio";
+    if (/\.(avif|gif|jpe?g|png|webp|heic)$/.test(path) || /(^|\.)imagedelivery\.net$/i.test(url.hostname)) return "image";
+    return null;
+  } catch { return null; }
+}
+
 function hasMedia(cast: CastView): boolean {
-  return cast.embeds.some((embed) => {
-    if (embed.metadata?.content_type?.startsWith("image/") || embed.metadata?.content_type?.startsWith("video/") || embed.metadata?.image || embed.metadata?.video) return true;
-    if (!embed.url) return false;
-    try {
-      const url = new URL(embed.url);
-      return /\.(avif|gif|jpe?g|png|webp|mp4|webm|m3u8|mov)(?:$|[?#])/i.test(url.pathname + url.search) || /(^|\.)imagedelivery\.net$/i.test(url.hostname);
-    } catch {
-      return false;
-    }
-  });
+  return cast.embeds.some((embed) => embedMediaKind(embed) !== null);
+}
+
+export async function followingMediaFeed(kind: MediaKind = "all", cursor?: string, limit = 30): Promise<Page> {
+  const { fid } = await viewerOrThrow();
+  const prefs = await getPrefs();
+  const friendFids = new Set(prefs.friends.map((person) => person.fid));
+  const res = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit, cursor });
+  const candidates = res.casts.map(asCast).filter((cast) => cast.author.fid !== fid && !friendFids.has(cast.author.fid) && cast.embeds.some((embed) => {
+    const media = embedMediaKind(embed);
+    return media !== null && (kind === "all" || media === kind);
+  }));
+  const filtered = await clean(candidates, fid);
+  return { casts: byTime(filtered.casts).slice(0, limit), hidden: filtered.hidden, cursor: res.next?.cursor ?? null };
+}
+
+export async function savedCasts(hashes: string[], viewerFid: number): Promise<CastView[]> {
+  const safeHashes = hashes.filter((hash) => /^0x[0-9a-f]{40}$/i.test(hash)).slice(0, 30);
+  if (!safeHashes.length) return [];
+  const result = await neynar().fetchBulkCasts({ casts: safeHashes, viewerFid, sortType: "recent" });
+  const byHash = new Map(result.result.casts.map((cast) => [cast.hash.toLowerCase(), asCast(cast)]));
+  return safeHashes.flatMap((hash) => byHash.has(hash.toLowerCase()) ? [byHash.get(hash.toLowerCase())!] : []);
 }
 
 export async function userCasts(userFid: number, cursor?: string, mediaOnly = false): Promise<Page> {
@@ -204,7 +257,8 @@ export type RecentFriendSuggestions = {
 
 /** A bounded 90-day activity scan, cached per viewer for a day. */
 const recentFriendSuggestionsCached = unstable_cache(
-  async (fid: number): Promise<RecentFriendSuggestions> => {
+  async (fid: number, refreshKey?: number): Promise<RecentFriendSuggestions> => {
+    void refreshKey;
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     const activity = new Map<number, { fid: number; username: string; posts: number; followers: number; latest: number }>();
     let cursor: string | undefined;
@@ -242,7 +296,7 @@ const recentFriendSuggestionsCached = unstable_cache(
     }
     const people = [...activity.values()]
       .sort((a, b) => b.posts - a.posts || b.followers - a.followers || b.latest - a.latest)
-      .slice(0, MAX_FRIENDS)
+      .slice(0, MAX_TOP_ACCOUNTS)
       .map(({ fid: personFid, username, posts, followers }) => ({ fid: personFid, username, posts, followers }));
     return { people, scanned, complete, generatedAt: Date.now() };
   },
@@ -250,8 +304,45 @@ const recentFriendSuggestionsCached = unstable_cache(
   { revalidate: 86400, tags: ["recent-friend-suggestions"] }
 );
 
-export async function recentFriendSuggestions(fid: number): Promise<RecentFriendSuggestions> {
-  return recentFriendSuggestionsCached(fid);
+export async function recentFriendSuggestions(fid: number, refresh = false): Promise<RecentFriendSuggestions> {
+  return recentFriendSuggestionsCached(fid, refresh ? Date.now() : undefined);
+}
+
+export type TopAccountLeader = { fid: number; username: string; displayName: string; pfpUrl: string; role: string };
+export type TopAccountsSnapshot = {
+  leaders: TopAccountLeader[];
+  active: RecentFriendSuggestion[];
+  scanned: number;
+  complete: boolean;
+  generatedAt: number;
+};
+
+const curatedTopAccountsCached = unstable_cache(async (): Promise<TopAccountLeader[]> => {
+  const resolved = await Promise.all(CURATED_TOP_ACCOUNTS.map(async (seed) => {
+    try {
+      const { user } = await neynar().lookupUserByUsername({ username: seed.username });
+      return { fid: user.fid, username: user.username.toLowerCase(), displayName: user.display_name || user.username, pfpUrl: user.pfp_url || "", role: String(seed.role) };
+    } catch { return null; }
+  }));
+  return resolved.filter((person): person is TopAccountLeader => person !== null);
+}, ["jackcaster-curated-top-accounts-v1"], { revalidate: 86400, tags: ["curated-top-accounts"] });
+
+/** Curated Farcaster leaders plus the viewer's most active followed accounts over a cached 90-day window. */
+export async function topAccountsSnapshot(fid: number): Promise<TopAccountsSnapshot> {
+  const [leaders, recent] = await Promise.allSettled([curatedTopAccountsCached(), recentFriendSuggestions(fid)]);
+  const knownLeaders = leaders.status === "fulfilled" ? leaders.value : [];
+  const activity = recent.status === "fulfilled" ? recent.value : { people: [], scanned: 0, complete: false, generatedAt: Date.now() };
+  return { leaders: knownLeaders, active: activity.people, scanned: activity.scanned, complete: activity.complete, generatedAt: activity.generatedAt };
+}
+
+/** Chronological posts from a small curated roster and the viewer's 90-day top accounts. */
+export async function topAccountsFeed(cursor?: string, limit = 30): Promise<Page & { snapshot: TopAccountsSnapshot }> {
+  const { fid } = await viewerOrThrow();
+  const snapshot = await topAccountsSnapshot(fid);
+  const accounts = new Map<number, { fid: number }>();
+  for (const person of [...snapshot.leaders, ...snapshot.active]) accounts.set(person.fid, { fid: person.fid });
+  const page = await peopleFeed([...accounts.values()], cursor, limit, new Set([fid]));
+  return { ...page, snapshot };
 }
 
 export type SavedFriendActivity = { fid: number; username: string; posts: number; followers: number };
@@ -259,39 +350,55 @@ export type SavedFriendsActivity = { people: SavedFriendActivity[]; scanned: num
 
 /** Check every saved Friends account together, with a weekly cache and bounded scan. */
 const savedFriendsActivityCached = unstable_cache(
-  async (viewerFid: number, people: { fid: number; username: string }[]): Promise<SavedFriendsActivity> => {
+  async (viewerFid: number, people: { fid: number; username: string }[], refreshKey?: number): Promise<SavedFriendsActivity> => {
+    void refreshKey;
     if (!people.length) return { people: [], scanned: 0, complete: true, generatedAt: Date.now() };
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     const activity = new Map<number, { posts: number; followers: number }>();
-    const fids = people.map((person) => person.fid);
-    let cursor: string | undefined;
+    const groups = groupFeedFids([...new Set(people.map((person) => person.fid).filter((fid) => Number.isSafeInteger(fid) && fid > 0))]);
+    const cursors: (string | undefined)[] = groups.map(() => undefined);
+    const done = groups.map(() => false);
+    const requestsByGroup = groups.map(() => 0);
     let scanned = 0;
-    let complete = false;
-    for (let page = 0; page < 10; page++) {
-      const result = await neynar().fetchFeed({ feedType: "filter", filterType: "fids", fids, viewerFid, withRecasts: false, limit: 100, cursor });
-      let reachedCutoff = false;
-      for (const raw of result.casts) {
-        const cast = asCast(raw);
-        const timestamp = Date.parse(cast.timestamp);
-        if (!Number.isFinite(timestamp)) continue;
-        if (timestamp < cutoff) { reachedCutoff = true; continue; }
-        scanned++;
-        const author = cast.author as typeof cast.author & { follower_count?: number };
-        const previous = activity.get(author.fid);
-        const followers = Number(author.follower_count ?? 0);
-        activity.set(author.fid, {
-          posts: (previous?.posts ?? 0) + 1,
-          followers: Math.max(previous?.followers ?? 0, Number.isFinite(followers) ? followers : 0),
-        });
+    // Check every account group under a hard 10-request budget (up to 1,000 casts total).
+    // Neynar's feed filter accepts at most 10 FIDs, and saved-Friends activity refreshes weekly.
+    let requests = 0;
+    while (requests < 10 && done.some((isDone) => !isDone)) {
+      const pending = groups.map((group, index) => ({ group, index }))
+        .filter(({ index }) => !done[index])
+        .sort((a, b) => requestsByGroup[a.index] - requestsByGroup[b.index] || a.index - b.index)
+        .slice(0, 10 - requests);
+      const results = await Promise.all(pending.map(async ({ group, index }) => ({
+        index,
+        result: await neynar().fetchFeed({ feedType: "filter", filterType: "fids", fids: group, viewerFid, withRecasts: false, limit: 100, cursor: cursors[index] }),
+      })));
+      requests += results.length;
+      for (const { index } of results) requestsByGroup[index]++;
+      for (const { index, result } of results) {
+        let reachedCutoff = false;
+        for (const raw of result.casts) {
+          const cast = asCast(raw);
+          const timestamp = Date.parse(cast.timestamp);
+          if (!Number.isFinite(timestamp)) continue;
+          if (timestamp < cutoff) { reachedCutoff = true; continue; }
+          scanned++;
+          const author = cast.author as typeof cast.author & { follower_count?: number };
+          const previous = activity.get(author.fid);
+          const followers = Number(author.follower_count ?? 0);
+          activity.set(author.fid, {
+            posts: (previous?.posts ?? 0) + 1,
+            followers: Math.max(previous?.followers ?? 0, Number.isFinite(followers) ? followers : 0),
+          });
+        }
+        cursors[index] = result.next?.cursor ?? undefined;
+        if (reachedCutoff || !cursors[index] || !result.casts.length) done[index] = true;
       }
-      cursor = result.next?.cursor ?? undefined;
-      if (reachedCutoff || !cursor || !result.casts.length) { complete = true; break; }
     }
     return {
       people: people.map((person) => ({ ...person, posts: activity.get(person.fid)?.posts ?? 0, followers: activity.get(person.fid)?.followers ?? 0 }))
         .sort((a, b) => b.posts - a.posts || b.followers - a.followers || a.username.localeCompare(b.username)),
       scanned,
-      complete,
+      complete: done.every(Boolean),
       generatedAt: Date.now(),
     };
   },
@@ -299,8 +406,8 @@ const savedFriendsActivityCached = unstable_cache(
   { revalidate: 604800, tags: ["saved-friends-activity"] }
 );
 
-export async function savedFriendsActivity(fid: number, people: { fid: number; username: string }[]): Promise<SavedFriendsActivity> {
-  return savedFriendsActivityCached(fid, people);
+export async function savedFriendsActivity(fid: number, people: { fid: number; username: string }[], refresh = false): Promise<SavedFriendsActivity> {
+  return savedFriendsActivityCached(fid, people, refresh ? Date.now() : undefined);
 }
 
 const weeklyMiniAppsCached = unstable_cache(

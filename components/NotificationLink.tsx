@@ -24,19 +24,21 @@ export function NotificationLink({ icon }: { icon: React.ReactNode }) {
     };
 
     if (pathname === "/notifications") {
-      setCount(0);
       timer = setTimeout(() => { void refresh(true); }, 2000);
     } else {
       void refresh();
     }
     const interval = setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 300_000);
     const visible = () => { if (document.visibilityState === "visible") void refresh(); };
+    const read = () => setCount(0);
     document.addEventListener("visibilitychange", visible);
+    window.addEventListener("jackcaster:notifications-read", read);
     return () => {
       active = false;
       if (timer) clearTimeout(timer);
       clearInterval(interval);
       document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("jackcaster:notifications-read", read);
     };
   }, [pathname]);
 

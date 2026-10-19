@@ -9,11 +9,13 @@ import { publish } from "@/app/actions";
 import { prepareImage, randomName } from "@/lib/image";
 import type { Author } from "@/lib/types";
 import { Avatar } from "./Avatar";
+import { GifMemePicker } from "./GifMemePicker";
 
 const MAX_BYTES = 1024;
 const MAX_EMBEDS = 2;
 
 type Photo = { id: string; preview: string; status: "uploading" | "done" | "error"; url?: string; error?: string };
+type GifSelection = { url: string; preview: string; title: string };
 
 export type QuoteTarget = { hash: string; fid: number; author: Author; text: string };
 
@@ -63,6 +65,7 @@ export function Composer({
   const [link, setLink] = useState(initialLink);
   const [showLink, setShowLink] = useState(Boolean(initialLink));
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [gif, setGif] = useState<GifSelection | null>(null);
   const [quoted, setQuoted] = useState<QuoteTarget | undefined>(quote);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,10 +126,10 @@ export function Composer({
 
   const bytes = new TextEncoder().encode(text).length;
   const over = bytes > MAX_BYTES;
-  const used = photos.length + (link.trim() ? 1 : 0) + (quoted ? 1 : 0);
+  const used = photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0);
   const slotsLeft = MAX_EMBEDS - used;
   const uploading = photos.some((p) => p.status === "uploading");
-  const empty = !text.trim() && !link.trim() && !quoted && !photos.some((p) => p.status === "done");
+  const empty = !text.trim() && !link.trim() && !quoted && !gif && !photos.some((p) => p.status === "done");
 
   function grow(el: HTMLTextAreaElement) {
     el.style.height = "auto";
@@ -137,7 +140,7 @@ export function Composer({
     setError(null);
     const images = files.filter((f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name));
     if (!images.length) return;
-    const room = MAX_EMBEDS - (photos.length + (link.trim() ? 1 : 0) + (quoted ? 1 : 0));
+    const room = MAX_EMBEDS - (photos.length + (gif ? 1 : 0) + (link.trim() ? 1 : 0) + (quoted ? 1 : 0));
     if (room <= 0) {
       setError("Farcaster allows 2 attachments per cast. Remove one first.");
       return;
@@ -165,6 +168,12 @@ export function Composer({
     });
   }
 
+  function selectGif(selection: GifSelection) {
+    if (slotsLeft <= 0) { setError("Farcaster allows 2 attachments per cast. Remove one first."); return; }
+    setGif(selection);
+    setError(null);
+  }
+
   function submit() {
     if (empty || over || pending || uploading) return;
     if (photos.some((p) => p.status === "error")) {
@@ -178,7 +187,7 @@ export function Composer({
         parentHash,
         parentAuthorFid,
         channelId: channel || undefined,
-        embedUrls: [...photos.map((p) => p.url!).filter(Boolean), ...(link.trim() ? [link.trim()] : [])],
+        embedUrls: [...photos.map((p) => p.url!).filter(Boolean), ...(gif ? [gif.url] : []), ...(link.trim() ? [link.trim()] : [])],
         quote: quoted ? { hash: quoted.hash, fid: quoted.fid } : undefined,
       });
       if (!res.ok) {
@@ -192,6 +201,7 @@ export function Composer({
       setLink("");
       setShowLink(false);
       setPhotos([]);
+      setGif(null);
       setQuoted(undefined);
       if (ref.current) ref.current.style.height = "auto";
       if (afterPost) {
@@ -264,6 +274,8 @@ export function Composer({
           </div>
         )}
 
+        {gif && <div className="composer-gif-preview"><img src={gif.preview} alt={gif.title || "Selected GIF"} /><span>{gif.title || "GIF"}</span><button type="button" className="attach-x" onClick={() => setGif(null)} aria-label="Remove GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>}
+
         {quoted && (
           <div className="quote composer-quote">
             <div className="q-head">
@@ -311,6 +323,7 @@ export function Composer({
               <path d="M21 16l-5-5-9 9" />
             </svg>
           </button>
+          <GifMemePicker disabled={slotsLeft <= 0} onSelect={selectGif} onMeme={(file) => { void addFiles([file]); }} />
           <button
             type="button"
             className="tool"

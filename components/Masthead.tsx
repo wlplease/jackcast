@@ -1,13 +1,12 @@
 "use client";
 
-"use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { logout } from "@/app/actions";
 import { Wordmark } from "@/components/Wordmark";
 import { NotificationLink } from "@/components/NotificationLink";
+import { ListeningDock } from "@/components/ListeningDock";
 
 const I = {
   search: (
@@ -44,7 +43,7 @@ const I = {
   ),
 };
 
-export function Masthead({ channels, customName }: { channels: string[]; customName: string; aiEnabled?: boolean }) {
+export function Masthead({ channels, customName, audioTracks = [] }: { channels: string[]; customName: string; audioTracks?: { title: string; url: string }[]; aiEnabled?: boolean }) {
   const path = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const tab = (href: string, label: string) => (
@@ -68,6 +67,7 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
         <nav className="mast-nav" aria-label="Main">
           {icon("/search", "Search", I.search)}
           {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
+          <ListeningDock personalTracks={audioTracks} />
           <NotificationLink icon={I.bell} />
           {icon("/profile", "Profile and analytics", I.you)}
           {icon("/me", "Settings", I.settings)}
@@ -78,11 +78,13 @@ export function Masthead({ channels, customName }: { channels: string[]; customN
       </div>
       <nav className="tabs" aria-label="Feeds">
         {tab("/", "Following")}
-        {tab("/friends", "Friends")}
+        {tab("/saved", "Saved")}
+        {tab("/media", "Media")}
+        {tab("/friends", "Top Friends")}
+        {tab("/top", "Top Accounts")}
         {tab("/recasts", "Recasts")}
         {tab("/mini-apps", "Mini Apps")}
         {tab("/circle", customName)}
-        {tab("/dev", "Dev")}
         {channels.map((c) => tab(`/c/${c}`, `/${c}`))}
       </nav>
       {confirmSignOut && <div className="confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmSignOut(false); }}>

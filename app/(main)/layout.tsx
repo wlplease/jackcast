@@ -2,6 +2,7 @@ import { Masthead } from "@/components/Masthead";
 import { FeedScrollRestoration } from "@/components/FeedScrollRestoration";
 import { tabChannels } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
+import { SavedCastsProvider } from "@/components/SavedCastsProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -11,19 +12,19 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     const [nextChannels, prefs] = await Promise.all([tabChannels(), getPrefs()]);
     channels = nextChannels;
     return (
-      <div className="shell">
+      <SavedCastsProvider initial={prefs.savedCasts}><div className="shell">
         <FeedScrollRestoration />
-        <Masthead channels={channels} customName={prefs.customName} />
+        <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} />
         <main>{children}</main>
-      </div>
+      </div></SavedCastsProvider>
     );
   } catch {}
 
   return (
-    <div className="shell">
+    <SavedCastsProvider initial={[]}><div className="shell">
       <FeedScrollRestoration />
       <Masthead channels={channels} customName="Custom" />
       <main>{children}</main>
-    </div>
+    </div></SavedCastsProvider>
   );
 }

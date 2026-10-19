@@ -4,6 +4,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { customFeed } from "@/lib/data";
 import { getPrefs } from "@/lib/prefs";
 import { requireViewer } from "@/lib/viewer";
+import { MAX_CUSTOM_PEOPLE } from "@/lib/prefs-shared";
 
 export default async function CustomFeedPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
   const { cursor } = await searchParams;
@@ -15,7 +16,7 @@ export default async function CustomFeedPage({ searchParams }: { searchParams: P
         <div className="section-head"><h1>{prefs.customName}</h1></div>
         <div className="empty">
           <h2>Build your own feed</h2>
-          <p>Choose up to 20 people for a separate chronological feed. Search people you already follow in your profile settings.</p>
+          <p>Choose up to {MAX_CUSTOM_PEOPLE} people for a separate chronological feed. Search people you already follow in your profile settings.</p>
           <Link className="btn" href="/me#custom-feed">Set up this feed</Link>
         </div>
       </>

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { CHANNEL_ID, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_FRIENDS, MAX_MUTES, MAX_TABS, normalizeMute, type Prefs } from "./prefs-shared";
+import { CHANNEL_ID, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_TABS, normalizeMute, type Prefs } from "./prefs-shared";
 import { MODES, THEME_IDS, type Mode, type ThemeId } from "./themes";
 
 export const PREFS_COOKIE = "selfcaster_prefs";
@@ -23,18 +23,18 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const mode = MODES.includes(p.mode as Mode) ? (p.mode as Mode) : DEFAULT_PREFS.mode;
     const density = p.density === "compact" ? "compact" : "comfortable";
     const showPreviews = p.showPreviews !== false;
-    const cleanPeople = (value: unknown) => Array.isArray(value)
+    const cleanPeople = (value: unknown, limit: number) => Array.isArray(value)
       ? value
           .map((entry) => ({ fid: Number(entry?.fid), username: String(entry?.username ?? "").trim().toLowerCase().replace(/^@/, "") }))
           .filter((entry) => Number.isSafeInteger(entry.fid) && entry.fid > 0 && /^[a-z0-9_-]{1,32}$/.test(entry.username))
           .filter((entry, index, all) => all.findIndex((x) => x.fid === entry.fid) === index)
-          .slice(0, MAX_FRIENDS)
+          .slice(0, limit)
       : [];
-    const friends = cleanPeople(p.friends);
+    const friends = cleanPeople(p.friends, MAX_FRIENDS);
     const friendFids = new Set(friends.map((person) => person.fid));
     // A Friends selection belongs only in Friends, even if an older settings
     // cookie also listed that account in the custom feed.
-    const customPeople = cleanPeople(p.customPeople).filter((person) => !friendFids.has(person.fid));
+    const customPeople = cleanPeople(p.customPeople, MAX_CUSTOM_PEOPLE).filter((person) => !friendFids.has(person.fid));
     const customName = typeof p.customName === "string"
       ? p.customName.trim().replace(/\s+/g, " ").slice(0, 18) || DEFAULT_PREFS.customName
       : DEFAULT_PREFS.customName;
@@ -61,7 +61,10 @@ export function parsePrefs(raw: string | undefined): Prefs {
           } catch { return []; }
         })).values())
       : [];
-    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, audioTracks, theme, mode };
+    const savedCasts = Array.isArray(p.savedCasts)
+      ? Array.from(new Set(p.savedCasts.filter((hash): hash is string => typeof hash === "string" && /^0x[0-9a-f]{40}$/i.test(hash)).map((hash) => hash.toLowerCase()))).slice(0, MAX_SAVED_CASTS)
+      : [];
+    return { mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, audioTracks, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

@@ -1,0 +1,23 @@
+/** Curated Farcaster and ecosystem accounts offered in Top Friends settings. */
+export const CURATED_TOP_ACCOUNTS = [
+  { username: "balajis.eth", name: "Balaji", role: "Network states and crypto" },
+  { username: "grin", name: "Grin", role: "Farcaster community" },
+  { username: "dwr", name: "Dan Romero", role: "Farcaster co-founder" },
+  { username: "linda", name: "Linda Xie", role: "Farcaster community" },
+  { username: "horsefacts.eth", name: "Horsefacts", role: "Farcaster builder" },
+  { username: "rish", name: "Rish", role: "Neynar co-founder" },
+  { username: "manan", name: "Manan", role: "Neynar" },
+  { username: "v", name: "Varun", role: "Farcaster co-founder" },
+  { username: "jesse.base.eth", name: "Jesse Pollak", role: "Base and Farcaster" },
+  { username: "vitalik.eth", name: "Vitalik Buterin", role: "Ethereum and Farcaster" },
+  { username: "warpcast", name: "Warpcast", role: "Farcaster client" },
+  { username: "base", name: "Base", role: "Onchain ecosystem" },
+  { username: "neynar", name: "Neynar", role: "Farcaster developer tools" },
+  { username: "clanker", name: "Clanker", role: "Farcaster onchain apps" },
+  { username: "poidh", name: "POIDH", role: "Farcaster mini app" },
+  { username: "nounishprof", name: "Nounish Professor", role: "Farcaster creator" },
+  { username: "ted", name: "Ted", role: "Farcaster builder" },
+  { username: "moxie", name: "Moxie", role: "Farcaster protocol" },
+  { username: "purple", name: "Purple", role: "Farcaster community" },
+  { username: "0xdesigner", name: "0xDesigner", role: "Farcaster creator" },
+] as const;

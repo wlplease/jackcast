@@ -28,6 +28,8 @@ export type Prefs = {
   pinnedCastHash: string | null;
   /** Mini apps saved to this device. */
   savedMiniApps: { url: string; title: string }[];
+  /** Cast hashes saved to this device's private reading list. */
+  savedCasts: string[];
   /** Optional personal audio playlist, stored in this device's settings cookie. */
   audioTracks: { url: string; title: string }[];
   /** Color theme (see lib/themes.ts). */
@@ -36,11 +38,14 @@ export type Prefs = {
   mode: Mode;
 };
 
-export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], audioTracks: [], theme: "selfcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], audioTracks: [], theme: "selfcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
-export const MAX_FRIENDS = 20;
+export const MAX_FRIENDS = 50;
+export const MAX_CUSTOM_PEOPLE = 20;
+export const MAX_TOP_ACCOUNTS = 20;
 export const MAX_AUDIO_TRACKS = 3;
+export const MAX_SAVED_CASTS = 30;
 export const CHANNEL_ID = /^[a-z0-9-]{1,32}$/;
 
 export const QUALITY_LEVELS = [

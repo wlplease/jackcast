@@ -9,7 +9,7 @@ export async function GET() {
   if (!viewer) return NextResponse.json({ count: 0 }, { headers: { "Cache-Control": "no-store" } });
   try {
     const result = await neynar().fetchAllNotifications({ fid: viewer.fid, limit: 25 });
-    const count = result.notifications.reduce((total, notification) => total + (notification.seen ? 0 : notification.count ?? 1), 0);
+    const count = Number.isSafeInteger(result.unseen_notifications_count) ? result.unseen_notifications_count : 0;
     return NextResponse.json({ count }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "Notification count unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });

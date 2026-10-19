@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { loadMiniAppSearch, refreshMiniApps } from "@/app/(main)/mini-apps/actions";
 import type { MiniAppSummary } from "@/lib/data";
 import { MiniAppSaveButton } from "@/components/MiniAppSaveButton";
 import { MiniAppLaunchButton } from "@/components/MiniAppLaunchButton";
 import type { Prefs } from "@/lib/prefs-shared";
 
-function AppGrid({ apps, saved, onSaved }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void }) {
+const RECENT_KEY = "jackcaster:recent-mini-apps:v1";
+type RecentApp = { url: string; title: string };
+
+function AppGrid({ apps, saved, onSaved, onLaunch }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void; onLaunch: (app: RecentApp) => void }) {
   if (!apps.length) return <p className="field-hint">No mini apps found in this section yet.</p>;
   return <div className="miniapp-grid">{apps.map((app) => <article key={app.url} className="miniapp-card">
     {app.image ? <img src={app.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="miniapp-placeholder" aria-hidden="true">✳</span>}
     <span className="miniapp-card-copy"><b>{app.title}</b>{app.author && <small>by {app.author}</small>}{app.description && <span>{app.description}</span>}</span>
-    <span className="miniapp-actions"><MiniAppSaveButton app={{ url: app.url, title: app.title }} saved={saved.some((item) => item.url === app.url)} allSaved={saved} onSaved={onSaved} /><MiniAppLaunchButton app={{ url: app.url, title: app.title }} /></span>
+    <span className="miniapp-actions"><MiniAppSaveButton app={{ url: app.url, title: app.title }} saved={saved.some((item) => item.url === app.url)} allSaved={saved} onSaved={onSaved} /><MiniAppLaunchButton app={{ url: app.url, title: app.title }} onLaunch={onLaunch} /></span>
   </article>)}</div>;
 }
 
@@ -25,6 +28,25 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
   const [error, setError] = useState("");
   const [savedApps, setSavedApps] = useState(initialSaved);
   const [category, setCategory] = useState("all");
+  const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]") as unknown;
+      if (Array.isArray(raw)) setRecentApps(raw.filter((entry): entry is RecentApp => {
+        if (!entry || typeof entry !== "object" || typeof (entry as RecentApp).url !== "string" || typeof (entry as RecentApp).title !== "string") return false;
+        try { const url = new URL((entry as RecentApp).url); return url.protocol === "https:" && !url.username && !url.password; } catch { return false; }
+      }).slice(0, 8));
+    } catch { setRecentApps([]); }
+  }, []);
+
+  function rememberApp(app: RecentApp) {
+    setRecentApps((current) => {
+      const next = [app, ...current.filter((item) => item.url !== app.url)].slice(0, 8);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
 
   async function search(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,9 +74,10 @@ export function MiniAppsHub({ weekly, relevant, generatedAt, initialSaved }: { w
       <button className="btn ghost sm" disabled={searching || query.trim().length < 2}>{searching ? "Searching…" : "Search"}</button>
     </form>
     {error && <p className="form-error miniapp-error" role="status">{error}</p>}
-    {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Saved apps</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} /></section>}
-    {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} /></section>}
-    <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button key={value} className={category === value ? "active" : ""} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} /></section>
-    <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} /></section>
+    {recentApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Recently opened</h2><button type="button" className="linkish" onClick={() => { setRecentApps([]); try { localStorage.removeItem(RECENT_KEY); } catch {} }}>Clear</button></div><AppGrid apps={recentApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
+    {savedApps.length > 0 && <section className="me-section"><div className="me-section-head"><h2>Saved apps</h2><span className="meta">this device · {savedApps.length}/6</span></div><AppGrid apps={savedApps.map((app) => ({ ...app }))} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
+    {results && <section className="me-section"><div className="me-section-head"><h2>Search results</h2><button className="linkish" onClick={() => { setResults(null); setQuery(""); }}>Clear</button></div><AppGrid apps={results} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>}
+    <section className="me-section"><div className="me-section-head"><h2>Trending this week</h2><span className="meta">Neynar 7-day trend</span></div><p className="field-hint">Ranked by Neynar’s mini app trending score for the last 7 days.</p><div className="miniapp-categories" aria-label="Filter mini apps by category">{categories.map((value) => <button key={value} className={category === value ? "active" : ""} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><AppGrid apps={visibleWeekly} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>
+    <section className="me-section"><div className="me-section-head"><h2>For your network</h2><span className="meta">Personalized · 7 days</span></div><p className="field-hint">Based on mini apps shared by people Neynar identifies as relevant to you.</p><AppGrid apps={relevant} saved={savedApps} onSaved={setSavedApps} onLaunch={rememberApp} /></section>
   </>;
 }

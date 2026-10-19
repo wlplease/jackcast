@@ -45,7 +45,7 @@ export async function Feed({
           <h2>{emptyTitle}</h2>
           <p>{emptyBody}</p>
         </div>
-        {(live === "following" || live === "friends") && <InfiniteFeed initial={page} canWrite={canWrite} viewerFid={viewerFid ?? 0} mutes={prefs.mutes} groupLinks={prefs.groupLinks} live={live} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} digestEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />}
+        {(live === "following" || live === "friends" || live === "media" || live === "top") && <InfiniteFeed key={live === "media" ? mediaKindFrom(basePath) : live} initial={page} canWrite={canWrite} viewerFid={viewerFid ?? 0} mutes={prefs.mutes} groupLinks={prefs.groupLinks} live={live} mediaKind={live === "media" ? mediaKindFrom(basePath) : "all"} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} digestEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />}
         {hiddenNote}
         {page.cursor && (
           <Link className="more" href={`${basePath}${basePath.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(page.cursor)}`}>
@@ -76,20 +76,24 @@ export async function Feed({
       <ActiveFeedFilters prefs={prefs} />
       {live ? (
         <>
-          <NewCastsPill feed={live} newest={newest} />
-          {live === "following" || live === "friends"
-            ? <InfiniteFeed initial={page} canWrite={canWrite} viewerFid={viewerFid ?? 0} mutes={prefs.mutes} groupLinks={prefs.groupLinks} live={live} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} digestEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
+          {live !== "top" && live !== "friends" && <NewCastsPill feed={live} newest={newest} />}
+          {live === "following" || live === "friends" || live === "media" || live === "top"
+            ? <InfiniteFeed key={live === "media" ? mediaKindFrom(basePath) : live} initial={page} canWrite={canWrite} viewerFid={viewerFid ?? 0} mutes={prefs.mutes} groupLinks={prefs.groupLinks} live={live} mediaKind={live === "media" ? mediaKindFrom(basePath) : "all"} audioEnabled={Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID)} digestEnabled={Boolean(process.env.GOOGLE_AI_API_KEY)} />
             : <CaughtUpProvider feed={live} newest={newest}>{list}</CaughtUpProvider>}
         </>
       ) : (
         list
       )}
       {hiddenNote}
-      {page.cursor && (
+      {page.cursor && !(live === "following" || live === "friends" || live === "media" || live === "top") && (
         <Link className="more" href={`${basePath}${basePath.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(page.cursor)}`}>
           older →
         </Link>
       )}
     </>
   );
+}
+
+function mediaKindFrom(basePath: string): string {
+  return new URLSearchParams(basePath.split("?")[1] ?? "").get("type") ?? "all";
 }

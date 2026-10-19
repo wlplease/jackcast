@@ -7,6 +7,7 @@ import { react } from "@/app/actions";
 import { savePrefs } from "@/app/(main)/me/actions";
 import { compact } from "@/lib/format";
 import { MAX_MUTES, normalizeMute } from "@/lib/prefs-shared";
+import { SaveCastButton } from "@/components/SaveCastButton";
 
 type State = { liked: boolean; recasted: boolean; likes: number; recasts: number };
 
@@ -132,28 +133,14 @@ export function CastActions(props: {
     try {
       const { sdk } = await import("@farcaster/miniapp-sdk");
       if (await sdk.isInMiniApp()) {
-        await sdk.actions.composeCast({ embeds: [castUrl] });
+        await sdk.actions.composeCast({ text: `Sharing this cast on Jackcaster`, embeds: [castUrl] });
         return;
       }
     } catch {
-      // The SDK is optional outside Farcaster; use the browser's share options below.
+      // The SDK is only available when Jackcaster is hosted by Farcaster.
     }
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Share this cast", url: castUrl });
-        return;
-      }
-      await navigator.clipboard.writeText(castUrl);
-      setShareMessage("Cast link copied");
-    } catch (shareError) {
-      if (shareError instanceof DOMException && shareError.name === "AbortError") return;
-      try {
-        await navigator.clipboard.writeText(castUrl);
-        setShareMessage("Cast link copied");
-      } catch {
-        setShareMessage("Could not share this cast. Open the cast and copy its link.");
-      }
-    }
+    const composeUrl = `/compose?url=${encodeURIComponent(castUrl)}&text=${encodeURIComponent("Sharing this cast on Jackcaster")}`;
+    window.location.assign(composeUrl);
   }
 
   useEffect(() => {
@@ -193,9 +180,10 @@ export function CastActions(props: {
         {Icon.like(state.liked)}
         {state.likes > 0 && compact(state.likes)}
       </button>
-      <button type="button" className="act" onClick={shareCast} aria-label="Share cast" title="Share cast">
+      <button type="button" className="act" onClick={shareCast} aria-label="Share as a cast" title="Share as a cast">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" /></svg>
       </button>
+      <SaveCastButton hash={props.hash} />
       {shareMessage && <span className="share-status" role="status">{shareMessage}</span>}
       {props.authorUsername && props.viewerFid != null && props.viewerFid !== props.authorFid && (
         <details className="cast-menu">

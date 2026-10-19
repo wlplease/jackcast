@@ -15,7 +15,7 @@ export function ProfileFriendsAction({ person, initial }: { person: Person; init
   function toggle() {
     const next = added ? people.filter((item) => item.fid !== person.fid) : [...people, person];
     if (!added && people.length >= MAX_FRIENDS) {
-      setError(`Friends can include up to ${MAX_FRIENDS} people. Remove someone in settings first.`);
+      setError(`Top Friends can include up to ${MAX_FRIENDS} people. Remove someone in Settings first.`);
       return;
     }
     setError("");
@@ -29,7 +29,7 @@ export function ProfileFriendsAction({ person, initial }: { person: Person; init
   return (
     <div className="profile-friend-action">
       <button type="button" className={`btn sm${added ? " ghost" : ""}`} onClick={toggle} disabled={pending} aria-pressed={added}>
-        {pending ? "Saving…" : added ? "In Friends ✓" : "Add to Friends"}
+        {pending ? "Saving…" : added ? "In Top Friends ✓" : "Add to Top Friends"}
       </button>
       {error && <span className="form-error" role="status">{error}</span>}
     </div>

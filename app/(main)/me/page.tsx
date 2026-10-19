@@ -12,10 +12,11 @@ import { ListeningSettings } from "@/components/ListeningSettings";
 const SETTINGS = [
   { href: "#appearance", icon: "◐", title: "Appearance", detail: "Themes and light or dark mode" },
   { href: "#feeds", icon: "☷", title: "Channel tabs", detail: "Choose feeds and composer channels" },
-  { href: "#friends", icon: "♡", title: "Friends and custom", detail: "Choose people for each feed" },
+  { href: "#friends", icon: "♡", title: "Top Friends and custom", detail: "Choose people for each feed" },
   { href: "#filters", icon: "⌕", title: "Feed controls", detail: "Muted topics, replies, mini apps, and density" },
   { href: "#listening", icon: "♫", title: "Listening", detail: "Your optional audio playlist" },
   { href: "#account", icon: "◉", title: "Account and connection", detail: "Posting access and setup details" },
+  { href: "#developer", icon: "⌘", title: "Developer tools", detail: "Mini Apps and project tools" },
 ];
 
 export default async function SettingsPage() {
@@ -32,10 +33,11 @@ export default async function SettingsPage() {
     <nav className="settings-shortcuts" aria-label="Settings sections">{SETTINGS.map((section) => <a key={section.href} href={section.href} className="settings-shortcut"><span className="settings-shortcut-icon" aria-hidden="true">{section.icon}</span><span><strong>{section.title}</strong><small>{section.detail}</small></span><span aria-hidden="true">›</span></a>)}</nav>
     <section className="me-section" id="appearance"><div className="me-section-head"><h2>Appearance</h2><span className="meta">this device</span></div><ThemeForm initialTheme={prefs.theme} initialMode={prefs.mode} /></section>
     <section className="me-section" id="feeds"><div className="me-section-head"><h2>Channel tabs</h2><span className="meta">this device</span></div><ChannelTabsForm followed={followed} current={currentTabs} /></section>
-    <section className="me-section" id="friends"><div className="me-section-head"><h2>Friends</h2><span className="meta">this device</span></div><FriendsFeedForm initial={prefs.friends} /></section>
+    <section className="me-section" id="friends"><div className="me-section-head"><h2>Top Friends</h2><span className="meta">this device · up to 50</span></div><FriendsFeedForm initial={prefs.friends} /></section>
     <section className="me-section" id="custom-feed"><div className="me-section-head"><h2>Custom feed</h2><span className="meta">this device</span></div><CustomFeedNameForm initial={prefs.customName} /><CustomFeedForm initial={prefs.customPeople} excluded={prefs.friends} /></section>
     <section className="me-section" id="filters"><div className="me-section-head"><h2>Feed controls</h2><span className="meta">this device</span></div><FiltersForm initial={prefs} envDefault={envDefault} /></section>
     <section className="me-section" id="listening"><div className="me-section-head"><div><h2>Listening</h2><p className="field-hint">Optional background tracks and audio settings.</p></div><span className="meta">this device</span></div><ListeningSettings initial={prefs.audioTracks} /></section>
     <section className="me-section" id="account"><div className="me-section-head"><h2>Account and connection</h2></div><p className="field-hint">{viewer.canWrite ? viewer.source === "env" ? "Connected on every device through your environment variables." : "Connected on this device." : "Read-only. Connect to post, like, and reply."} <Link href="/setup" className="linkish">{viewer.canWrite ? "Connection details" : "Connect account"}</Link></p></section>
+    <section className="me-section" id="developer"><div className="me-section-head"><div><h2>Developer tools</h2><p className="field-hint">Your published Mini Apps and project resources.</p></div><span className="meta">advanced</span></div><Link className="btn ghost sm" href="/dev">Open Developer tools →</Link></section>
   </>;
 }

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { after } from "next/server";
 import { Avatar } from "@/components/Avatar";
 import { SetupBanner } from "@/components/SetupBanner";
 import { neynar } from "@/lib/neynar";
 import { timeAgo } from "@/lib/format";
 import type { Author } from "@/lib/types";
 import { requireViewer } from "@/lib/viewer";
+import { NotificationControls } from "@/components/NotificationControls";
 
 const GLYPH: Record<string, string> = {
   likes: "♥",
@@ -52,18 +52,14 @@ export default async function NotificationsPage({
   }
 
   const signerUuid = viewer.signerUuid;
-  const unseenCount = res.notifications.reduce((count, notification) => count + (notification.seen ? 0 : notification.count ?? 1), 0);
-  if (signerUuid && !cursor && unseenCount > 0) {
-    after(async () => {
-      await neynar().markNotificationsAsSeen({ signerUuid }).catch(() => {});
-    });
-  }
+  const unseenCount = res.unseen_notifications_count;
 
   return (
     <>
       <div className="section-head">
         <h1>Notifications</h1>
-        {unseenCount > 0 && <span className="meta">{unseenCount} new</span>}
+        {unseenCount > 0 && <span className="meta">{unseenCount} unread</span>}
+        <NotificationControls count={unseenCount} canMarkRead={Boolean(signerUuid)} />
       </div>
       {res.notifications.map((n, i) => {
         const users: Author[] =

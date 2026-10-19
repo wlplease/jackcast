@@ -5,8 +5,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
-import { followedPeople as getFollowedPeople, recentFriendSuggestions, savedFriendsActivity, ownMiniApps } from "@/lib/data";
-import { CHANNEL_ID, type Prefs } from "@/lib/prefs-shared";
+import { followedPeople as getFollowedPeople, recentFriendSuggestions, savedFriendsActivity, ownMiniApps, topAccountsSnapshot } from "@/lib/data";
+import { CHANNEL_ID, MAX_FRIENDS, MAX_SAVED_CASTS, MAX_TOP_ACCOUNTS, type Prefs } from "@/lib/prefs-shared";
 
 /** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
 export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; prefs: Prefs } | { ok: false; error: string }> {
@@ -14,7 +14,7 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; pref
   // Re-parse so only clean, bounded values ever reach the cookie.
   const prefs = parsePrefs(JSON.stringify({ ...current, ...patch }));
   const serialized = JSON.stringify(prefs);
-  if (new TextEncoder().encode(serialized).length > 3500) {
+  if (new TextEncoder().encode(serialized).length > 3800) {
     return { ok: false, error: "Your device settings are too large to save. Remove a few mute terms or people from your feeds and try again." };
   }
   const jar = await cookies();
@@ -27,6 +27,16 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; pref
   });
   revalidatePath("/", "layout");
   return { ok: true, prefs };
+}
+
+export async function toggleSavedCast(hash: string): Promise<{ ok: true; saved: boolean } | { ok: false; error: string }> {
+  if (!/^0x[0-9a-f]{40}$/i.test(hash)) return { ok: false, error: "That cast link is not valid." };
+  const normalized = hash.toLowerCase();
+  const prefs = await getPrefs();
+  const exists = prefs.savedCasts.includes(normalized);
+  if (!exists && prefs.savedCasts.length >= MAX_SAVED_CASTS) return { ok: false, error: `Your saved list is full (${MAX_SAVED_CASTS}). Remove a cast first.` };
+  const result = await savePrefs({ savedCasts: exists ? prefs.savedCasts.filter((item) => item !== normalized) : [normalized, ...prefs.savedCasts] });
+  return result.ok ? { ok: true, saved: !exists } : { ok: false, error: result.error };
 }
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
@@ -113,8 +123,7 @@ export async function suggestRecentFriends(refresh = false): Promise<{ ok: true;
   const viewer = await getViewer();
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
-    if (refresh) revalidateTag("recent-friend-suggestions");
-    return { ok: true, ...await recentFriendSuggestions(viewer.fid) };
+    return { ok: true, ...await recentFriendSuggestions(viewer.fid, refresh) };
   } catch (error) {
     return { ok: false, error: neynarFailure(error, "Couldn't scan your recent feed. Check your Neynar connection and try again.") };
   }
@@ -125,10 +134,33 @@ export async function checkSavedFriendsActivity(refresh = false): Promise<{ ok: 
   if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
   try {
     const prefs = await getPrefs();
-    if (refresh) revalidateTag("saved-friends-activity");
-    return { ok: true, ...await savedFriendsActivity(viewer.fid, prefs.friends) };
+    return { ok: true, ...await savedFriendsActivity(viewer.fid, prefs.friends, refresh) };
   } catch (error) {
     return { ok: false, error: neynarFailure(error, "Couldn't check your saved Friends accounts. Try again shortly.") };
+  }
+}
+
+export async function addTopAccountsBatch(group: "network" | "leaders" | "both"): Promise<{ ok: true; prefs: Prefs; added: number; alreadySelected: number; skippedForLimit: number } | { ok: false; error: string }> {
+  if (group !== "network" && group !== "leaders" && group !== "both") return { ok: false, error: "Choose a valid account group." };
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, error: "Connect your account at /setup first." };
+  try {
+    const [snapshot, current] = await Promise.all([topAccountsSnapshot(viewer.fid), getPrefs()]);
+    const network = snapshot.active.slice(0, MAX_TOP_ACCOUNTS).map(({ fid, username }) => ({ fid, username }));
+    const leaders = snapshot.leaders.slice(0, MAX_TOP_ACCOUNTS).map(({ fid, username }) => ({ fid, username }));
+    const requested = group === "network" ? network : group === "leaders" ? leaders : [...leaders, ...network];
+    if (!requested.length) return { ok: false, error: group === "network" ? "No 90-day activity rankings are available yet. Try again after the activity scan." : "No curated Farcaster accounts could be loaded. Try again shortly." };
+    const existing = new Set(current.friends.map((person) => person.fid));
+    const unique = requested.filter((person, index, all) => all.findIndex((candidate) => candidate.fid === person.fid) === index);
+    const alreadySelected = unique.filter((person) => existing.has(person.fid)).length;
+    const additions = unique.filter((person) => !existing.has(person.fid));
+    const room = Math.max(0, MAX_FRIENDS - current.friends.length);
+    const accepted = additions.slice(0, room);
+    const result = await savePrefs({ friends: [...current.friends, ...accepted] });
+    if (!result.ok) return result;
+    return { ok: true, prefs: result.prefs, added: accepted.length, alreadySelected, skippedForLimit: additions.length - accepted.length };
+  } catch (error) {
+    return { ok: false, error: neynarFailure(error, "Couldn't add those accounts right now. Try again shortly.") };
   }
 }
 
