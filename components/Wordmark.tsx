@@ -1,7 +1,6 @@
 "use client";
 
 import { BRAND } from "@/lib/brand";
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { recordArcadeSecret } from "@/lib/arcade-client";
 import { useRouter } from "next/navigation";
@@ -26,7 +25,11 @@ export function Wordmark() {
   return (
     <span className="wordmark-secret-wrap">
       <span className="wordmark-trigger" aria-label="Jackcaster" onClick={revealArcade}>
-        <Image className="wordmark-mark" src="/jackcaster-icon.svg?v=3" width={32} height={32} alt="" aria-hidden="true" priority />
+        <svg className="wordmark-mark wordmark-mark-inline" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="8" fill="#07584f" />
+          <path d="m16 4.5 11.5 11.5-4.6 4.6-3.7-3.7V28h-6.4V16.9l-3.7 3.7L4.5 16 16 4.5Z" fill="#fff" />
+          <circle cx="25" cy="7" r="2" fill="#f3a2ce" />
+        </svg>
         <span>{BRAND.wordmark.first}<em>{BRAND.wordmark.second}</em></span>
       </span>
       {secret && <button type="button" className="wordmark-arcade-link" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setSecret(false); router.push("/arcade"); }}><strong>Secret found!</strong><span>Don’t give up — hint: another path takes four keys.</span><b>↟ Jumping Jacks →</b></button>}
