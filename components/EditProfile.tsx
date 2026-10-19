@@ -7,11 +7,11 @@ import Link from "next/link";
 import { uploadImage } from "@/lib/upload-client";
 import { updateProfile } from "@/app/(main)/me/actions";
 import { prepareAvatar, randomName } from "@/lib/image";
-import { GrokProfileMaker } from "@/components/GrokProfileMaker";
+import { ProfileMediaMaker } from "@/components/ProfileMediaMaker";
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled, grokSetupMessage }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; grokEnabled: boolean; grokSetupMessage?: string }) {
+export function EditProfile({ initial, fid, farcasterSignedIn, profileStudioEnabled, profileStudioSetupMessage }: { initial: { displayName: string; bio: string; pfpUrl: string; bannerUrl: string }; fid: number; farcasterSignedIn: boolean; profileStudioEnabled: boolean; profileStudioSetupMessage?: string }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -99,8 +99,8 @@ export function EditProfile({ initial, fid, farcasterSignedIn, grokEnabled, grok
         </div>
       </div>
 
-      {grokSetupMessage && <div className="env-box" role="status"><strong>Paid profile studio is off</strong><p>{grokSetupMessage}</p></div>}
-      {grokEnabled && <GrokProfileMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
+      {profileStudioSetupMessage && <div className="env-box" role="status"><strong>Paid profile studio is off</strong><p>{profileStudioSetupMessage}</p></div>}
+      {profileStudioEnabled && <ProfileMediaMaker fid={fid} farcasterSignedIn={farcasterSignedIn} currentPfpUrl={initial.pfpUrl} onUse={useGeneratedMedia} />}
 
       <label className="field">
         <span className="field-label">

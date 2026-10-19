@@ -9,7 +9,7 @@ import { createPublicClient, encodeFunctionData, formatUnits, http, isAddress, t
 import { ANIMATION_CREDITS_ADDRESS, animationCreditsAbi, BASE_USDC_ADDRESS, usdcAbi } from "@/lib/animation-credits";
 
 type EthereumWindow = Window & { ethereum?: EIP1193Provider };
-type PendingAnimation = { requestId: string; walletAddress: Address; mode: "animate" | "upgrade" };
+type PendingAnimation = { requestId: string; walletAddress: Address; mode: "animate"; provider: "google" };
 const baseClient = createPublicClient({ chain: base, transport: http("https://mainnet.base.org") });
 const USDC_DECIMALS = 6;
 
@@ -59,7 +59,7 @@ async function send(provider: EIP1193Provider, from: Address, to: Address, data:
   return hash as Hex;
 }
 
-export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse }: { fid: number; farcasterSignedIn: boolean; currentPfpUrl: string; onUse: (url: string) => void }) {
+export function ProfileMediaMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse }: { fid: number; farcasterSignedIn: boolean; currentPfpUrl: string; onUse: (url: string) => void }) {
   const [style, setStyle] = useState<(typeof animationStyles)[number]["id"]>("auto");
   const [prompt, setPrompt] = useState("");
   const [credits, setCredits] = useState<bigint | null>(null);
@@ -92,11 +92,10 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       const saved = localStorage.getItem(`jackcaster:grok-pending:v1:${fid}`);
       if (!saved) return;
       const value = JSON.parse(saved) as Partial<PendingAnimation>;
-      if (typeof value.requestId === "string" && /^0x[0-9a-f]{64}$/i.test(value.requestId)
-        && typeof value.walletAddress === "string" && isAddress(value.walletAddress)
-        && (value.mode === "animate" || value.mode === "upgrade")) {
-        setPendingAnimation({ requestId: value.requestId, walletAddress: value.walletAddress, mode: value.mode });
-      }
+      if (value.provider === "google" && value.mode === "animate" && typeof value.requestId === "string" && /^0x[0-9a-f]{64}$/i.test(value.requestId)
+        && typeof value.walletAddress === "string" && isAddress(value.walletAddress)) {
+        setPendingAnimation({ requestId: value.requestId, walletAddress: value.walletAddress, mode: "animate", provider: "google" });
+      } else localStorage.removeItem(`jackcaster:grok-pending:v1:${fid}`);
     } catch { /* Pending jobs are a convenience; corrupt local state should not block the studio. */ }
   }, [fid]);
 
@@ -114,10 +113,10 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
     const deadline = Date.now() + 10 * 60_000;
     while (Date.now() < deadline) {
       await new Promise((resolve) => window.setTimeout(resolve, 5_000));
-      setMessage("Grok is rendering your animation… You can leave and resume this job later.");
+      setMessage("Google is rendering your animation… You can leave and resume this job later.");
       let poll: Response;
       try {
-        poll = await fetch(`/api/grok/profile-image?${query}`, { cache: "no-store" });
+        poll = await fetch(`/api/profile-media/profile-image?${query}`, { cache: "no-store" });
       } catch { continue; }
       let result: { processing?: boolean; mediaUrl?: string; mediaType?: "image" | "video"; requestId?: string; error?: string };
       try { result = await poll.json() as typeof result; }
@@ -126,7 +125,7 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       if (poll.status === 503) continue;
       if (!poll.ok || !result.mediaUrl || result.mediaType !== "video") {
         savePendingAnimation(null);
-        throw new Error(result.error || "Grok could not complete this animation. The onchain credit was spent for this attempt.");
+        throw new Error(result.error || "Google could not complete this animation. The onchain credit was spent for this attempt.");
       }
       savePendingAnimation(null);
       setGeneratedUrl(result.mediaUrl);
@@ -192,6 +191,10 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
 
   async function generate(mode: "image" | "animate" | "upgrade", sourceImageUrl = currentPfpUrl, sourceRequestId?: string) {
     if (busyRef.current) return;
+    if (mode !== "image" && pendingAnimation) {
+      setMessage("Resume or finish your saved animation before starting another one. This protects the credit already used for that job.");
+      return;
+    }
     busyRef.current = true;
     setBusy(true); setMessage("");
     try {
@@ -200,25 +203,25 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       if (state.balance < 1n) throw new Error("No credits in this wallet. Buy a pack to create more profile media.");
       if (mode === "image" && !prompt.trim()) throw new Error("Add a short description for the new profile artwork.");
       if (mode !== "image" && !sourceImageUrl) throw new Error(mode === "upgrade" ? "Choose an existing animation to upgrade." : "Set a profile image before animating it.");
-      if (mode !== "image") {
-        setMessage("Checking xAI video access. No credit is used for this check…");
-        const accessResponse = await fetch(`/api/grok/profile-image?mode=${mode}`, { cache: "no-store" });
+      {
+        setMessage("Checking Google model availability. No credit is used for this check…");
+        const accessResponse = await fetch(`/api/profile-media/profile-image?mode=${mode}`, { cache: "no-store" });
         const access = await accessResponse.json() as { ready?: boolean; error?: string };
-        if (!accessResponse.ok || !access.ready) throw new Error(access.error || "Could not confirm xAI video access. No credit was used.");
+        if (!accessResponse.ok || !access.ready) throw new Error(access.error || "Could not confirm Google AI access. No credit was used.");
       }
       const requestId = toHex(crypto.getRandomValues(new Uint8Array(32))) as Hex;
-      const authorization = `Jackcaster Grok profile ${mode}\nFID: ${fid}\nWallet: ${state.account.toLowerCase()}\nRequest: ${requestId.toLowerCase()}`;
+      const authorization = `Jackcaster Google profile ${mode}\nFID: ${fid}\nWallet: ${state.account.toLowerCase()}\nRequest: ${requestId.toLowerCase()}`;
       setMessage("Sign the request in MetaMask. This message signature does not move funds.");
       const signature = await state.provider.request({ method: "personal_sign", params: [toHex(authorization), state.account] }) as Hex;
       setMessage("Confirm spending 1 credit in MetaMask…");
       const txHash = await send(state.provider, state.account, ANIMATION_CREDITS_ADDRESS, encodeFunctionData({ abi: animationCreditsAbi, functionName: "useCredit", args: [requestId] }));
       setCredits(state.balance - 1n);
-      setMessage(mode === "animate" ? "Credit confirmed. Grok is animating your profile image…" : "Credit confirmed. Grok is creating your profile image…");
-      if (mode !== "image") savePendingAnimation({ requestId, walletAddress: state.account, mode });
-      const response = await fetch("/api/grok/profile-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: state.account, requestId, transactionHash: txHash, signature, prompt: mode === "image" ? prompt.trim() : finalPrompt, mode, sourceImageUrl: mode !== "image" ? sourceImageUrl : undefined, sourceRequestId: mode !== "image" ? sourceRequestId : undefined }) });
+      setMessage(mode === "animate" ? "Credit confirmed. Google is animating your profile image…" : "Credit confirmed. Google is creating your profile image…");
+      if (mode === "animate") savePendingAnimation({ requestId, walletAddress: state.account, mode: "animate", provider: "google" });
+      const response = await fetch("/api/profile-media/profile-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: state.account, requestId, transactionHash: txHash, signature, prompt: mode === "image" ? prompt.trim() : finalPrompt, mode, sourceImageUrl: mode !== "image" ? sourceImageUrl : undefined, sourceRequestId: mode !== "image" ? sourceRequestId : undefined }) });
       const result = await response.json() as { processing?: boolean; mediaUrl?: string; mediaType?: "image" | "video"; requestId?: string; error?: string };
       if (mode !== "image" && response.status === 202 && result.processing) {
-        const pending = { requestId, walletAddress: state.account, mode } as PendingAnimation;
+        const pending: PendingAnimation = { requestId, walletAddress: state.account, mode: "animate", provider: "google" };
         savePendingAnimation(pending);
         await waitForAnimation(pending);
         return;
@@ -272,20 +275,20 @@ export function GrokProfileMaker({ fid, farcasterSignedIn, currentPfpUrl, onUse 
       {currentPfpUrl && (currentPfpIsMp4
         ? <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("upgrade")}>{busy ? "Creating…" : "Upgrade current MP4 · 1 credit"}</button>
         : currentPfpIsWebm || currentPfpIsGif
-          ? <button type="button" className="btn sm" disabled title={currentPfpIsGif ? "Grok video generation needs a still PNG, JPEG, or WebP image." : "Grok video editing accepts MP4 source videos."}>{currentPfpIsGif ? "GIF source unsupported" : "WebM upgrade unavailable"}</button>
+          ? <button type="button" className="btn sm" disabled title={currentPfpIsGif ? "Google video generation needs a still PNG, JPEG, or WebP image." : "Google video editing accepts MP4 source videos."}>{currentPfpIsGif ? "GIF source unsupported" : "WebM upgrade unavailable"}</button>
         : <button type="button" className="btn sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("animate")}>{busy ? "Creating…" : "Animate my profile · 1 credit"}</button>)}
       {generatedUrl && generatedType === "image" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("animate", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Animate this image · 1 credit"}</button>}
       {generatedUrl && generatedType === "video" && <button type="button" className="btn ghost sm" disabled={busy || !farcasterSignedIn || credits === null || credits < 1n} onClick={() => void generate("upgrade", generatedUrl, generatedRequestId)}>{busy ? "Creating…" : "Try another look · 1 credit"}</button>}
     </div>
     {credits !== null && <p className="field-hint">Balance: {credits.toString()} · {walletAddress?.slice(0, 6)}…{walletAddress?.slice(-4)}</p>}
     {!walletAddress && <p className="field-hint">Connect Base to see your live price and credits.</p>}
-    {currentPfpIsGif && <p className="field-hint grok-maker-status" role="note">Grok needs a still PNG, JPEG, or WebP image to create a profile animation. You can create a new image below, then animate that result; this GIF will not be sent or charged for animation.</p>}
+    {currentPfpIsGif && <p className="field-hint grok-maker-status" role="note">Google AI needs a still PNG, JPEG, or WebP image to create a profile animation. You can create a new image below, then animate that result; this GIF will not be sent or charged for animation.</p>}
     {currentPfpIsWebm && <p className="field-hint grok-maker-status" role="note">Animation upgrades currently accept MP4 source video. This WebM will not be sent or charged for an upgrade.</p>}
     {!farcasterSignedIn && <p className="field-hint grok-maker-status" role="note">Connect your Farcaster account on this device to animate or upgrade a profile video. <Link href="/setup">Connect Farcaster</Link>. Buying credits and image creation do not enable animation access.</p>}
     {message && <p className="field-hint grok-maker-status" role="status">{message}</p>}
     {pendingAnimation && !busy && <button type="button" className="btn sm" onClick={resumeAnimation}>Resume animation</button>}
     {generatedUrl && <div className="grok-maker-result"><div className="grok-maker-preview">{generatedType === "video" ? <video src={generatedUrl} autoPlay muted loop playsInline controls aria-label="Animated profile preview" /> : <img src={generatedUrl} alt="Generated profile image preview" />}</div><div><span className="grok-result-kicker">YOUR PREVIEW</span><strong>{generatedType === "video" ? "Your animation is ready" : "Your artwork is ready"}</strong><p className="field-hint">It won’t change your Farcaster profile until you apply it and save.</p><button type="button" className="btn sm" disabled={busy} onClick={() => onUse(generatedUrl)}>Use on my profile</button></div></div>}
-    <p className="field-hint">1 credit per try, even if it fails. Your prompt and image go to xAI.</p>
+    <p className="field-hint">1 credit per try, even if it fails. Your prompt and selected image are sent to Google AI. The model check cannot confirm remaining quota or billing; Google can still reject a generation.</p>
     </section>
   </>;
 }
