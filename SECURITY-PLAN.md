@@ -18,7 +18,7 @@ This document tracks review findings and implementation decisions for this repos
 | --- | --- | --- | --- |
 | High | The lockfile resolves Next.js 15.5.28 with PostCSS 8.4.31. `npm audit` reports high severity PostCSS advisories through Next.js. | Keep Next 15 and override PostCSS to a patched 8.5 release; re-audit after install. Revisit when a patched Next 15 release becomes available. | Done (PostCSS override) |
 | Medium | `npm audit --omit=dev` reports six moderate advisories through the Farcaster Mini App SDK's transitive Solana dependencies (`stream-json` and `uuid`); npm reports no available fix. | Monitor upstream SDK and dependency releases; retain the Mini App SDK required for native Farcaster integration and re-audit before release. | Open (no upstream fix available) |
-| High | `selfcaster_session` is a deterministic, unkeyed SHA-256 digest of `APP_PASSWORD`; possession permits replay. It lasts 90 days. | Replace it with a versioned, keyed session token and invalidate old tokens. Replay remains possible if a current cookie is stolen; rotation still uses `APP_PASSWORD`. | Done (token); replay and lifetime remain open |
+| High | A captured login cookie can be replayed until it expires or the password changes. | Use random, signed sessions with a server-enforced lifetime; mark private responses non-cacheable. | Done (2026-10-19; 30-day sessions). A current stolen cookie remains replayable until expiry or password rotation. |
 | Medium | Login throttling needs shared state to coordinate attempts across serverless instances. | Use an atomic Upstash counter when configured, with a process-local fallback and host-level controls. | Partial (shared counter when configured; Vercel edge limit still recommended) |
 | Medium | Signer setup can create signer requests and poll Neynar without app-level throttling. | Validate signer IDs and request data at the server boundary; rate-limit signer creation and polling; cap polling duration and request frequency. | Open |
 | Medium | The public image route trusts the Blob object's `image/*` content type and serves it at the app origin. | Verify the stored type and extension agree; restrict served formats; set `X-Content-Type-Options` and a restrictive content security policy for image responses. | Done (response checks) |
@@ -45,6 +45,14 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 | Medium | Provider failures are not always distinguishable from empty feeds or broken actions. | Show safe, actionable Neynar/Gemini/ElevenLabs status messages for configuration, authorization, rate-limit, timeout, and temporary availability failures. Preserve already-loaded posts when background polling fails. | Done |
 
 ## Change log
+
+### 2026-10-19 — Enforced shorter, random login sessions
+
+- **Changed:** Login now issues a fresh random token with a keyed HMAC and server-checked issuance time. Sessions expire after 30 days; old deterministic session tokens are invalidated.
+- **Changed:** Protected app responses now send `Cache-Control: private, no-store, max-age=0` and `Pragma: no-cache`. Signing out clears both the app session and this browser’s signer cookie.
+- **Why:** The previous session value was identical on every login, and its 90-day cookie expiry was not enforced server-side against a copied token. Personalized feeds and API responses should also stay out of shared caches.
+- **Limit:** A stolen current session remains usable until expiry or `APP_PASSWORD` rotation. Signing out removes this device’s signer cookie but does not revoke the signer on Farcaster.
+- **Verification:** Source review and TypeScript check.
 
 ### 2026-10-18 — Surface feed filters and separate recasts
 

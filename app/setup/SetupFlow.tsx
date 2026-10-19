@@ -211,11 +211,12 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
     return (
       <section className="setup-card">
         <span className="setup-eyebrow">FARCASTER, ON YOUR TERMS</span>
-        <h1>Choose how to get started</h1>
+        <h1>Browse first. Connect when you’re ready.</h1>
         <p>
-          Browse public casts without connecting anything. Connect Farcaster only when you want to post, like, or reply.
+          Jackcaster can load a read-only Farcaster feed without a signer. Connect an account only when you want to post, like, or reply.
         </p>
         <p className="setup-upstream-credit">Jackcaster is an independent fork of <a href="https://selfcaster.xyz/" target="_blank" rel="noreferrer">Selfcaster</a>, the original open-source Farcaster client by <a href="https://farcaster.xyz/genuinejack" target="_blank" rel="noreferrer">@genuinejack</a>.</p>
+        <div className="setup-security-note"><strong>Before you begin:</strong> if this deployment has a read-only Farcaster ID configured, you can browse without connecting a signer. Otherwise, the instance operator needs to configure <code>MY_FID</code> before a read-only feed is available.</div>
         <div className="setup-options">
           <div><strong>Neynar service key</strong><span>Required by the instance operator for Farcaster data and posting setup. It stays server-side; users should never enter it here.</span></div>
           <div><strong>AI and voice keys</strong><span>Google Gemini and ElevenLabs are optional and configured by the instance operator. They are not needed to browse or post.</span></div>
@@ -232,7 +233,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           Continue to posting setup
         </button>
         <Link className="quiet setup-skip" href="/">
-          Browse read-only — I’ll set this up later
+          Skip connection and browse read-only
         </Link>
       </section>
     );

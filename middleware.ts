@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
+import { isValidSessionToken, SESSION_COOKIE } from "@/lib/auth";
 
 export async function middleware(req: NextRequest) {
   const isSetup = req.nextUrl.pathname === "/setup" || req.nextUrl.pathname.startsWith("/setup/");
@@ -7,10 +7,10 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   if (nonce) requestHeaders.set("x-nonce", nonce);
 
-  const expected = await sessionToken();
+  const hasPassword = Boolean(process.env.APP_PASSWORD);
 
   // No password configured: fail closed in production, open in local dev.
-  if (!expected) {
+  if (!hasPassword) {
     if (process.env.NODE_ENV === "production") {
       const response = new NextResponse("Set APP_PASSWORD to use this client.", { status: 500 });
       applySetupPolicy(response, nonce);
@@ -19,7 +19,7 @@ export async function middleware(req: NextRequest) {
     return nextResponse(requestHeaders, nonce);
   }
 
-  if (req.cookies.get(SESSION_COOKIE)?.value === expected) return nextResponse(requestHeaders, nonce);
+  if (await isValidSessionToken(req.cookies.get(SESSION_COOKIE)?.value)) return nextResponse(requestHeaders, nonce);
 
   const url = req.nextUrl.clone();
   url.pathname = "/login";
@@ -31,6 +31,8 @@ export async function middleware(req: NextRequest) {
 
 function nextResponse(requestHeaders: Headers, nonce: string | null) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
   applySetupPolicy(response, nonce);
   return response;
 }

@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { createHmac } from "node:crypto";
 import { neynar } from "@/lib/neynar";
-import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
+import { createSessionToken, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 import type { PostCastReqBodyEmbeds } from "@neynar/nodejs-sdk/build/api";
-import { getViewer } from "@/lib/viewer";
+import { getViewer, SIGNER_COOKIE } from "@/lib/viewer";
 import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 
 async function signer(): Promise<string> {
@@ -232,8 +232,7 @@ export async function deleteOwnCast(input: { hash: string }): Promise<ActionResu
 }
 
 export async function login(_prev: string | null, form: FormData): Promise<string | null> {
-  const expected = await sessionToken();
-  if (!expected) redirect("/");
+  if (!process.env.APP_PASSWORD) redirect("/");
   const now = Date.now();
   const requestHeaders = await headers();
   const address = requestHeaders.get("x-real-ip") ?? "unknown";
@@ -266,12 +265,14 @@ export async function login(_prev: string | null, form: FormData): Promise<strin
   loginWindows.delete(key);
   if (sharedAllowed === true) await clearSharedLoginAttempts(key);
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, expected, {
+  const session = await createSessionToken();
+  if (!session) redirect("/");
+  jar.set(SESSION_COOKIE, session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 90,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
   redirect("/");
 }
@@ -279,5 +280,6 @@ export async function login(_prev: string | null, form: FormData): Promise<strin
 export async function logout() {
   const jar = await cookies();
   jar.delete(SESSION_COOKIE);
+  jar.delete(SIGNER_COOKIE);
   redirect("/login");
 }

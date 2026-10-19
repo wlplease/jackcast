@@ -9,6 +9,9 @@ function describeNeynarError(error: unknown) {
   if (/Missing env var NEYNAR_API_KEY/i.test(message)) {
     return { title: "Neynar isn’t configured", body: "Add NEYNAR_API_KEY to this deployment’s server environment, then redeploy." };
   }
+  if (/No Farcaster account is configured/i.test(message)) {
+    return { title: "Choose an account to browse", body: "This deployment needs a read-only Farcaster ID (MY_FID) or an account connected in Setup before it can load a feed." };
+  }
   if (/Not connected|Visit \/setup/i.test(message)) {
     return { title: "Connect a Farcaster account", body: "Finish account setup before loading this data." };
   }
