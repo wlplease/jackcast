@@ -54,7 +54,7 @@ export function JumpingJacksGame({ player }: { player: { fid: number; username: 
     setBest(nextBest);
     localStorage.setItem(SAVE_KEY, String(nextBest));
     if (sharedBoard) {
-      const result = await submitBest({ fid: player.fid, username: player.username, score: Math.max(best, finalScore) });
+      const result = await submitBest({ fid: player.fid, username: player.username, score: finalScore });
       setMessage(result ? "Weekly best saved to the shared board." : "Your personal best is saved on this device. The shared board could not save this run.");
     } else {
       setMessage("Personal best saved on this device. Shared leaderboard is not configured yet.");

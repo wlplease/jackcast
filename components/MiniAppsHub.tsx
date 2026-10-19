@@ -5,6 +5,7 @@ import { loadMiniAppSearch, refreshMiniApps } from "@/app/(main)/mini-apps/actio
 import type { MiniAppSummary } from "@/lib/data";
 import { MiniAppSaveButton } from "@/components/MiniAppSaveButton";
 import { MiniAppLaunchButton } from "@/components/MiniAppLaunchButton";
+import { MiniAppIcon } from "@/components/MiniAppIcon";
 import type { Prefs } from "@/lib/prefs-shared";
 
 const RECENT_KEY = "jackcaster:recent-mini-apps:v1";
@@ -13,7 +14,7 @@ type RecentApp = { url: string; title: string };
 function AppGrid({ apps, saved, onSaved, onLaunch }: { apps: MiniAppSummary[]; saved: Prefs["savedMiniApps"]; onSaved: (items: Prefs["savedMiniApps"]) => void; onLaunch: (app: RecentApp) => void }) {
   if (!apps.length) return <p className="field-hint">No mini apps found in this section yet.</p>;
   return <div className="miniapp-grid">{apps.map((app) => <article key={app.url} className="miniapp-card">
-    {app.image ? <img src={app.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="miniapp-placeholder" aria-hidden="true">✳</span>}
+    <MiniAppIcon src={app.image} />
     <span className="miniapp-card-copy"><b>{app.title}</b>{app.author && <small>by {app.author}</small>}{app.description && <span>{app.description}</span>}</span>
     <span className="miniapp-actions"><MiniAppSaveButton app={{ url: app.url, title: app.title }} saved={saved.some((item) => item.url === app.url)} allSaved={saved} onSaved={onSaved} /><MiniAppLaunchButton app={{ url: app.url, title: app.title }} onLaunch={onLaunch} /></span>
   </article>)}</div>;

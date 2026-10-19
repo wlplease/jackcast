@@ -1,4 +1,4 @@
-/** Curated Farcaster and ecosystem accounts offered in Top Friends settings. */
+/** A cross-section of Farcaster protocol, builders, creators, community, and app teams. */
 export const CURATED_TOP_ACCOUNTS = [
   { username: "balajis.eth", name: "Balaji", role: "Network states and crypto" },
   { username: "grin", name: "Grin", role: "Farcaster community" },
@@ -20,4 +20,22 @@ export const CURATED_TOP_ACCOUNTS = [
   { username: "moxie", name: "Moxie", role: "Farcaster protocol" },
   { username: "purple", name: "Purple", role: "Farcaster community" },
   { username: "0xdesigner", name: "0xDesigner", role: "Farcaster creator" },
+  { username: "adrienne", name: "Adrienne", role: "Community and media" },
+  { username: "manasi", name: "Manasi", role: "Creator and builder" },
+  { username: "atown", name: "atown", role: "Farcaster builder" },
+  { username: "dish", name: "Dish", role: "Onchain apps" },
+  { username: "shawmakesmagic", name: "Shaw", role: "Farcaster creator" },
+  { username: "sayangel", name: "Sayangel", role: "Farcaster creator" },
+  { username: "chaskin.eth", name: "Chaskin", role: "Farcaster community" },
+  { username: "erica", name: "Erica", role: "Farcaster community" },
+  { username: "deanpat", name: "Dean Patrick", role: "Farcaster creator" },
+  { username: "alvesjtiago.eth", name: "Tiago Alves", role: "Farcaster builder" },
+  { username: "toadyhawk", name: "Toady Hawk", role: "Mini app builder" },
+  { username: "betrmint", name: "Betr Mint", role: "Mini app builder" },
+  { username: "burr.eth", name: "Burr", role: "Farcaster creator" },
+  { username: "zora", name: "Zora", role: "Creator onchain tools" },
+  { username: "coinbasewallet", name: "Coinbase Wallet", role: "Wallet and ecosystem" },
+  { username: "gmfarcaster", name: "GM Farcaster", role: "Farcaster news and community" },
+  { username: "unlonely", name: "Unlonely", role: "Live community" },
+  { username: "farcon", name: "FarCon", role: "Farcaster community events" },
 ] as const;

@@ -19,10 +19,16 @@ function miniAppSummary(frame: { title?: string; frames_url: string; image?: str
     if (candidate.protocol === "https:" && candidate.hostname && !candidate.username && !candidate.password) url = candidate.toString();
   } catch { /* Ignore malformed third-party URLs. */ }
   const manifest = frame.manifest?.miniapp ?? frame.manifest?.frame;
+  const imageCandidate = frame.image || manifest?.icon_url || manifest?.screenshot_urls?.[0];
+  let image: string | undefined;
+  try {
+    const parsedImage = new URL(imageCandidate || "");
+    if (parsedImage.protocol === "https:" && !parsedImage.username && !parsedImage.password) image = parsedImage.href.slice(0, 2048);
+  } catch { /* A broken app icon falls back to the Jackcaster placeholder. */ }
   return {
     title: (frame.title || manifest?.name || frame.metadata?.html?.ogSiteName || new URL(url || "https://invalid.local").hostname).slice(0, 100),
     url,
-    image: frame.image || manifest?.icon_url || manifest?.screenshot_urls?.[0],
+    image,
     author: frame.author?.display_name || frame.author?.username,
     authorFid: frame.author?.fid,
     description: (manifest?.description || frame.metadata?.html?.ogDescription || "").slice(0, 240),
@@ -318,14 +324,20 @@ export type TopAccountsSnapshot = {
 };
 
 const curatedTopAccountsCached = unstable_cache(async (): Promise<TopAccountLeader[]> => {
-  const resolved = await Promise.all(CURATED_TOP_ACCOUNTS.map(async (seed) => {
-    try {
-      const { user } = await neynar().lookupUserByUsername({ username: seed.username });
-      return { fid: user.fid, username: user.username.toLowerCase(), displayName: user.display_name || user.username, pfpUrl: user.pfp_url || "", role: String(seed.role) };
-    } catch { return null; }
-  }));
-  return resolved.filter((person): person is TopAccountLeader => person !== null);
-}, ["jackcaster-curated-top-accounts-v1"], { revalidate: 86400, tags: ["curated-top-accounts"] });
+  const resolved: (TopAccountLeader | null)[] = [];
+  for (let offset = 0; offset < CURATED_TOP_ACCOUNTS.length; offset += 8) {
+    const batch = CURATED_TOP_ACCOUNTS.slice(offset, offset + 8);
+    resolved.push(...await Promise.all(batch.map(async (seed) => {
+      try {
+        const { user } = await neynar().lookupUserByUsername({ username: seed.username });
+        return { fid: user.fid, username: user.username.toLowerCase(), displayName: user.display_name || user.username, pfpUrl: user.pfp_url || "", role: String(seed.role) };
+      } catch { return null; }
+    })));
+  }
+  const unique = new Map<number, TopAccountLeader>();
+  for (const person of resolved) if (person && !unique.has(person.fid)) unique.set(person.fid, person);
+  return [...unique.values()];
+}, ["jackcaster-curated-top-accounts-v2"], { revalidate: 604800, tags: ["curated-top-accounts"] });
 
 /** Curated Farcaster leaders plus the viewer's most active followed accounts over a cached 90-day window. */
 export async function topAccountsSnapshot(fid: number): Promise<TopAccountsSnapshot> {

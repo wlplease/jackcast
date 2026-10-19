@@ -211,8 +211,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           <div><strong>Neynar service key</strong><span>Required by the instance operator for Farcaster data and posting setup. It stays server-side; users should never enter it here.</span></div>
           <div><strong>AI and voice keys</strong><span>Google Gemini and ElevenLabs are optional and configured by the instance operator. They are not needed to browse or post.</span></div>
           <div><strong>Farcaster connection</strong><span>Optional posting access. You can connect later from Settings → Account and connection.</span></div>
-          <div><strong>Wallet</strong><span>Optional and separate from Farcaster. Connect later in Settings → Wallet, only when you choose an onchain feature.</span></div>
-          <div><strong>GIF search</strong><span>Optional. Add your own GIPHY key later in the composer’s GIF picker. It stays in this browser if you choose to save it.</span></div>
+          <div><strong>GIF search</strong><span>Browse the built-in GIF library with a shared cooldown. You do not need to create or enter a GIPHY account key.</span></div>
         </div>
         <div className="setup-security-note"><strong>Posting setup has an extra security step.</strong> It asks you to enter your Farcaster recovery phrase on this page to sign one request locally. The phrase is not sent to Jackcaster’s server, but entering a recovery phrase into any web page carries risk. Continue only if you trust this instance; read-only browsing needs no phrase. Never enter wallet or provider API secrets here.</div>
         <ol className="how">

@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { firebaseAnonymousIdToken } from "@/lib/firebase-anonymous-client";
 
 type GifItem = { id: string; url: string; preview: string; title: string; sourceUrl?: string };
-type GiphyImage = { url?: string };
-type GiphyItem = { id: string; title?: string; url?: string; images?: { original?: GiphyImage; downsized_large?: GiphyImage; fixed_width?: GiphyImage; fixed_width_small?: GiphyImage } };
+type SearchResult = { items?: GifItem[]; hasMore?: boolean; retryAfterMs?: number; error?: string };
 
 function directGifUrl(value?: string): string | null {
   if (!value) return null;
@@ -44,97 +44,77 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingGate, setCheckingGate] = useState(false);
+  const [cooldownMs, setCooldownMs] = useState(0);
   const [error, setError] = useState("");
-  const [userApiKey, setUserApiKey] = useState("");
-  const [apiKeyDraft, setApiKeyDraft] = useState("");
-  const [rememberApiKey, setRememberApiKey] = useState(true);
-  const [apiKeyReady, setApiKeyReady] = useState(false);
-  const [keySettingsOpen, setKeySettingsOpen] = useState(false);
-  const [keyMessage, setKeyMessage] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [topText, setTopText] = useState("");
   const [bottomText, setBottomText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("jackcaster.giphy.api-key.v1") || "";
-      setUserApiKey(saved);
-      setApiKeyDraft(saved);
-      setRememberApiKey(true);
-      if (!saved && !process.env.NEXT_PUBLIC_GIPHY_API_KEY) setKeySettingsOpen(true);
-    } catch {}
-    setApiKeyReady(true);
-  }, []);
+  const coolingDown = cooldownMs > 0;
+  const secondsLeft = Math.max(0, Math.ceil(cooldownMs / 1000));
 
-  function saveApiKey(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const key = apiKeyDraft.trim();
-    if (key && (key.length < 8 || key.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(key))) {
-      setKeyMessage("Enter a valid GIPHY API key (letters, numbers, _ or - only).");
-      return;
-    }
-    try {
-      if (key && rememberApiKey) localStorage.setItem("jackcaster.giphy.api-key.v1", key);
-      else localStorage.removeItem("jackcaster.giphy.api-key.v1");
-    } catch {
-      setKeyMessage("This browser could not save the key. Check its storage settings.");
-      return;
-    }
-    setUserApiKey(key);
-    setKeyMessage(key ? (rememberApiKey ? "Your key is saved in this browser." : "Your key will be used until you close or reload this page.") : "Your personal key was removed.");
-    setError("");
-    setItems([]);
-    setOffset(0);
-    setHasMore(false);
-  }
+  useEffect(() => {
+    if (!open || tab !== "gifs") return;
+    let active = true;
+    setCheckingGate(true);
+    void (async () => {
+      try {
+        const token = await firebaseAnonymousIdToken();
+        const response = await fetch("/api/giphy/search", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+        const data = await response.json() as SearchResult;
+        if (!response.ok) throw new Error(data.error || "Shared GIF search is not available.");
+        if (active) setCooldownMs(data.retryAfterMs || 0);
+      } catch (reason) {
+        if (active) setError((reason as Error).message || "Shared GIF search is not available.");
+      } finally { if (active) setCheckingGate(false); }
+    })();
+    return () => { active = false; };
+  }, [open, tab]);
+
+  useEffect(() => {
+    if (!cooldownMs) return;
+    const startedAt = Date.now();
+    const initial = cooldownMs;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(0, initial - (Date.now() - startedAt));
+      setCooldownMs(remaining);
+      if (remaining <= 0) window.clearInterval(timer);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [cooldownMs > 0]);
 
   async function search(term = "", append = false) {
+    if (cooldownMs > 0 || checkingGate) return;
     setLoading(true);
     setError("");
     try {
-      const key = userApiKey.trim() || process.env.NEXT_PUBLIC_GIPHY_API_KEY;
-      if (!key) throw new Error("Add a GIPHY API key below to search. You can still make a meme or paste a GIF link without one.");
-      const endpoint = term.trim() ? "search" : "trending";
-      const url = new URL(`https://api.giphy.com/v1/gifs/${endpoint}`);
-      url.searchParams.set("api_key", key);
-      url.searchParams.set("limit", "18");
-      url.searchParams.set("offset", String(append ? offset : 0));
-      url.searchParams.set("rating", "g");
-      if (term.trim()) url.searchParams.set("q", term.trim().slice(0, 50));
-      const response = await fetch(url, { signal: AbortSignal.timeout(7000) });
-      const data = await response.json() as { data?: GiphyItem[]; meta?: { status?: number } };
-      if (!response.ok) throw new Error("GIF search is temporarily unavailable. Try again in a moment.");
-      const nextItems = (data.data ?? []).flatMap((item) => {
-        const full = [item.images?.original?.url, item.images?.downsized_large?.url, item.images?.fixed_width?.url, item.images?.fixed_width_small?.url]
-          .map(directGifUrl).find((url): url is string => Boolean(url));
-        const preview = item.images?.fixed_width_small?.url;
-        if (!full || !preview || !item.id) return [];
-        try {
-          const previewUrl = new URL(preview);
-          const pageUrl = item.url ? new URL(item.url) : undefined;
-          const isGiphyHost = (hostname: string) => hostname === "giphy.com" || hostname.endsWith(".giphy.com");
-          if (previewUrl.protocol !== "https:" || !isGiphyHost(new URL(full).hostname) || !isGiphyHost(previewUrl.hostname)) return [];
-          if (pageUrl && (pageUrl.protocol !== "https:" || !isGiphyHost(pageUrl.hostname))) return [];
-          return [{ id: item.id, url: full, preview: previewUrl.href, title: (item.title || "GIF").slice(0, 120), sourceUrl: pageUrl?.href }];
-        } catch { return []; }
-      });
+      const token = await firebaseAnonymousIdToken();
+      const response = await fetch("/api/giphy/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ query: term.trim().slice(0, 50), offset: append ? offset : 0 }), signal: AbortSignal.timeout(12000) });
+      const data = await response.json() as SearchResult;
+      if (data.retryAfterMs) setCooldownMs(data.retryAfterMs);
+      if (response.status === 429) { setError(""); return; }
+      if (!response.ok) throw new Error(data.error || "GIF search is temporarily unavailable.");
+      const nextItems = data.items ?? [];
       setItems((current) => append ? [...current, ...nextItems.filter((item) => !current.some((saved) => saved.id === item.id))] : nextItems);
-      setOffset((current) => append ? current + (data.data?.length ?? 0) : (data.data?.length ?? 0));
-      setHasMore((data.data?.length ?? 0) === 18);
+      setOffset((current) => append ? current + nextItems.length : nextItems.length);
+      setHasMore(Boolean(data.hasMore) && (append ? offset + nextItems.length : nextItems.length) < 90);
     } catch (reason) {
       setError((reason as Error).message || "GIF search could not load.");
+      const retryAfter = Number((reason as Error & { retryAfterMs?: number }).retryAfterMs);
+      if (retryAfter > 0) setCooldownMs(retryAfter);
       if (!append) { setItems([]); setOffset(0); setHasMore(false); }
     }
     finally { setLoading(false); }
   }
 
   useEffect(() => {
-    if (apiKeyReady && open && tab === "gifs" && items.length === 0 && !error) void search();
+    if (open && tab === "gifs" && items.length === 0 && !error && !checkingGate && cooldownMs <= 0) void search();
     // Load featured GIFs once per picker open; search() is intentionally omitted from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKeyReady, open, tab, userApiKey]);
+  }, [open, tab, checkingGate, cooldownMs, items.length, error]);
 
   function chooseFile(file?: File) {
     if (!file || !file.type.startsWith("image/")) return;
@@ -197,25 +177,17 @@ export function GifMemePicker({ disabled, onSelect, onMeme }: {
       <div className="gif-picker-head"><strong>Add a GIF or meme</strong><button type="button" aria-label="Close GIF picker" onClick={() => setOpen(false)}>×</button></div>
       <div className="gif-picker-tabs"><button type="button" className={tab === "gifs" ? "active" : ""} onClick={() => setTab("gifs")}>Find a GIF</button><button type="button" className={tab === "meme" ? "active" : ""} onClick={() => setTab("meme")}>Make a meme</button></div>
       {tab === "gifs" ? <>
-        <details className="gif-key-settings" open={keySettingsOpen} onToggle={(event) => setKeySettingsOpen(event.currentTarget.open)}>
-          <summary>Use your own GIPHY API key</summary>
-          <p>Get a web API key from GIPHY, then save it just for this browser. Jackcaster sends it directly to GIPHY for GIF search.</p>
-          <form className="gif-key-form" onSubmit={saveApiKey}>
-            <input type="password" value={apiKeyDraft} maxLength={128} autoComplete="off" spellCheck={false} onChange={(event) => { setApiKeyDraft(event.target.value); setKeyMessage(""); }} placeholder="Paste your GIPHY API key" aria-label="Your GIPHY API key" />
-            <button type="submit">Save key</button>
-            <label className="gif-remember-key"><input type="checkbox" checked={rememberApiKey} onChange={(event) => setRememberApiKey(event.target.checked)} /> Remember key on this device</label>
-          </form>
-          {keyMessage && <small className="gif-key-message" role="status">{keyMessage}</small>}
-          <small className="gif-key-links"><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">Get a GIPHY API key ↗</a> · <a href="https://developers.giphy.com/docs/api/" target="_blank" rel="noreferrer">GIPHY API guide</a></small>
-        </details>
-        <form className="gif-search" onSubmit={(event) => { event.preventDefault(); setCategory(""); void search(query); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reactions, moments…" aria-label="Search GIFs" /><button type="submit" disabled={loading}>{loading ? "…" : "Search"}</button></form>
-        <div className="gif-categories" role="group" aria-label="GIF categories">{GIF_CATEGORIES.map((item) => <button key={item.label} type="button" className={category === item.label ? "active" : ""} disabled={loading} onClick={() => { setCategory(item.label); setQuery(item.query); void search(item.query); }}>{item.label}</button>)}</div>
+        <p className="gif-shared-note">Built-in GIPHY search · shared 45-second cooldown for everyone · no key needed</p>
+        <form className="gif-search" onSubmit={(event) => { event.preventDefault(); setCategory(""); void search(query); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reactions, moments…" aria-label="Search GIFs" /><button type="submit" disabled={loading || checkingGate || coolingDown}>{loading || checkingGate ? "…" : coolingDown ? `${secondsLeft}s` : "Search"}</button></form>
+        <div className="gif-categories" role="group" aria-label="GIF categories">{GIF_CATEGORIES.map((item) => <button key={item.label} type="button" className={category === item.label ? "active" : ""} disabled={loading || checkingGate || coolingDown} onClick={() => { setCategory(item.label); setQuery(item.query); void search(item.query); }}>{item.label}</button>)}</div>
+        {coolingDown && <div className="gif-picker-cooldown" role="status">Shared search opens in <strong>{secondsLeft}s</strong>. This keeps the free GIF library available for everyone.</div>}
+        {checkingGate && <div className="gif-picker-message" role="status">Checking shared search window…</div>}
         {error && <div className="gif-picker-message">{error}</div>}
         {!error && <div className="gif-picker-grid">{items.map((item) => <div className="gif-picker-item" key={item.id}>
           <button type="button" className="gif-picker-select" title={`Add ${item.title}`} onClick={() => { onSelect({ url: item.url, preview: item.preview, title: item.title, sourceUrl: item.sourceUrl }); setOpen(false); }}><img src={item.preview} alt={item.title} loading="lazy" /></button>
           {item.sourceUrl && <a className="gif-picker-open" href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open ${item.title} on GIPHY`} title="Open on GIPHY">↗</a>}
         </div>)}</div>}
-        {!error && hasMore && <button type="button" className="gif-load-more" disabled={loading} onClick={() => void search(category && !query ? GIF_CATEGORIES.find((item) => item.label === category)?.query ?? query : query, true)}>{loading ? "Loading…" : "Load more GIFs"}</button>}
+        {!error && hasMore && <button type="button" className="gif-load-more" disabled={loading || checkingGate || coolingDown} onClick={() => void search(category && !query ? GIF_CATEGORIES.find((item) => item.label === category)?.query ?? query : query, true)}>{loading ? "Loading…" : coolingDown ? `Load more in ${secondsLeft}s` : "Load more GIFs"}</button>}
         {!loading && !error && items.length === 0 && <p className="gif-picker-message">No GIFs found. Try another search.</p>}
         <label className="gif-paste">Or paste a direct GIF image URL<input type="url" placeholder="https://…/image.gif" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const input = event.currentTarget; const url = directGifUrl(input.value.trim()); if (url) { onSelect({ url, preview: url, title: "GIF" }); setOpen(false); } else { setError("Use GIF search or paste a direct HTTPS .gif image URL. Share-page links do not embed as animations."); } } }} /></label>
         <small className="gif-attribution">Powered By GIPHY</small>

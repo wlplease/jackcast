@@ -95,7 +95,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     {aiOpen && <div className="ai-overlay" role="dialog" aria-modal="true" aria-label="AI catch-up">
       <button className="ai-overlay-backdrop" type="button" onClick={closeAi} aria-label="Close AI catch-up" />
       <div className="ai-overlay-panel"><button className="ai-overlay-x" type="button" onClick={closeAi} aria-label="Close AI catch-up">×</button>
-        <AIDigestMount casts={casts.slice(0, 40)} audioEnabled={audioEnabled} digestEnabled={digestEnabled} />
+        <AIDigestMount casts={casts.slice(0, 40)} viewerFid={viewerFid} audioEnabled={audioEnabled} digestEnabled={digestEnabled} />
       </div>
     </div>}
     <CaughtUpProvider feed={live ?? path} newest={initial.casts[0]?.timestamp ?? null}>
