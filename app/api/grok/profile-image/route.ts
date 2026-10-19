@@ -129,7 +129,13 @@ export async function POST(request: Request) {
   if (typeof signature !== "string" || !/^0x[0-9a-f]{130,132}$/i.test(signature)) return fail("Wallet authorization is required.", 400);
   if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 500) return fail("Describe the image or motion in 1–500 characters.", 400);
   if (mode !== "image" && mode !== "animate" && mode !== "upgrade") return fail("Choose image generation, profile animation, or animation upgrade.", 400);
-  if (mode !== "image" && viewer.source !== "setup") return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);
+  if (mode !== "image") {
+    if (viewer.source !== "setup" || !viewer.signerUuid) return fail("Connect your Farcaster account on this device before creating or upgrading an animation.", 401);
+    try {
+      const activeSigner = await neynar().lookupSigner({ signerUuid: viewer.signerUuid });
+      if (activeSigner.status !== "approved" || activeSigner.fid !== viewer.fid) return fail("Reconnect your Farcaster account before creating or upgrading an animation.", 401);
+    } catch { return fail("Couldn't verify your Farcaster connection right now. Try again shortly.", 503); }
+  }
 
   const wallet = walletAddress as Address;
   const hash = transactionHash as Hex;
@@ -194,6 +200,7 @@ export async function POST(request: Request) {
       status: "processing",
       startedAt: Date.now(),
     };
+    console.info("Jackcaster profile-media generation started", JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), mode, sourceKind, at: new Date(auditRecord.startedAt).toISOString() }));
     const previous = await get(lockPath, { access: blobAccess });
     if (previous?.statusCode === 200) {
       const saved = await new Response(previous.stream).json() as { mediaUrl?: unknown; mediaType?: unknown };
@@ -218,19 +225,29 @@ export async function POST(request: Request) {
       await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "provider_generation_failed", completedAt: Date.now() }), {
         access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
       }).catch(() => {});
+      console.info("Jackcaster profile-media generation failed", JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), mode, at: new Date().toISOString() }));
       return fail("Grok could not complete this generation. The onchain credit was spent for this attempt.", 502);
     }
 
-    const mediaPath = `pfp/grok-${viewer.fid}-${requestHex.slice(2).toLowerCase()}.${generated.ext}`;
-    const blob = await put(mediaPath, generated.bytes, {
-      access: blobAccess, addRandomSuffix: true, allowOverwrite: false, contentType: generated.contentType, cacheControlMaxAge: 31_536_000,
-    });
-    const mediaUrl = blobAccess === "private" ? `${new URL(request.url).origin}/i/${blob.pathname}` : blob.url;
-    const mediaType = generated.ext === "mp4" ? "video" : "image";
-    await put(lockPath, JSON.stringify({ ...auditRecord, status: "completed", mediaUrl, mediaType, completedAt: Date.now() }), {
-      access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
-    });
-    return NextResponse.json({ mediaUrl, mediaType, requestId: requestHex }, { headers: { "Cache-Control": "no-store" } });
+    try {
+      const mediaPath = `pfp/grok-${viewer.fid}-${requestHex.slice(2).toLowerCase()}.${generated.ext}`;
+      const blob = await put(mediaPath, generated.bytes, {
+        access: blobAccess, addRandomSuffix: true, allowOverwrite: false, contentType: generated.contentType, cacheControlMaxAge: 31_536_000,
+      });
+      const mediaUrl = blobAccess === "private" ? `${new URL(request.url).origin}/i/${blob.pathname}` : blob.url;
+      const mediaType = generated.ext === "mp4" ? "video" : "image";
+      const completedAt = Date.now();
+      await put(lockPath, JSON.stringify({ ...auditRecord, status: "completed", mediaUrl, mediaType, completedAt }), {
+        access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
+      });
+      console.info("Jackcaster profile-media generation completed", JSON.stringify({ fid: viewer.fid, wallet: wallet.toLowerCase(), requestId: requestHex.toLowerCase(), mode, mediaType, at: new Date(completedAt).toISOString() }));
+      return NextResponse.json({ mediaUrl, mediaType, requestId: requestHex }, { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+      await put(lockPath, JSON.stringify({ ...auditRecord, status: "failed", failure: "media_storage_failed", completedAt: Date.now() }), {
+        access: blobAccess, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60,
+      }).catch(() => {});
+      throw error;
+    }
   } catch (error) {
     console.error("Grok profile media request failed:", error instanceof Error ? error.message : "unknown error");
     return fail("Could not verify or save this generation. Check Base confirmation and your Vercel Blob setup.", 502);
