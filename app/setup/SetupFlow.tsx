@@ -213,10 +213,10 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
         <span className="setup-eyebrow">FARCASTER, ON YOUR TERMS</span>
         <h1>Browse first. Connect when you’re ready.</h1>
         <p>
-          Jackcaster can load a read-only Farcaster feed without a signer. Connect an account only when you want to post, like, or reply.
+          You can browse with a read-only account or connect your own account for posting. This deployment currently has no feed account configured, so choose which account to use below.
         </p>
         <p className="setup-upstream-credit">Jackcaster is an independent fork of <a href="https://selfcaster.xyz/" target="_blank" rel="noreferrer">Selfcaster</a>, the original open-source Farcaster client by <a href="https://farcaster.xyz/genuinejack" target="_blank" rel="noreferrer">@genuinejack</a>.</p>
-        <div className="setup-security-note"><strong>Before you begin:</strong> if this deployment has a read-only Farcaster ID configured, you can browse without connecting a signer. Otherwise, the instance operator needs to configure <code>MY_FID</code> before a read-only feed is available.</div>
+        <div className="setup-security-note"><strong>For the instance owner:</strong> setting <code>MY_FID</code> in Vercel lets everyone browse the same read-only feed. You can also connect your own account below.</div>
         <div className="setup-options">
           <div><strong>Neynar service key</strong><span>Required by the instance operator for Farcaster data and posting setup. It stays server-side; users should never enter it here.</span></div>
           <div><strong>AI and voice keys</strong><span>Google Gemini and ElevenLabs are optional and configured by the instance operator. They are not needed to browse or post.</span></div>
@@ -229,12 +229,9 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           <li>Review and approve that request in the Farcaster app.</li>
           <li>Revoke Jackcaster’s signer access anytime in Farcaster settings.</li>
         </ol>
-        <button className="btn wide" onClick={() => setStep({ kind: "phrase" })}>
-          Continue to posting setup
-        </button>
-        <Link className="quiet setup-skip" href="/">
-          Skip connection and browse read-only
-        </Link>
+        <button className="btn wide" onClick={() => setStep({ kind: "phrase" })}>Connect my account</button>
+        <p className="setup-connection-note">This optional setup requests posting access for this device. The recovery phrase is used only to sign one request in this browser and is never sent to the server. Only continue if you trust this deployment, device, and browser.</p>
+        <Link className="quiet setup-skip" href="/">Back to Jackcaster</Link>
       </section>
     );
   }

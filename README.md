@@ -33,6 +33,7 @@ Each deployment is hosted and configured by its operator. Neynar, Vercel, Google
 Compared with the upstream project, Jackcaster adds:
 
 - **More focused timelines:** separate Top Friends, Top Accounts, Recasts, and named custom feeds, followed-account search, reply and mini-app filters, repeated-link grouping, and per-feed scroll restoration. Recasts by people you follow have their own tab and stay out of the regular feeds.
+- **A better reading list:** save casts into private, device-local collections, then filter, move, and organize bookmarks without syncing your reading history to a service.
 - **Richer profile and posting tools:** Posts and Media profile tabs, a pinned cast, optional cover editing, local drafts, and a thread composer with partial-send recovery.
 - **Optional AI catch-up:** a user-triggered Gemini digest with optional ElevenLabs speech. Provider keys stay server-side; see the privacy and cost notes below before enabling them.
 - **Fork-specific hardening and polish:** responsive feed media and page layouts, server-side input and upload bounds, safer errors, baseline security headers, and documented security decisions.
@@ -56,6 +57,7 @@ These are Jackcast-specific choices, not a claim that Selfcaster should adopt ev
 - **A Sent feed.** Review casts and replies carrying Jackcaster's source attribution, then filter the loaded history by post type and date range. Posts made through other clients are not attributed to Jackcaster.
 - **Feed tabs that fit.** Reorder built-in feeds and hide the ones you rarely use in Settings. Following stays visible; hidden feeds remain available from **More** in the feed header. These choices are saved on this device.
 - **Drafts and threads.** Composer drafts stay in this browser. The thread composer posts a reply chain of up to five casts and keeps unsent text if a later post fails.
+- **Mobile navigation and conversations.** Touch-friendly Home, Search, Saved, Alerts, Map, and You navigation stays reachable at the bottom of small screens. Deep replies include a direct jump back to their parent cast.
 - **Optional AI catch-up and audio.** Open the AI icon to ask Gemini for a storyline, cited topic sections, insights, and activity analytics based on up to 40 loaded posts in Following. The latest successful digest and compact source-post snapshot are saved in this browser per connected FID. Reopening or refreshing restores the saved digest without another Google request; choose **Redo digest** to analyze again or **Clear digest** to remove the local copy. Add `GOOGLE_AI_API_KEY` for the digest; add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` for audio. Google receives selected post text, author names, dates, and public engagement counts; ElevenLabs receives only the generated digest. Audio is created on demand and held in the browser for that visit.
 - **A small soundtrack player.** Eight Jackcaster tracks are available from the top bar, with play/pause, previous/next, shuffle, repeat, and volume. Playback never starts automatically. Add up to three direct HTTPS tracks of your own under Settings → Listening; links are saved in this browser's settings.
 - **Support development.** Settings and Dev include optional Base donations to the original Selfcaster developer or Jackcaster. Choose $1, $10, or $100 in USDC or approximate ETH; your connected Farcaster wallet is preferred in Farcaster, with a browser wallet fallback. The wallet must confirm each transaction. ETH uses a spot quote and can change before approval; verify the recipient and amount in your wallet.
@@ -77,7 +79,7 @@ What it doesn't do: DMs (on purpose), ads, or engagement-ranked timelines. Opera
 
 - A **GitHub** account (free) and a **Vercel** account (the free Hobby plan is enough).
 - A **Neynar API key** from [dev.neynar.com](https://dev.neynar.com). Neynar is the API Selfcaster reads and writes through. Their free plan is enough to try it; reading, posting and the connected account all use credits, so a daily user will likely want a paid plan. See [neynar.com/pricing](https://neynar.com/pricing).
-- Your **Farcaster account** and its **recovery phrase**, used once in your browser to approve the app. More on that below.
+- Your **Farcaster account**. Connecting it for posting uses the recovery phrase once in your browser to approve the app. Read-only browsing is available when the instance owner sets `MY_FID`.
 
 ### Environment variables: required and optional
 
@@ -87,7 +89,7 @@ Keep secrets in Vercel Environment Variables or an ignored local `.env.local`; n
 | --- | --- | --- |
 | `NEYNAR_API_KEY` | Yes | Server-only Neynar access for Farcaster profiles, feeds, and actions. Get it from [Neynar](https://dev.neynar.com). Never use a `NEXT_PUBLIC_` prefix. |
 | `APP_PASSWORD` | Yes in production | Locks your deployment. Use a long, unique password and do not share it. Each person connects their own Farcaster account before posting. Local development can run without it. |
-| `MY_FID` | Optional | Your numeric Farcaster ID for read-only mode before connecting a device-specific signer. |
+| `MY_FID` | Optional | Numeric Farcaster ID for the deployment's shared read-only feed. Users can connect their own accounts separately for posting. |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Enables direct Vercel Blob photo uploads for an existing token-based store. For newer stores use `BLOB_STORE_ID` plus `BLOB_WEBHOOK_PUBLIC_KEY` instead. |
 | `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` | Optional pair | Enables Vercel's presigned Blob upload flow. Do not set only one. |
 | `GOOGLE_AI_API_KEY` | Optional | Enables Gemini catch-up and paid profile artwork. It is a server key; selected public casts go to Google when a user requests a digest, and an artwork prompt goes to Google only when a user requests profile generation. Review Google's data retention, terms, model access, quotas, and billing. Profile video animation is currently paused in the app regardless of environment settings. |
@@ -130,13 +132,15 @@ Then it builds and gives you a URL for your own Jackcaster. Each deploy is separ
 
 Open your URL, enter your password, and you'll land on `/setup`.
 
-1. Paste your Farcaster recovery phrase (Farcaster app settings, usually under Advanced). The page signs one key request **in your browser** and clears it. The phrase is never sent to the server or saved. See [SECURITY.md](./SECURITY.md).
+1. Choose **Connect my account**, then paste your Farcaster recovery phrase (Farcaster app settings, usually under Advanced). The page signs one key request **in your browser** and clears it. The phrase is never sent to the server or saved. See [SECURITY.md](./SECURITY.md).
 2. Approve in the Farcaster app: scan the QR on desktop, or tap **Open in Farcaster** on your phone.
 3. Done. That device is connected.
 
 The confirmation screen shows the Farcaster account that will publish. Sign in separately on each device; Jackcast does not share a deployment-wide signer, so a cast cannot silently publish as the site owner's account.
 
 Rather not use your main recovery phrase? Make a separate Farcaster account just for this and use its phrase. You still approve and post as *you*. The other account only shows up as the app that asked.
+
+If you only want read access, the instance owner can set `MY_FID` in Vercel. Then open the app and browse without connecting a signer or entering a recovery phrase.
 
 To revoke access later: Farcaster app settings, connected apps.
 

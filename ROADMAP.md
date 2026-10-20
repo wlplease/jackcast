@@ -4,16 +4,16 @@ This roadmap is a list of ideas, not a promise or release schedule. Jackcaster i
 
 ## Shipped in this source
 
-- Chronological Following, Friends (up to 50), Leaders, Recasts, custom feeds, channel feeds, Saved, and Media views.
+- Chronological Following, Friends (up to 50), Leaders, Recasts, custom feeds, channel feeds, Saved collections, and Media views.
 - Neynar FID batching at 10 accounts per request; bounded activity discovery and request budgets. See [Neynar usage](./docs/NEYNAR-USAGE.md).
 - Per-device filters, reorderable channel tabs and built-in feed tabs, feed visibility controls, saved posts and Mini App favorites, custom account lists, editable feed labels, themes, and audio URLs.
 - Sent activity feed for Jackcaster-attributed posts, including type and date filters.
 - Search for casts, people, and channels; notifications with mark-read controls.
-- Composer with images, links, quote/reply, text threads, local drafts, GIF search, and a local meme maker.
+- Composer with images, links, quote/reply, text threads with parent navigation, local drafts, GIF search, and a local meme maker.
 - Inline feed video and audio, plus a user-initiated soundtrack player with bundled and personal tracks.
 - On-demand AI digest with cited source posts, an expandable full sample list, insights, and optional text-to-speech.
 - Mini Apps catalog, categories, search, favorites, recent apps, developer discovery, native Farcaster launching, and a nearly full-screen browser preview with a minimize tray.
-- Profile posts/media, profile analytics, pinned cast, theme-aware settings, security headers, and best-effort login throttling.
+- Profile posts/media, profile analytics, pinned cast, touch-friendly mobile navigation, theme-aware settings, security headers, and best-effort login throttling.
 
 ## Useful next refinements
 
@@ -27,7 +27,6 @@ Prioritize reliability and user control before adding another large feed:
 | Optional cross-device preference sync | Device cookies do not follow the owner across browsers. | Requires durable storage, clear account ownership, and a deliberate security model; the app is currently single-owner, not multi-tenant. |
 | Edge-wide login protection | Upstash coordinates the five-failure block when configured; the fallback is process-local. | Add and verify Vercel Firewall limits in each deployment; this cannot be completed in source alone. |
 | Spaces discovery | Live conversations could complement cast feeds. | First verify reliable discovery data and native Farcaster join support. If only external links are supported, label and open them as such. |
-| Saved post collections | Saved casts are useful, but one flat reading list can become hard to browse. | Keep collections private and device-local unless sync is deliberately designed. |
 
 ## Product boundaries
 
