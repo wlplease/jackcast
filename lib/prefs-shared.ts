@@ -35,6 +35,10 @@ export type Prefs = {
   savedMiniApps: { url: string; title: string }[];
   /** Cast hashes saved to this device's private reading list. */
   savedCasts: string[];
+  /** Private, device-local folders for saved casts. */
+  savedCollections: { id: string; name: string }[];
+  /** Only non-default folder assignments are stored; unassigned casts stay in the inbox. */
+  savedCastCollections: { hash: string; collectionId: string }[];
   /** Optional personal audio playlist, stored in this device's settings cookie. */
   audioTracks: { url: string; title: string }[];
   /** Color theme (see lib/themes.ts). */
@@ -49,7 +53,8 @@ export const BUILTIN_FEED_ORDER: BuiltinFeedKey[] = ["following", "friends", "le
 export type FeedNames = Record<FeedNameKey, string>;
 export const DEFAULT_FEED_NAMES: FeedNames = { following: "Following", friends: "Friends", leaders: "Leaders", recasts: "Recasts", miniApps: "Mini Apps", media: "Media" };
 
-export const DEFAULT_PREFS: Prefs = { feedNames: DEFAULT_FEED_NAMES, feedOrder: BUILTIN_FEED_ORDER, hiddenFeeds: [], mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], audioTracks: [], theme: "jackcaster", mode: "auto" };
+export const DEFAULT_SAVED_COLLECTIONS = [{ id: "inbox", name: "Reading list" }];
+export const DEFAULT_PREFS: Prefs = { feedNames: DEFAULT_FEED_NAMES, feedOrder: BUILTIN_FEED_ORDER, hiddenFeeds: [], mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], savedCollections: DEFAULT_SAVED_COLLECTIONS, savedCastCollections: [], audioTracks: [], theme: "jackcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 50;
@@ -57,6 +62,7 @@ export const MAX_CUSTOM_PEOPLE = 20;
 export const MAX_TOP_ACCOUNTS = 20;
 export const MAX_AUDIO_TRACKS = 3;
 export const MAX_SAVED_CASTS = 30;
+export const MAX_SAVED_COLLECTIONS = 8;
 export const CHANNEL_ID = /^[a-z0-9-]{1,32}$/;
 
 export const QUALITY_LEVELS = [

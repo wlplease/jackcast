@@ -1446,3 +1446,14 @@ html[data-previews="off"] .cast .embeds { display: none; }
 @media (max-width: 700px) { .landing-tour-stage { grid-template-columns: minmax(0, 1fr); } .landing-tour-copy p { min-height: 0; } }
 @media (max-width: 380px) { .login-portal-bar { font-size: 8px; } .login-portal-status { padding: 5px 6px; font-size: 8px; } .login-card, .login-deploy { padding: 18px; } .login-card { padding: 12px 14px; } .login-feature-grid { grid-template-columns: minmax(0, 1fr); } .login-portal-footer { display: grid; grid-template-columns: 1fr auto; } .login-portal-footer span:last-child { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .login-portal-status i, .login-feature-grid > span, .login-deploy-button { animation: none; transition: none; } }
+
+/* Compact, predictable app navigation for touch screens. */
+.mobile-app-nav { display: none; }
+@media (max-width: 520px) {
+  .site-footer { justify-content: center; width: 100%; min-height: calc(62px + env(safe-area-inset-bottom)); padding: 5px 6px calc(5px + env(safe-area-inset-bottom)); border-right: 0; border-left: 0; border-radius: 0; }
+  .site-footer-brand, .site-footer > nav[aria-label="Project links"] { display: none; }
+  .site-footer nav.mobile-app-nav { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: stretch; justify-content: stretch; gap: 1px; width: min(100%, 520px); }
+  .site-footer nav.mobile-app-nav > a { display: grid; grid-template-rows: 20px 13px; align-content: center; justify-items: center; gap: 2px; width: auto; height: 48px; min-width: 0; border-radius: 10px; color: var(--ink-3); font-size: 9px; font-weight: 600; line-height: 1; }
+  .site-footer nav.mobile-app-nav > a svg { width: 19px; height: 19px; }
+  .site-footer nav.mobile-app-nav > a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+}

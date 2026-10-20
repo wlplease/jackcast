@@ -84,7 +84,7 @@ export function ThreadReplyTree({
       {nodes.length > 0 ? (
         <div className="thread-reply-tree">
           {nodes.map((node) => (
-            <ThreadReplyBranch key={node.cast.hash} node={node} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} depth={1} />
+            <ThreadReplyBranch key={node.cast.hash} node={node} parentHash={parentHash} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} depth={1} />
           ))}
         </div>
       ) : (

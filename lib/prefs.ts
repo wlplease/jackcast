@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { BUILTIN_FEED_ORDER, CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_TABS, normalizeMute, type BuiltinFeedKey, type Prefs } from "./prefs-shared";
+import { BUILTIN_FEED_ORDER, CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, DEFAULT_SAVED_COLLECTIONS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_SAVED_COLLECTIONS, MAX_TABS, normalizeMute, type BuiltinFeedKey, type Prefs } from "./prefs-shared";
 import { MODES, THEME_IDS, type Mode, type ThemeId } from "./themes";
 
 export const PREFS_COOKIE = "selfcaster_prefs";
@@ -74,7 +74,19 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const savedCasts = Array.isArray(p.savedCasts)
       ? Array.from(new Set(p.savedCasts.filter((hash): hash is string => typeof hash === "string" && /^0x[0-9a-f]{40}$/i.test(hash)).map((hash) => hash.toLowerCase()))).slice(0, MAX_SAVED_CASTS)
       : [];
-    return { feedNames, feedOrder, hiddenFeeds, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, audioTracks, theme, mode };
+    const savedCollections = Array.isArray(p.savedCollections)
+      ? [{ ...DEFAULT_SAVED_COLLECTIONS[0] }, ...p.savedCollections.filter((entry) => entry && typeof entry.id === "string" && entry.id !== "inbox" && /^[a-z0-9-]{1,24}$/.test(entry.id) && typeof entry.name === "string")
+          .map((entry) => ({ id: entry.id, name: entry.name.trim().replace(/\s+/g, " ").slice(0, 28) }))
+          .filter((entry) => entry.name && !DEFAULT_SAVED_COLLECTIONS.some((item) => item.name.toLowerCase() === entry.name.toLowerCase()))
+          .filter((entry, index, all) => all.findIndex((item) => item.id === entry.id) === index)
+          .slice(0, MAX_SAVED_COLLECTIONS - 1)]
+      : DEFAULT_SAVED_COLLECTIONS;
+    const collectionIds = new Set(savedCollections.map((collection) => collection.id));
+    const savedCastCollections = Array.isArray(p.savedCastCollections)
+      ? Array.from(new Map(p.savedCastCollections.filter((entry) => entry && typeof entry.hash === "string" && /^0x[0-9a-f]{40}$/i.test(entry.hash) && typeof entry.collectionId === "string" && entry.collectionId !== "inbox" && collectionIds.has(entry.collectionId) && savedCasts.includes(entry.hash.toLowerCase()))
+          .map((entry) => [entry.hash.toLowerCase(), { hash: entry.hash.toLowerCase(), collectionId: entry.collectionId }] as const)).values())
+      : [];
+    return { feedNames, feedOrder, hiddenFeeds, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, savedCollections, savedCastCollections, audioTracks, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

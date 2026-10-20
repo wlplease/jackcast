@@ -18,12 +18,14 @@ function mergeNodes(current: ThreadReplyNode[], incoming: ThreadReplyNode[]): Th
 
 export function ThreadReplyBranch({
   node,
+  parentHash,
   canWrite,
   viewerFid,
   mutes,
   depth,
 }: {
   node: ThreadReplyNode;
+  parentHash: string;
   canWrite: boolean;
   viewerFid: number;
   mutes: string[];
@@ -62,11 +64,12 @@ export function ThreadReplyBranch({
 
   return (
     <div className="thread-reply-branch">
+      <a className="thread-parent-jump" href={`#cast-${parentHash}`}>↑ Parent cast</a>
       <CastCard cast={node.cast} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} showReplyTo={false} />
       {children.length > 0 && (
         <div className="thread-reply-children">
           {children.map((child) => (
-            <ThreadReplyBranch key={child.cast.hash} node={child} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} depth={depth + 1} />
+            <ThreadReplyBranch key={child.cast.hash} node={child} parentHash={node.cast.hash} canWrite={canWrite} viewerFid={viewerFid} mutes={mutes} depth={depth + 1} />
           ))}
         </div>
       )}

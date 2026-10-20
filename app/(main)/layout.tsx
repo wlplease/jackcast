@@ -14,7 +14,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     const [nextChannels, prefs] = await Promise.all([tabChannels(), getPrefs()]);
     channels = nextChannels;
     return (
-      <SavedCastsProvider initial={prefs.savedCasts}><MiniAppSessionProvider><div className="shell">
+      <SavedCastsProvider initial={prefs.savedCasts} initialCollections={prefs.savedCollections} initialAssignments={prefs.savedCastCollections}><MiniAppSessionProvider><div className="shell">
         <FeedScrollRestoration />
         <Masthead channels={channels} customName={prefs.customName} audioTracks={prefs.audioTracks} feedNames={prefs.feedNames} feedOrder={prefs.feedOrder} hiddenFeeds={prefs.hiddenFeeds} />
         <ArcadeDiscovery />
@@ -24,7 +24,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   } catch {}
 
   return (
-    <SavedCastsProvider initial={[]}><MiniAppSessionProvider><div className="shell">
+    <SavedCastsProvider initial={[]} initialCollections={[{ id: "inbox", name: "Reading list" }]} initialAssignments={[]}><MiniAppSessionProvider><div className="shell">
       <FeedScrollRestoration />
       <Masthead channels={channels} customName="Custom" />
       <ArcadeDiscovery />

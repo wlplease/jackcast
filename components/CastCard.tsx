@@ -25,7 +25,7 @@ export function CastCard({
   const a = cast.author;
   const postedViaJackcast = isJackcastAttributed(cast.text);
   return (
-    <article className={`cast${variant ? ` ${variant}` : ""}`}>
+    <article id={`cast-${cast.hash}`} className={`cast${variant ? ` ${variant}` : ""}`}>
       {variant !== "focus" && <Link className="stretch" href={`/cast/${cast.hash}`} aria-label="Open thread" />}
       <Link href={`/u/${a.username}`}>
         <Avatar user={a} />

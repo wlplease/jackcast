@@ -6,7 +6,7 @@ import { neynar } from "@/lib/neynar";
 import { getViewer } from "@/lib/viewer";
 import { PREFS_COOKIE, getPrefs, parsePrefs } from "@/lib/prefs";
 import { followedPeople as getFollowedPeople, recentFriendSuggestions, savedFriendsActivity, ownMiniApps, topAccountsSnapshot } from "@/lib/data";
-import { CHANNEL_ID, MAX_FRIENDS, MAX_SAVED_CASTS, MAX_TOP_ACCOUNTS, type Prefs } from "@/lib/prefs-shared";
+import { CHANNEL_ID, MAX_FRIENDS, MAX_SAVED_CASTS, MAX_SAVED_COLLECTIONS, MAX_TOP_ACCOUNTS, type Prefs } from "@/lib/prefs-shared";
 
 /** Saves only the fields you pass, merged over what's already stored, so separate settings forms can't clobber each other. */
 export async function savePrefs(patch: Partial<Prefs>): Promise<{ ok: true; prefs: Prefs } | { ok: false; error: string }> {
@@ -35,8 +35,45 @@ export async function toggleSavedCast(hash: string): Promise<{ ok: true; saved: 
   const prefs = await getPrefs();
   const exists = prefs.savedCasts.includes(normalized);
   if (!exists && prefs.savedCasts.length >= MAX_SAVED_CASTS) return { ok: false, error: `Your saved list is full (${MAX_SAVED_CASTS}). Remove a cast first.` };
-  const result = await savePrefs({ savedCasts: exists ? prefs.savedCasts.filter((item) => item !== normalized) : [normalized, ...prefs.savedCasts] });
+  const result = await savePrefs({
+    savedCasts: exists ? prefs.savedCasts.filter((item) => item !== normalized) : [normalized, ...prefs.savedCasts],
+    savedCastCollections: prefs.savedCastCollections.filter((item) => item.hash !== normalized),
+  });
   return result.ok ? { ok: true, saved: !exists } : { ok: false, error: result.error };
+}
+
+export async function createSavedCollection(rawName: string): Promise<{ ok: true; collection: { id: string; name: string } } | { ok: false; error: string }> {
+  const name = rawName.trim().replace(/\s+/g, " ").slice(0, 28);
+  if (!name) return { ok: false, error: "Enter a name for this collection." };
+  const prefs = await getPrefs();
+  if (prefs.savedCollections.length >= MAX_SAVED_COLLECTIONS) return { ok: false, error: `You can have up to ${MAX_SAVED_COLLECTIONS} saved collections.` };
+  if (prefs.savedCollections.some((collection) => collection.name.toLowerCase() === name.toLowerCase())) return { ok: false, error: "A collection with that name already exists." };
+  const collection = { id: crypto.randomUUID().replace(/-/g, "").slice(0, 16), name };
+  const result = await savePrefs({ savedCollections: [...prefs.savedCollections, collection] });
+  return result.ok ? { ok: true, collection } : { ok: false, error: result.error };
+}
+
+export async function moveSavedCast(hash: string, collectionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const normalized = hash.toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(normalized)) return { ok: false, error: "That cast link is not valid." };
+  const prefs = await getPrefs();
+  if (!prefs.savedCasts.includes(normalized)) return { ok: false, error: "Save this cast before moving it." };
+  if (!prefs.savedCollections.some((collection) => collection.id === collectionId)) return { ok: false, error: "That collection is no longer available." };
+  const savedCastCollections = prefs.savedCastCollections.filter((item) => item.hash !== normalized);
+  if (collectionId !== "inbox") savedCastCollections.push({ hash: normalized, collectionId });
+  const result = await savePrefs({ savedCastCollections });
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
+export async function deleteSavedCollection(collectionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!/^[a-z0-9-]{1,24}$/.test(collectionId) || collectionId === "inbox") return { ok: false, error: "The Reading list collection cannot be deleted." };
+  const prefs = await getPrefs();
+  if (!prefs.savedCollections.some((collection) => collection.id === collectionId)) return { ok: false, error: "That collection is no longer available." };
+  const result = await savePrefs({
+    savedCollections: prefs.savedCollections.filter((collection) => collection.id !== collectionId),
+    savedCastCollections: prefs.savedCastCollections.filter((item) => item.collectionId !== collectionId),
+  });
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
