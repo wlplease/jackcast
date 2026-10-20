@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ShareJackcasterButton } from "@/components/ShareJackcasterButton";
-import { MobileAppNav } from "@/components/MobileAppNav";
 
 const ExternalLinkIcon = ({ children }: { children: React.ReactNode }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -10,7 +9,6 @@ const ExternalLinkIcon = ({ children }: { children: React.ReactNode }) => (
 
 export function SiteFooter() {
   return <footer className="site-footer">
-    <MobileAppNav />
     <div className="site-footer-brand"><span className="site-footer-spark" aria-hidden="true">↑</span><span><strong>Jackcaster</strong><small>Built on open-source Selfcaster</small></span></div>
     <nav aria-label="Project links">
       <Link href="/map" className="site-footer-map" aria-label="Community map" title="Community map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3c2.4 2.5 3.5 5.5 3.5 9s-1.1 6.5-3.5 9c-2.4-2.5-3.5-5.5-3.5-9S9.6 5.5 12 3Z"/></svg><span>Map</span></Link>

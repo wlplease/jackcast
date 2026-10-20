@@ -102,11 +102,6 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     setBusy(true); setError("");
     navigator.geolocation.getCurrentPosition((position) => {
       // Coordinates are immediately reduced to a broad grid cell and never leave this callback.
-      if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy > 100_000) {
-        setBusy(false);
-        setError("Could not estimate an area from this location reading. Try again or leave your pin unset.");
-        return;
-      }
       setSelectedAreaId(areaIdFor(position.coords.latitude, position.coords.longitude));
       setReviewPin(true);
       setBusy(false);
