@@ -1197,6 +1197,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .map-privacy-card { display: grid; gap: 10px; margin: 0 14px; padding: 13px; border: 1px solid var(--rule); border-radius: 16px; background: color-mix(in srgb, var(--card) 85%, transparent); box-shadow: 0 10px 28px rgb(20 40 30 / 4%); backdrop-filter: blur(14px); }
 .map-privacy-card strong { font-size: 13px; }
 .map-privacy-card p { margin: 3px 0 0; color: var(--ink-2); font-size: 11px; line-height: 1.5; }
+.map-setup-note { padding: 10px 12px; border: 1px solid var(--rule); border-radius: 11px; background: var(--paper); }
 .map-pin-form, .map-your-pin { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .map-pin-review { display: grid; gap: 5px; padding: 11px; border: 1px solid var(--rule); border-radius: 12px; background: color-mix(in srgb, var(--paper) 78%, transparent); }
 .map-pin-review small { color: var(--ink-3); font-size: 11px; line-height: 1.45; }

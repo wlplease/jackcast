@@ -40,6 +40,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const [geoReady, setGeoReady] = useState(false);
+  const [mapConfigured, setMapConfigured] = useState<boolean | null>(null);
   const visiblePins = useMemo(() => pins.filter((pin) => Number.isInteger(pin.areaId) && pin.areaId >= 0 && pin.areaId < 90000), [pins]);
   const visibleMyPin = myPin && Number.isInteger(myPin.areaId) && myPin.areaId >= 0 && myPin.areaId < 90000 ? myPin : null;
   useEffect(() => {
@@ -55,7 +56,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       setGeoReady(worldResult.status === "fulfilled");
 
       const firebaseConfig = config();
-      if (!firebaseConfig) { if (active) { setError((current) => current || "Shared map is not configured yet. Add the Firebase Web App config described in the README."); setReady(true); } return; }
+      if (!firebaseConfig) { if (active) { setMapConfigured(false); setReady(true); } return; }
+      if (active) setMapConfigured(true);
       try {
         await firebaseAnonymousIdToken("jackcaster-map");
         const [{ initializeApp, getApps }, { getAuth }, { getFirestore, collection, onSnapshot, query, orderBy, limit }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
@@ -83,7 +85,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     setBusy(true); setError("");
     try {
       const firebaseConfig = config();
-      if (!firebaseConfig) throw new Error("Shared map is not configured.");
+      if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
       const [{ initializeApp, getApps }, { getAuth }, { getFirestore, doc, setDoc, serverTimestamp }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
       const app = getApps().find((entry) => entry.name === "jackcaster-map") ?? initializeApp(firebaseConfig, "jackcaster-map");
@@ -115,7 +117,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     setBusy(true); setError("");
     try {
       const firebaseConfig = config();
-      if (!firebaseConfig) throw new Error("Shared map is not configured.");
+      if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
       const [{ initializeApp, getApps }, { getAuth }, { getFirestore, deleteDoc, doc }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
       const app = getApps().find((entry) => entry.name === "jackcaster-map") ?? initializeApp(firebaseConfig, "jackcaster-map");
@@ -152,10 +154,12 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
 
       <section className="map-privacy-card">
         <div>
-          <strong>Share an approximate area</strong>
+          <strong>{mapConfigured === false ? "Community map" : "Share an approximate area"}</strong>
           <p>Your location is rounded on this device into a broad area about 220 km north-to-south. Exact coordinates are never uploaded. Sharing is optional, and you can remove your pin anytime.</p>
         </div>
-        {reviewPin && selectedAreaId !== null ? (
+        {mapConfigured === false ? (
+          <p className="map-setup-note" role="status">Area sharing isn’t set up on this site yet. The globe is still available to explore.</p>
+        ) : reviewPin && selectedAreaId !== null ? (
           <div className="map-pin-review">
             <strong>Share this broad area?</strong>
             <p>Broad map area · about 220 km north-to-south</p>
