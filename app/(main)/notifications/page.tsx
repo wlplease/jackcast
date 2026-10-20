@@ -6,6 +6,7 @@ import { timeAgo } from "@/lib/format";
 import type { Author } from "@/lib/types";
 import { requireViewer } from "@/lib/viewer";
 import { NotificationControls } from "@/components/NotificationControls";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 const GLYPH: Record<string, string> = {
   likes: "♥",
@@ -92,7 +93,7 @@ export default async function NotificationsPage({
                 {whoLine(users, VERB[n.type] ?? n.type)}{" "}
                 <span style={{ color: "var(--ink-3)" }}>· {timeAgo(n.most_recent_timestamp)}</span>
               </div>
-              {n.cast?.text && <div className="note-snippet">{n.cast.text}</div>}
+              {n.cast?.text && <div className="note-snippet">{withoutCastAttribution(n.cast.text)}</div>}
             </div>
           </Link>
         );

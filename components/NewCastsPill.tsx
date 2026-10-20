@@ -12,14 +12,27 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   const [capped, setCapped] = useState(false);
   const [checkError, setCheckError] = useState("");
   const [showTop, setShowTop] = useState(false);
+  const [refreshDismissed, setRefreshDismissed] = useState(false);
   const [pending, start] = useTransition();
   const [retryAttempt, setRetryAttempt] = useState(0);
   const last = useRef(0);
+  const refreshStarted = useRef(false);
 
   function refreshFeed() {
     window.scrollTo({ top: 0, behavior: "smooth" });
+    refreshStarted.current = true;
+    setRefreshDismissed(false);
     start(() => router.refresh());
   }
+
+  useEffect(() => {
+    if (!pending && refreshStarted.current) {
+      refreshStarted.current = false;
+      setRefreshDismissed(true);
+    }
+  }, [pending]);
+
+  useEffect(() => { setRefreshDismissed(false); }, [feed]);
 
   useEffect(() => {
     const updateTopVisibility = () => setShowTop(window.scrollY > 500);
@@ -48,6 +61,7 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
           if (!stop) {
             setCount(n);
             setCapped(capped && n === timestamps.length);
+            if (n > 0) setRefreshDismissed(false);
             setCheckError("");
           }
         } else if (!stop) {
@@ -80,14 +94,14 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
 
   return (
     <>
-    {checkError && <div className="feed-poll-status" role="status">{checkError} <button type="button" onClick={() => setRetryAttempt((attempt) => attempt + 1)}>Retry check</button> <button type="button" onClick={refreshFeed} disabled={pending}>Refresh feed</button></div>}
-    <div className="pill-wrap feed-quick-actions">
-      {count > 0 ? <button className="pill" onClick={refreshFeed} disabled={pending}>
+    {checkError && <div className="feed-poll-status" role="status">{checkError} <button type="button" onClick={() => setRetryAttempt((attempt) => attempt + 1)}>Retry check</button> {!refreshDismissed && <button type="button" onClick={refreshFeed} disabled={pending}>Refresh feed</button>}</div>}
+    {(!refreshDismissed || showTop) && <div className="pill-wrap feed-quick-actions">
+      {!refreshDismissed && (count > 0 ? <button className="pill" onClick={refreshFeed} disabled={pending}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
         {pending ? "Loading…" : `${capped ? `${count}+` : count} new ${count === 1 ? "cast" : "casts"}`}
-      </button> : <button className="pill feed-refresh-button" onClick={refreshFeed} disabled={pending} aria-label="Refresh feed and return to the top">{pending ? "Refreshing…" : "↻ Refresh feed"}</button>}
+      </button> : <button className="pill feed-refresh-button" onClick={refreshFeed} disabled={pending} aria-label="Refresh feed and return to the top">{pending ? "Refreshing…" : "↻ Refresh feed"}</button>)}
       {showTop && <button className="pill feed-top-button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Back to top">↑ Top</button>}
-    </div>
+    </div>}
     </>
   );
 }

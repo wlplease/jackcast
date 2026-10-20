@@ -15,3 +15,8 @@ export function withCastAttribution(text: string): string {
 export function isJackcastAttributed(text: string): boolean {
   return /Casted from\s+https:\/\/jackcast(?:er)?\.vercel\.app\/?/i.test(text);
 }
+
+/** Remove the app's trailing protocol credit when showing cast text inside Jackcaster. */
+export function withoutCastAttribution(text: string): string {
+  return text.replace(/\n*\s*Casted from\s+https:\/\/jackcast(?:er)?\.vercel\.app\/?\s*$/i, "").trimEnd();
+}

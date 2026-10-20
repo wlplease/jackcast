@@ -18,16 +18,17 @@ export default function LoginLanding() {
         </header>
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
           <span className="login-eyebrow">YOUR FARCASTER, YOUR WAY</span>
-          <h2 id="login-deploy-title">A calmer home for your Farcaster conversations.</h2>
-          <p className="login-deploy-intro"><span>An open-source Farcaster client for chronological feeds, focused lists, conversations, and Mini Apps. This is a private demo; deploy your own copy to use Jackcaster.</span></p>
+          <h2 id="login-deploy-title">Build your own Farcaster client and node.</h2>
+          <p className="login-deploy-intro"><span>Start a Snapchain node, then connect a client that reads your node and submits signed messages. Follow the three-step developer lab.</span></p>
           <a className="login-deploy-button login-deploy-button-top" href={DEPLOY_URL} target="_blank" rel="noreferrer">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
             Quick deploy to Vercel <span aria-hidden="true">↗</span>
           </a>
+          <a className="login-lab-link" href="https://github.com/wlplease/jackcast/blob/main/docs/SNAPCHAIN-LAB.md" target="_blank" rel="noreferrer">Open the three-step Snapchain lab <span aria-hidden="true">↗</span></a>
           <p className="login-prereq"><strong>Before you start:</strong> have a <a href="https://neynar.com" target="_blank" rel="noreferrer">Neynar API key</a> ready. You’ll choose a private app password during setup. A Farcaster signer is only needed if you want to post.</p>
           <LandingWalkthrough />
           <section className="login-what" aria-labelledby="login-what-title">
-            <div className="login-what-heading"><span className="login-eyebrow">MADE TO FIT YOUR FLOW</span><h3 id="login-what-title">Your feed, your rhythm.</h3></div>
+            <div className="login-what-heading"><span className="login-eyebrow">THE CLIENT EXAMPLE</span><h3 id="login-what-title">Your feed, your rhythm.</h3></div>
             <article><span aria-hidden="true">↕</span><div><h4>Focused feeds</h4><p>Following, Friends, lists, channels, and more.</p></div></article>
             <article><span aria-hidden="true">✎</span><div><h4>Join the conversation</h4><p>Post, reply, quote, and save drafts on your device.</p></div></article>
             <article><span aria-hidden="true">▣</span><div><h4>Explore</h4><p>Discover Mini Apps, media, and profiles.</p></div></article>

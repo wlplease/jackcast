@@ -9,6 +9,7 @@ import { createSessionToken, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/l
 import type { PostCastReqBodyEmbeds } from "@neynar/nodejs-sdk/build/api";
 import { getViewer, SIGNER_COOKIE } from "@/lib/viewer";
 import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
+import { buildReplyTree, THREAD_DEPTH } from "@/lib/thread-replies";
 
 async function signer(): Promise<string> {
   const v = await getViewer();
@@ -17,6 +18,39 @@ async function signer(): Promise<string> {
 }
 
 export type ActionResult = { ok: true; hash?: string } | { ok: false; error: string };
+
+export type ThreadRepliesResult =
+  | { ok: true; nodes: Awaited<ReturnType<typeof buildReplyTree>>["nodes"]; hidden: number; truncated: boolean; cursor: string | null }
+  | { ok: false; error: string };
+
+/** Read another page or a deeper branch of a thread for an authenticated viewer. */
+export async function loadThreadReplies(input: { parentHash: string; cursor?: string }): Promise<ThreadRepliesResult> {
+  if (!input || typeof input.parentHash !== "string" || !/^0x[0-9a-f]{40}$/i.test(input.parentHash) ||
+      (input.cursor !== undefined && (typeof input.cursor !== "string" || input.cursor.length > 4096))) {
+    return { ok: false, error: "That conversation request is not valid." };
+  }
+  const viewer = await getViewer();
+  if (!viewer?.fid) return { ok: false, error: "Reconnect your Farcaster account to load more replies." };
+  try {
+    const response = await neynar().lookupCastConversation({
+      identifier: input.parentHash,
+      type: "hash",
+      replyDepth: THREAD_DEPTH,
+      includeChronologicalParentCasts: false,
+      viewerFid: viewer.fid,
+      sortType: "chron",
+      limit: 50,
+      cursor: input.cursor,
+    });
+    const tree = await buildReplyTree(
+      response.conversation.cast.direct_replies ?? [],
+      viewer.fid,
+    );
+    return { ok: true, ...tree, cursor: response.next?.cursor ?? null };
+  } catch {
+    return { ok: false, error: "Couldn't load those replies just now. Try again." };
+  }
+}
 
 type LoginWindow = { failures: number; resetAt: number; blockedUntil: number };
 const loginWindows = new Map<string, LoginWindow>();

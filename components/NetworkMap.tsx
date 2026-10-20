@@ -6,10 +6,22 @@ import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import { firebaseAnonymousIdToken } from "@/lib/firebase-anonymous-client";
 
-type City = { id: number; name: string; lat: number; lon: number; countryCode: string; country: string };
-type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; cityId: number; city: string; country: string; locationMethod?: "gps"; updatedAt?: { toDate?: () => Date } };
+const AREA_STEP = 2;
+type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; areaId: number; locationMethod?: "gps"; updatedAt?: { toDate?: () => Date } };
 type PinRow = Pin & { id: string };
 type WorldTopology = Topology<{ countries: GeometryCollection }>;
+
+function areaIdFor(lat: number, lon: number) {
+  const latIndex = Math.max(0, Math.min(89, Math.floor((lat + 90) / AREA_STEP)));
+  const lonIndex = Math.max(0, Math.min(179, Math.floor((lon + 180) / AREA_STEP)));
+  return latIndex * 1000 + lonIndex;
+}
+
+function areaCenter(areaId: number) {
+  const latIndex = Math.floor(areaId / 1000);
+  const lonIndex = areaId % 1000;
+  return { lat: -90 + (latIndex + 0.5) * AREA_STEP, lon: -180 + (lonIndex + 0.5) * AREA_STEP };
+}
 
 function config(): { apiKey: string; authDomain: string; projectId: string; appId: string } | null {
   const packed = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
@@ -18,54 +30,29 @@ function config(): { apiKey: string; authDomain: string; projectId: string; appI
   return apiKey && authDomain && projectId && appId ? { apiKey, authDomain, projectId, appId } : null;
 }
 
-function parseCities(text: string): City[] {
-  return text.split(/\r?\n/).filter(Boolean).map((line) => {
-    const [id, name, lat, lon, countryCode, country] = line.split("\t");
-    return { id: Number(id), name, lat: Number(lat), lon: Number(lon), countryCode, country };
-  }).filter((city) => Number.isInteger(city.id) && city.name && city.country && Number.isFinite(city.lat) && Number.isFinite(city.lon));
-}
-
-function nearestCity(cities: City[], lat: number, lon: number): { city: City; distanceKm: number } | null {
-  let best: City | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  const toRad = Math.PI / 180;
-  for (const city of cities) {
-    const dLat = (city.lat - lat) * toRad;
-    const dLon = (city.lon - lon) * toRad;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * toRad) * Math.cos(city.lat * toRad) * Math.sin(dLon / 2) ** 2;
-    const distance = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    if (distance < bestDistance) { best = city; bestDistance = distance; }
-  }
-  return best && bestDistance <= 15 ? { city: best, distanceKm: bestDistance } : null;
-}
-
 export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number; username: string; displayName: string; pfpUrl: string }) {
-  const [cities, setCities] = useState<City[]>([]);
   const [topology, setTopology] = useState<WorldTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
   const [myPin, setMyPin] = useState<PinRow | null>(null);
-  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [reviewPin, setReviewPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const [geoReady, setGeoReady] = useState(false);
-  const citiesById = useMemo(() => new Map(cities.map((city) => [city.id, city])), [cities]);
-  const visiblePins = useMemo(() => pins.filter((pin) => citiesById.has(pin.cityId)), [pins, citiesById]);
-  const visibleMyPin = myPin && citiesById.has(myPin.cityId) ? myPin : null;
+  const visiblePins = useMemo(() => pins.filter((pin) => Number.isInteger(pin.areaId) && pin.areaId >= 0 && pin.areaId < 90000), [pins]);
+  const visibleMyPin = myPin && Number.isInteger(myPin.areaId) && myPin.areaId >= 0 && myPin.areaId < 90000 ? myPin : null;
   useEffect(() => {
     let active = true;
     let stop = () => {};
     void (async () => {
-      const [cityResult, worldResult] = await Promise.allSettled([
-        fetch("/data/geonames-cities.tsv", { cache: "force-cache" }).then((response) => { if (!response.ok) throw new Error("Could not load the offline city list."); return response.text(); }),
+      const worldResult = await Promise.allSettled([
         fetch("/data/world-countries-110m.json", { cache: "force-cache" }).then((response) => { if (!response.ok) throw new Error("Could not load the world globe data."); return response.json() as Promise<WorldTopology>; }),
-      ]);
+      ]).then((results) => results[0]);
       if (!active) return;
-      if (cityResult.status === "fulfilled") setCities(parseCities(cityResult.value));
       if (worldResult.status === "fulfilled") setTopology(worldResult.value);
-      if (cityResult.status === "rejected" || worldResult.status === "rejected") setError("The local map data could not be loaded. Refresh the page to try again.");
-      setGeoReady(cityResult.status === "fulfilled" && worldResult.status === "fulfilled");
+      if (worldResult.status === "rejected") setError("The local map data could not be loaded. Refresh the page to try again.");
+      setGeoReady(worldResult.status === "fulfilled");
 
       const firebaseConfig = config();
       if (!firebaseConfig) { if (active) { setError((current) => current || "Shared map is not configured yet. Add the Firebase Web App config described in the README."); setReady(true); } return; }
@@ -79,7 +66,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
         stop = onSnapshot(query(collection(db, "jackcaster_map", "pins", "pins"), orderBy("updatedAt", "desc"), limit(300)), (snapshot) => {
           if (!active) return;
           const allRows = snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Pin) }));
-          const rows = allRows.filter((item) => item.locationMethod === "gps" && Number.isInteger(item.cityId) && Number.isInteger(item.fid) && Boolean(item.username && item.city && item.country));
+          const rows = allRows.filter((item) => item.locationMethod === "gps" && Number.isInteger(item.areaId) && Number.isInteger(item.fid) && Boolean(item.username));
           setPins(rows);
           setMyPin(allRows.find((item) => item.id === uid) ?? null);
           setReady(true);
@@ -92,7 +79,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   }, []);
 
   async function savePin() {
-    if (!selectedCity) { setError("Use GPS to find a nearby city before sharing a pin."); return; }
+    if (selectedAreaId === null) { setError("Check your approximate area before sharing a pin."); return; }
     setBusy(true); setError("");
     try {
       const firebaseConfig = config();
@@ -103,10 +90,10 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       const uid = getAuth(app).currentUser?.uid;
       if (!uid) throw new Error("Firebase could not verify this browser session.");
       const db = getFirestore(app);
-      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), cityId: selectedCity.id, city: selectedCity.name.slice(0, 80), country: selectedCity.country.slice(0, 80), locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
+      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId: selectedAreaId, locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
       await setDoc(doc(db, "jackcaster_map", "pins", "pins", uid), pin);
-      setSelectedCity(null); setReviewPin(false); setMyPin({ ...pin, id: uid });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your city pin."); }
+      setSelectedAreaId(null); setReviewPin(false); setMyPin({ ...pin, id: uid });
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your area pin."); }
     finally { setBusy(false); }
   }
 
@@ -114,26 +101,19 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
     setBusy(true); setError("");
     navigator.geolocation.getCurrentPosition((position) => {
-      // The exact coordinates are used only for a local lookup and are discarded before any network request.
-      if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy > 1_000) {
+      // Coordinates are immediately reduced to a broad grid cell and never leave this callback.
+      if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy > 100_000) {
         setBusy(false);
-        setError("GPS accuracy is too low to choose a city (over 1 km). Enable precise location and try again. No location was saved.");
+        setError("Could not estimate an area from this location reading. Try again or leave your pin unset.");
         return;
       }
-      const match = nearestCity(cities, position.coords.latitude, position.coords.longitude);
-      if (match) {
-        setSelectedCity(match.city);
-        setReviewPin(true);
-      } else {
-        setSelectedCity(null);
-        setReviewPin(false);
-        setError("No listed city was found within 15 km of your GPS location. No location was saved.");
-      }
+      setSelectedAreaId(areaIdFor(position.coords.latitude, position.coords.longitude));
+      setReviewPin(true);
       setBusy(false);
     }, (reason) => {
       setBusy(false);
       setError(reason.code === reason.PERMISSION_DENIED ? "Location permission was declined. Your location was not changed." : "Could not read a GPS location. Your location was not changed; try again or leave it unset.");
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 });
+    }, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 });
   }
 
   async function removePin() {
@@ -148,22 +128,21 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       if (!uid) throw new Error("Could not verify your map session.");
       await deleteDoc(doc(getFirestore(app), "jackcaster_map", "pins", "pins", uid));
       setMyPin(null);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove your city pin."); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove your area pin."); }
     finally { setBusy(false); }
   }
 
-  const cityGroups = useMemo(() => {
-    const groups = new Map<number, { city: City; pins: PinRow[] }>();
+  const areaGroups = useMemo(() => {
+    const groups = new Map<number, { lat: number; lon: number; pins: PinRow[] }>();
     for (const pin of visiblePins) {
-      const city = citiesById.get(pin.cityId);
-      if (!city) continue;
-      const group = groups.get(pin.cityId) ?? { city, pins: [] };
+      const center = areaCenter(pin.areaId);
+      const group = groups.get(pin.areaId) ?? { ...center, pins: [] };
       group.pins.push(pin);
-      groups.set(pin.cityId, group);
+      groups.set(pin.areaId, group);
     }
     return [...groups.values()];
-  }, [citiesById, visiblePins]);
-  const hasLegacyMyPin = Boolean(myPin && (myPin.locationMethod !== "gps" || !citiesById.has(myPin.cityId)));
+  }, [visiblePins]);
+  const hasLegacyMyPin = Boolean(myPin && !visibleMyPin);
 
   return (
     <div className="network-map-page">
@@ -171,79 +150,79 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
         <div>
           <span className="map-eyebrow">JACKCASTER COMMUNITY</span>
           <h1>Network globe</h1>
-        <p>Opt-in city spots based on a fresh GPS reading. Share a nearby city or leave your location unset.</p>
+      <p>Find your people across broad areas.</p>
         </div>
         <strong className="map-count">{visiblePins.length === 300 ? "300+" : visiblePins.length} {visiblePins.length === 1 ? "person" : "people"}</strong>
       </header>
 
       <section className="map-privacy-card">
         <div>
-          <strong>Share a GPS-checked city</strong>
-          <p>Jackcaster requests a fresh GPS reading with reported accuracy within 1 km, then matches a listed city within 15 km on this device. GPS coordinates are discarded; only the city and country are shared after you confirm. You can leave this blank or remove your pin anytime. Browser GPS can be spoofed, so this is an estimate, not proof of physical presence.</p>
+          <strong>Share an approximate area</strong>
+          <p>Your location is rounded on this device into a broad area about 220 km north-to-south. Exact coordinates are never uploaded. Sharing is optional, and you can remove your pin anytime.</p>
         </div>
-        {reviewPin && selectedCity ? (
+        {reviewPin && selectedAreaId !== null ? (
           <div className="map-pin-review">
-            <strong>Confirm your nearby city</strong>
-            <p>{selectedCity.name}, {selectedCity.country}</p>
-            <small>Matched on this device from your fresh GPS reading. Exact coordinates and GPS accuracy are not uploaded.</small>
+            <strong>Share this broad area?</strong>
+            <p>Broad map area · about 220 km north-to-south</p>
+            <small>Your precise coordinates stay on this device.</small>
             <div className="map-pin-form">
-              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedCity(null); setReviewPin(false); setError(""); }}>Cancel</button>
-              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Share this city"}</button>
+              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedAreaId(null); setReviewPin(false); setError(""); }}>Cancel</button>
+              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Share area"}</button>
             </div>
           </div>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
-            <span>Older pin hidden until you confirm a nearby city with GPS.</span>
-            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Checking GPS…" : "Update with GPS"}</button>
+            <span>Older city pin hidden. Replace it with an approximate area or remove it.</span>
+            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Finding area…" : "Update area"}</button>
             <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove old pin</button>
           </div>
         ) : visibleMyPin ? (
           <div className="map-your-pin">
-            <span>📍 {visibleMyPin.city}, {visibleMyPin.country}</span>
-            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Checking GPS…" : "Update with GPS"}</button>
+            <span>📍 Approximate area shared</span>
+            <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Finding area…" : "Update area"}</button>
             <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove my pin</button>
           </div>
         ) : (
           <div className="map-pin-form">
-            <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Checking GPS…" : "Use GPS to find my city"}</button>
-            <small className="map-attribution">GPS is optional. Nothing is saved until you confirm.</small>
+            <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding area…" : "Find my approximate area"}</button>
+            <small className="map-attribution">Optional · nothing is saved until you confirm.</small>
           </div>
         )}
         {error && <p className="map-error" role="status">{error}</p>}
       </section>
 
       {!geoReady ? (
-        <p className="map-empty">Loading the local world and city data…</p>
+        <p className="map-empty">Loading the globe…</p>
       ) : (
-        <section className="network-globe-card" aria-label="Spinning globe of shared cities">
-          {topology ? <SpinningGlobe topology={topology} groups={cityGroups} /> : <p className="map-empty">Globe data is unavailable.</p>}
-          <div className="globe-caption"><strong>{cityGroups.length.toLocaleString()} cities</strong><span>Drag to turn the globe · dots mark shared cities</span></div>
+        <section className="network-globe-card" aria-label="Spinning globe of shared approximate areas">
+          {topology ? <SpinningGlobe topology={topology} groups={areaGroups} /> : <p className="map-empty">Globe data is unavailable.</p>}
+          <div className="globe-caption"><strong>{areaGroups.length.toLocaleString()} areas</strong><span>Drag to turn · each dot covers a broad area</span></div>
         </section>
       )}
 
       {!ready ? (
         <p className="map-empty">Loading community pins…</p>
       ) : visiblePins.length === 0 ? (
-        <p className="map-empty">No cities shared yet. Add yours if you’d like to appear on the globe.</p>
+        <p className="map-empty">No areas shared yet. Add yours if you’d like to appear on the globe.</p>
       ) : (
         <section className="map-pin-list" aria-label="People on the globe">
           <h2>Across the network</h2>
           {visiblePins.map((pin) => (
             <article className="map-pin-row" key={pin.id}>
               <span className="map-avatar">{pin.pfpUrl ? <img src={pin.pfpUrl} alt="" /> : "↟"}</span>
-              <span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · {pin.city}, {pin.country}</small></span>
+              <span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · Approximate area</small></span>
               <a href={`/u/${encodeURIComponent(pin.username)}`} aria-label={`Open @${pin.username}'s profile`}>Profile ↗</a>
             </article>
           ))}
         </section>
       )}
 
-      <small className="map-attribution">City data: <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a> · Globe boundaries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a></small>
+      <small className="map-attribution">Globe boundaries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a></small>
     </div>
   );
 }
 
-function SpinningGlobe({ topology, groups }: { topology: WorldTopology; groups: { city: City; pins: PinRow[] }[] }) {
+function SpinningGlobe({ topology, groups }: { topology: WorldTopology; groups: { lat: number; lon: number; pins: PinRow[] }[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(-20);
   const draggingRef = useRef(false);
@@ -295,8 +274,8 @@ function SpinningGlobe({ topology, groups }: { topology: WorldTopology; groups: 
       for (const longitude of [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150]) { context.beginPath(); path({ type: "LineString", coordinates: Array.from({ length: 37 }, (_, i) => [longitude, -90 + i * 5]) }); context.stroke(); }
       context.globalAlpha = 1;
       for (const group of groups) {
-        if (geoDistance([group.city.lon, group.city.lat], [-rotationRef.current, 0]) > Math.PI / 2) continue;
-        const point = projection([group.city.lon, group.city.lat]);
+        if (geoDistance([group.lon, group.lat], [-rotationRef.current, 0]) > Math.PI / 2) continue;
+        const point = projection([group.lon, group.lat]);
         if (!point) continue;
         context.beginPath(); context.arc(point[0], point[1], group.pins.length > 1 ? 5.3 : 3.4, 0, Math.PI * 2);
         context.fillStyle = dotColor; context.shadowColor = dotColor; context.shadowBlur = 12; context.fill(); context.shadowBlur = 0;
@@ -312,5 +291,5 @@ function SpinningGlobe({ topology, groups }: { topology: WorldTopology; groups: 
     return () => { cancelAnimationFrame(frame); resize.disconnect(); };
   }, [topology, groups]);
 
-  return <canvas ref={canvasRef} className="network-globe" aria-label="Rotating globe showing shared city locations" role="img" onPointerDown={(event) => { draggingRef.current = true; lastXRef.current = event.clientX; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!draggingRef.current) return; const dx = event.clientX - lastXRef.current; lastXRef.current = event.clientX; rotationRef.current = (rotationRef.current + dx * .45 + 360) % 360; }} onPointerUp={() => { draggingRef.current = false; }} onPointerCancel={() => { draggingRef.current = false; }} />;
+  return <canvas ref={canvasRef} className="network-globe" aria-label="Rotating globe showing shared approximate areas" role="img" onPointerDown={(event) => { draggingRef.current = true; lastXRef.current = event.clientX; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!draggingRef.current) return; const dx = event.clientX - lastXRef.current; lastXRef.current = event.clientX; rotationRef.current = (rotationRef.current + dx * .45 + 360) % 360; }} onPointerUp={() => { draggingRef.current = false; }} onPointerCancel={() => { draggingRef.current = false; }} />;
 }

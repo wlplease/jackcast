@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CastView } from "@/lib/types";
 import { trackUsage } from "@/components/UsageAnalytics";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 type DigestPart = { title: string; summary: string; castHashes: string[] };
 type Digest = { storyline: string; sections: DigestPart[]; insights: DigestPart[] };
@@ -258,5 +259,5 @@ function SourceCasts({ casts }: { casts: DigestSource[] }) {
 }
 
 function DigestPost({ cast }: { cast: DigestSource }) {
-  return <article className="digest-post"><div className="digest-post-head"><span>{cast.username ? <Link href={`/u/${encodeURIComponent(cast.username)}`}>@{cast.username}</Link> : cast.name}</span><time dateTime={cast.timestamp}>{shortDate(cast.timestamp)}</time></div><p>{cast.text || "(Media cast)"}</p><div className="digest-post-foot"><span>♥ {cast.likes.toLocaleString()}</span><span>↻ {cast.recasts.toLocaleString()}</span><span>↩ {cast.replies.toLocaleString()}</span><Link href={`/cast/${encodeURIComponent(cast.hash)}`}>Open cast ↗</Link></div></article>;
+  return <article className="digest-post"><div className="digest-post-head"><span>{cast.username ? <Link href={`/u/${encodeURIComponent(cast.username)}`}>@{cast.username}</Link> : cast.name}</span><time dateTime={cast.timestamp}>{shortDate(cast.timestamp)}</time></div><p>{withoutCastAttribution(cast.text) || "(Media cast)"}</p><div className="digest-post-foot"><span>♥ {cast.likes.toLocaleString()}</span><span>↻ {cast.recasts.toLocaleString()}</span><span>↩ {cast.replies.toLocaleString()}</span><Link href={`/cast/${encodeURIComponent(cast.hash)}`}>Open cast ↗</Link></div></article>;
 }

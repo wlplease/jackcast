@@ -6,6 +6,7 @@ import { StatsChart } from "@/components/StatsChart";
 import { compact, timeAgo } from "@/lib/format";
 import { computeStats, type StatsWindow } from "@/lib/stats";
 import type { CastView } from "@/lib/types";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 const WINDOWS: { value: StatsWindow; label: string }[] = [
   { value: "7d", label: "7 days" },
@@ -41,7 +42,7 @@ export function ProfileAnalytics({ casts, followerCount }: { casts: CastView[]; 
       {stats.top.length > 0 && <>
         <h3 className="sub-head">What landed</h3>
         <ol className="top-casts">{stats.top.map((cast) => <li key={cast.hash}><Link href={`/cast/${cast.hash}`}>
-          <span className="tc-text">{cast.text || (cast.hasMedia ? "(photo or link)" : "(no text)")}</span>
+          <span className="tc-text">{withoutCastAttribution(cast.text) || (cast.hasMedia ? "(photo or link)" : "(no text)")}</span>
           <span className="tc-meta">♥ {compact(cast.likes)} · ↻ {compact(cast.recasts)} · ↳ {compact(cast.replies)} · {timeAgo(cast.ts)}</span>
         </Link></li>)}</ol>
       </>}

@@ -20,7 +20,6 @@ export function ImageEmbed({ src, animated = false }: { src: string; animated?: 
         <button type="button" className={`embed-image-link${animated ? " animated-image" : ""}`} onClick={() => setOpen(true)} aria-label={animated ? "Expand GIF" : "Expand image"}>
           <img className="embed-img" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
         </button>
-        {!animated && <a className="embed-image-open" href={src} target="_blank" rel="noreferrer" aria-label="Open image in a new tab" title="Open original in a new tab">↗</a>}
       </div>
       <dialog
         ref={dialog}

@@ -41,10 +41,10 @@ match /jackcaster_map/pins/pins/{uid} {
 
   function validPin() {
     return request.resource.data.keys().hasAll([
-        'fid', 'username', 'displayName', 'pfpUrl', 'cityId', 'city', 'country', 'locationMethod', 'updatedAt'
+        'fid', 'username', 'displayName', 'pfpUrl', 'areaId', 'locationMethod', 'updatedAt'
       ])
       && request.resource.data.keys().hasOnly([
-        'fid', 'username', 'displayName', 'pfpUrl', 'cityId', 'city', 'country', 'locationMethod', 'updatedAt'
+        'fid', 'username', 'displayName', 'pfpUrl', 'areaId', 'locationMethod', 'updatedAt'
       ])
       && request.resource.data.fid is int
       && request.resource.data.fid > 0
@@ -55,14 +55,9 @@ match /jackcaster_map/pins/pins/{uid} {
       && request.resource.data.displayName.size() <= 48
       && request.resource.data.pfpUrl is string
       && request.resource.data.pfpUrl.size() <= 256
-      && request.resource.data.cityId is int
-      && request.resource.data.cityId > 0
-      && request.resource.data.city is string
-      && request.resource.data.city.size() > 0
-      && request.resource.data.city.size() <= 80
-      && request.resource.data.country is string
-      && request.resource.data.country.size() > 0
-      && request.resource.data.country.size() <= 80
+      && request.resource.data.areaId is int
+      && request.resource.data.areaId >= 0
+      && request.resource.data.areaId < 90000
       && request.resource.data.locationMethod == 'gps'
       && request.resource.data.updatedAt == request.time;
   }
@@ -81,7 +76,7 @@ match /jackcaster_map/pins/pins/{uid} {
 
 - `jackcaster_arcade/...`: one anonymous-user score per weekly board. Scores remain community-reported; rules cannot prove gameplay or link the Firebase UID to the submitted Farcaster FID.
 - GIF cooldowns are stored in Upstash Redis, not Firebase. See the GIPHY setup in the [README](../README.md#gifs-and-memes-in-the-composer). No GIF Firestore rules are needed.
-- `jackcaster_map/...`: public, opt-in pins with a GeoNames city ID, city name, country, and `locationMethod: 'gps'`. The app requires a fresh GPS reading reported within 1 km accuracy and matches the nearest listed city within 15 km on-device; manual city selection is not offered. Exact GPS coordinates and reported accuracy are never written to Firebase. Users review and confirm the matched city before sharing and can remove their pin. The `locationMethod` field records the UI path; Firestore rules cannot independently prove that a browser actually used GPS, and browser GPS can be spoofed. Anonymous Auth is open to anyone with the public Firebase Web config, and rules cannot confirm that a submitted FID belongs to that anonymous UID. Treat pins as approximate, self-reported locations. Existing pins can be deleted by their owner; older pins without `locationMethod: 'gps'` are hidden until the owner updates them with GPS.
+- `jackcaster_map/...`: public, opt-in pins store only a coarse `areaId` grid cell (2° by 2°, roughly 220 km north-to-south), public profile fields, and `locationMethod: 'gps'`. Coordinates are rounded on-device and never written to Firebase. Users review and confirm before sharing and can remove their pin. The `locationMethod` field records the UI path; Firestore rules cannot independently prove GPS use, and browser location can be spoofed. Anonymous Auth is open to anyone with the public Firebase Web config, and rules cannot confirm that a submitted FID belongs to that anonymous UID. Pins are approximate, self-reported locations. Existing city pins are hidden by the updated app; owners can replace them with a coarse area or remove them. Publish the updated rules below before enabling new area pins.
 - Paid profile-animation audit is not stored in Firebase. Anonymous Firebase Auth cannot verify a Farcaster signer or FID, so Jackcaster uses the signed-in server session, contract events, and replay-protected Vercel Blob request records for those actions instead.
 
 Firestore combines matching `allow` rules with OR. Audit existing wildcard rules: a broad `allow write: if true` on a parent path can make any narrower rule ineffective. Do not add service-account credentials or Firebase Admin SDK to Jackcaster.

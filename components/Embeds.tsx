@@ -6,6 +6,7 @@ import { Player } from "./Player";
 import { playerFor } from "@/lib/players";
 import { VideoEmbed } from "./VideoEmbed";
 import { ImageEmbed } from "./ImageEmbed";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|heic)(\?|$)/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m3u8)(\?|$)/i;
@@ -76,6 +77,7 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
     <div className={`embeds${images === 2 ? " pair" : ""}`}>
       {embeds.map((e, i) => {
         if (e.cast) {
+          const quoteText = withoutCastAttribution(e.cast.text);
           return (
             <Link key={i} href={`/cast/${e.cast.hash}`} className="quote">
               <div className="q-head">
@@ -83,7 +85,7 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
                 <span>{e.cast.author.display_name || e.cast.author.username}</span>
               </div>
               <div style={{ whiteSpace: "pre-wrap" }}>
-                {e.cast.text.length > 280 ? e.cast.text.slice(0, 280) + "…" : e.cast.text}
+                {quoteText.length > 280 ? quoteText.slice(0, 280) + "…" : quoteText}
               </div>
             </Link>
           );

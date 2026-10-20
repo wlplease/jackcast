@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { tokenize } from "@/lib/format";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 export function RichText({ text }: { text: string }) {
+  // Keep protocol attribution in the published cast for transparency and Sent-feed matching,
+  // while avoiding a repeated raw URL in every feed, profile, and thread view.
+  const displayText = withoutCastAttribution(text);
   return (
     <>
-      {tokenize(text).map((p, i) => {
+      {tokenize(displayText).map((p, i) => {
         switch (p.kind) {
           case "url": {
             let label = p.value.replace(/^https?:\/\/(www\.)?/, "");

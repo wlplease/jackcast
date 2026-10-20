@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { savePrefs } from "@/app/(main)/me/actions";
 import type { CastView } from "@/lib/types";
+import { withoutCastAttribution } from "@/lib/cast-attribution";
 
 export function PinnedCastForm({ casts, initial }: { casts: CastView[]; initial: string | null }) {
   const [hash, setHash] = useState(initial ?? "");
@@ -36,7 +37,7 @@ export function PinnedCastForm({ casts, initial }: { casts: CastView[]; initial:
       <select className="text-input" value={hash} onChange={(event) => save(event.target.value)}>
         <option value="">No pinned cast</option>
         {casts.map((cast) => (
-          <option key={cast.hash} value={cast.hash}>{(cast.text || "Photo or link").replace(/\s+/g, " ").slice(0, 72)}</option>
+          <option key={cast.hash} value={cast.hash}>{(withoutCastAttribution(cast.text) || "Photo or link").replace(/\s+/g, " ").slice(0, 72)}</option>
         ))}
       </select>
       {error && <div className="form-error" role="alert">{error}</div>}

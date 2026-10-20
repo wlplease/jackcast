@@ -8,7 +8,7 @@ import { uploadImage } from "@/lib/upload-client";
 import { publish } from "@/app/actions";
 import { prepareImage, randomName } from "@/lib/image";
 import type { Author } from "@/lib/types";
-import { withCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
+import { withCastAttribution, withoutCastAttribution, MAX_CAST_BYTES } from "@/lib/cast-attribution";
 import { Avatar } from "./Avatar";
 import { GifMemePicker } from "./GifMemePicker";
 import { EmojiPicker } from "./EmojiPicker";
@@ -313,7 +313,7 @@ export function Composer({
                 </svg>
               </button>
             </div>
-            <div className="q-text">{quoted.text.length > 220 ? quoted.text.slice(0, 220) + "…" : quoted.text}</div>
+            <div className="q-text">{withoutCastAttribution(quoted.text).length > 220 ? withoutCastAttribution(quoted.text).slice(0, 220) + "…" : withoutCastAttribution(quoted.text)}</div>
           </div>
         )}
 
@@ -383,7 +383,7 @@ export function Composer({
             </button>
           </div>
         </div>
-        <div className="composer-attribution">This source link identifies the app; the author is the account shown above. <a href="https://jackcast.vercel.app" target="_blank" rel="noreferrer">Jackcast</a>.</div>
+        <div className="composer-attribution">Jackcast adds a small source link to your cast.</div>
         {dragging && <div className="drop-hint">Drop photos to attach</div>}
         {draftStatus !== "idle" && <div className="draft-note" role="status">Draft {draftStatus === "restored" ? "restored" : "saved"} on this device. <button type="button" onClick={discardDraft}>Discard</button></div>}
         {error && <div className="form-error">{error}{/result is unclear/i.test(error) && <> <Link href="/sent" className="linkish">Check Sent</Link></>}</div>}

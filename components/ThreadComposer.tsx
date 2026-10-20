@@ -73,7 +73,7 @@ export function ThreadComposer({ username }: { username: string }) {
       <div className="thread-intro">
         <div>
           <h1>Write a thread</h1>
-          <p>Posting as <strong>@{username}</strong> · each cast replies to the one before it. Up to {MAX_CASTS} casts; the Jackcast source link is added to each one.</p>
+          <p>Posting as <strong>@{username}</strong> · each cast replies to the one before it. Up to {MAX_CASTS} casts.</p>
         </div>
         <span className="draft-note">{saved ? "Draft saved on this device" : "Drafts stay on this device"}</span>
       </div>
