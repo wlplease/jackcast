@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { tokenize } from "@/lib/format";
-import { withoutCastAttribution } from "@/lib/cast-attribution";
+import { CAST_ATTRIBUTION, isJackcastAttributed, withoutCastAttribution } from "@/lib/cast-attribution";
 
 export function RichText({ text }: { text: string }) {
-  // Keep protocol attribution in the published cast for transparency and Sent-feed matching,
-  // while avoiding a repeated raw URL in every feed, profile, and thread view.
   const displayText = withoutCastAttribution(text);
   return (
     <>
@@ -35,6 +33,14 @@ export function RichText({ text }: { text: string }) {
             return <span key={i}>{p.value}</span>;
         }
       })}
+      {isJackcastAttributed(text) && (
+        <>
+          {displayText ? "\n\n" : null}
+          <a className="link cast-attribution" href="https://jackcast.vercel.app/" target="_blank" rel="noreferrer">
+            {CAST_ATTRIBUTION}
+          </a>
+        </>
+      )}
     </>
   );
 }

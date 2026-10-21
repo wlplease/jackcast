@@ -109,8 +109,15 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       setBusy(false);
     }, (reason) => {
       setBusy(false);
-      setError(reason.code === reason.PERMISSION_DENIED ? "Location permission was declined. Your location was not changed." : "Could not read a GPS location. Your location was not changed; try again or leave it unset.");
-    }, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 });
+      const message = reason.code === reason.PERMISSION_DENIED
+        ? "Location permission was declined. Allow location access for this site in your browser settings, then try again. Your location was not changed."
+        : reason.code === reason.POSITION_UNAVAILABLE
+          ? "Your device could not get a location fix. Check that device location services are on, then try again. Your location was not changed."
+          : reason.code === reason.TIMEOUT
+            ? "Getting a GPS fix took too long. Move near a window or try again outdoors. Your location was not changed."
+            : "Could not read a GPS location. Your location was not changed; try again or leave it unset.";
+      setError(message);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 60_000 });
   }
 
   async function removePin() {
