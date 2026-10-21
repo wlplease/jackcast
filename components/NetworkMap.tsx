@@ -44,7 +44,13 @@ function firebaseMapError(reason: unknown, action: "load" | "save" | "remove") {
 function config(): { apiKey: string; authDomain: string; projectId: string; appId: string } | null {
   const packed = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
   if (packed) try { const value = JSON.parse(packed); if (value.apiKey && value.authDomain && value.projectId && value.appId) return value; } catch {}
-  const { NEXT_PUBLIC_FIREBASE_API_KEY: apiKey, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: authDomain, NEXT_PUBLIC_FIREBASE_PROJECT_ID: projectId, NEXT_PUBLIC_FIREBASE_APP_ID: appId } = process.env;
+  // Next.js only inlines public env vars when they are referenced directly.
+  // Destructuring process.env here made a correctly configured deployment look
+  // unconfigured in the browser unless the packed JSON variable was also set.
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
   return apiKey && authDomain && projectId && appId ? { apiKey, authDomain, projectId, appId } : null;
 }
 
