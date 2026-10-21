@@ -33,11 +33,12 @@ function locationErrorMessage(reason: GeolocationPositionError) {
 
 function firebaseMapError(reason: unknown, action: "load" | "save" | "remove") {
   const code = (reason as { code?: string })?.code;
-  if (code === "permission-denied") return "Firebase blocked this map action. Publish the Jackcaster map Firestore rules for the areaId format, then try again.";
-  if (code === "unavailable" || code === "deadline-exceeded") return "Firebase is temporarily unreachable. Check your connection and try again.";
-  if (code === "failed-precondition") return "Firebase is missing a required map database setup. Check the Jackcaster map setup guide.";
-  if (reason instanceof Error && reason.message) return reason.message;
-  return action === "load" ? "Could not connect to the shared map." : action === "save" ? "Could not save your area pin." : "Could not remove your area pin.";
+  if (code === "permission-denied") return "Map sharing isn’t enabled yet. The site owner must publish the map Firestore rule.";
+  if (code === "unavailable" || code === "deadline-exceeded") return "Map service is temporarily unavailable. Try again later.";
+  if (code === "failed-precondition") return "Map setup is incomplete. Ask the site owner to check Firebase.";
+  const message = reason instanceof Error ? reason.message : "";
+  if (/anonymous sign-in is disabled/i.test(message)) return "Map sharing isn’t enabled yet. The site owner must enable Anonymous sign-in in Firebase.";
+  return action === "load" ? "Could not load community areas." : action === "save" ? "Could not save your area." : "Could not remove your area.";
 }
 
 function config(): { apiKey: string; authDomain: string; projectId: string; appId: string } | null {
@@ -56,6 +57,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   const [ready, setReady] = useState(false);
   const [geoReady, setGeoReady] = useState(false);
   const [mapConfigured, setMapConfigured] = useState<boolean | null>(null);
+  const [mapBlocked, setMapBlocked] = useState(false);
   const visiblePins = useMemo(() => pins.filter((pin) => Number.isInteger(pin.areaId) && pin.areaId >= 0 && pin.areaId < 90000), [pins]);
   const visibleMyPin = myPin && Number.isInteger(myPin.areaId) && myPin.areaId >= 0 && myPin.areaId < 90000 ? myPin : null;
   useEffect(() => {
@@ -89,7 +91,18 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
           setPins(rows);
           setMyPin(allRows.find((item) => item.id === uid) ?? null);
           setReady(true);
-        }, (reason) => { if (active) { setError(firebaseMapError(reason, "load")); setReady(true); } });
+        }, (reason) => {
+          if (!active) return;
+          if ((reason as { code?: string })?.code === "permission-denied") {
+            setMapBlocked(true);
+            setPins([]);
+            setMyPin(null);
+            setError("");
+          } else {
+            setError(firebaseMapError(reason, "load"));
+          }
+          setReady(true);
+        });
       } catch (reason) {
         if (active) { setError(firebaseMapError(reason, "load")); setReady(true); }
       }
@@ -100,7 +113,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   async function savePin(areaId: number) {
     setBusy(true); setError("");
     try {
-      if (!sharingEnabled) throw new Error("Community map is turned off in this device's privacy choices.");
+      if (!sharingEnabled || mapBlocked) throw new Error("Map sharing isn’t available right now.");
       const firebaseConfig = config();
       if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
@@ -117,8 +130,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   }
 
   function useLocation() {
-    if (!sharingEnabled) { setError("Community map is turned off in this device's privacy choices."); return; }
-    if (!config()) { setError("Area sharing is not connected to Firebase on this deployment. Configure its public Firebase Web App settings, enable Anonymous Auth, publish the Jackcaster map rules, and redeploy."); return; }
+    if (!sharingEnabled || mapBlocked) return;
+    if (!config()) { setError("Map sharing isn’t configured on this site yet."); return; }
     if (!window.isSecureContext) { setError("Location access requires a secure HTTPS page. Open Jackcaster using its HTTPS address and try again."); return; }
     if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
     setBusy(true); setError("");
@@ -144,7 +157,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   async function removePin() {
     setBusy(true); setError("");
     try {
-      if (!sharingEnabled) throw new Error("Community map is turned off in this device's privacy choices.");
+      if (!sharingEnabled || mapBlocked) throw new Error("Map sharing isn’t available right now.");
       const firebaseConfig = config();
       if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
@@ -184,12 +197,14 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
       <section className="map-privacy-card">
         <div>
           <strong>{mapConfigured === false ? "Community map" : "Share an approximate area"}</strong>
-          <p>With your permission, this device’s location is rounded on-device to a broad area (about 220 km north-to-south). Exact coordinates are never uploaded. The public pin is self-reported, not Farcaster-verified; remove it anytime.</p>
+          <p>Optional: your device rounds location to a broad area before sharing. Exact coordinates are never uploaded. Pins are public and removable.</p>
         </div>
         {!sharingEnabled ? (
-          <p className="map-setup-note" role="status">Community map access is off on this device. Turn it back on in Settings → Privacy choices.</p>
+          <p className="map-setup-note" role="status">Map sharing is off in your privacy settings.</p>
+        ) : mapBlocked ? (
+          <p className="map-setup-note" role="status">Map sharing isn’t enabled. The site owner must publish the map rule in Firebase.</p>
         ) : mapConfigured === false ? (
-          <p className="map-setup-note" role="status">Area sharing is not connected on this deployment. Configure its public Firebase Web App settings, enable Anonymous sign-in, publish the Jackcaster map rules for coarse area pins, then redeploy. The globe is still available to explore.</p>
+          <p className="map-setup-note" role="status">Map sharing isn’t configured on this site. The globe is still available.</p>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
             <span>Older city pin hidden. Replace it with an approximate area or remove it.</span>
@@ -222,6 +237,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
 
       {!ready ? (
         <p className="map-empty">Loading community pins…</p>
+      ) : mapBlocked ? (
+        <p className="map-empty">Community areas will appear when map sharing is enabled.</p>
       ) : visiblePins.length === 0 ? (
         <p className="map-empty">No areas shared yet. Add yours if you’d like to appear on the globe.</p>
       ) : (
