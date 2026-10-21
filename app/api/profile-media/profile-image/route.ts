@@ -4,6 +4,7 @@ import { base } from "@/lib/base-chain";
 import { createPublicClient, decodeEventLog, http, isAddress, verifyMessage, type Address, type Hex } from "viem";
 import { ANIMATION_CREDITS_ADDRESS, animationCreditsAbi } from "@/lib/animation-credits";
 import { getViewer } from "@/lib/viewer";
+import { getPrefs } from "@/lib/prefs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -127,6 +128,7 @@ async function getInteractionVideo(interactionId: string, key: string): Promise<
 }
 
 export async function POST(request: Request) {
+  if ((await getPrefs()).disabledServices.includes("gemini")) return fail("Gemini image tools are turned off in this device's privacy choices.", 403);
   let body: { walletAddress?: unknown; requestId?: unknown; transactionHash?: unknown; signature?: unknown; prompt?: unknown; mode?: unknown };
   try {
     if (Number(request.headers.get("content-length") ?? 0) > 12_000) return fail("Request is too large.", 413);
@@ -239,6 +241,7 @@ export async function POST(request: Request) {
 
 /** Free preflight: confirm the deployment key can access the selected Google model before a credit is spent. */
 export async function GET(request: Request) {
+  if ((await getPrefs()).disabledServices.includes("gemini")) return fail("Gemini image tools are turned off in this device's privacy choices.", 403);
   const viewer = await getViewer();
   const requestUrl = new URL(request.url);
   const mode = requestUrl.searchParams.get("mode") || "animate";

@@ -2,6 +2,8 @@
 import type { Mode, ThemeId } from "./themes";
 
 export type Prefs = {
+  /** Optional providers/features the user has disabled on this device. */
+  disabledServices: OptionalService[];
   /** Personal labels for the built-in feed tabs. */
   feedNames: FeedNames;
   /** Built-in feed tab order and visibility for this device. */
@@ -47,6 +49,8 @@ export type Prefs = {
   mode: Mode;
 };
 
+export type OptionalService = "gemini" | "elevenlabs" | "giphy" | "dms" | "map" | "analytics";
+
 export type FeedNameKey = "following" | "friends" | "leaders" | "recasts" | "miniApps" | "media";
 export type BuiltinFeedKey = "following" | "friends" | "leaders" | "recasts" | "sent" | "miniApps" | "media" | "custom";
 export const BUILTIN_FEED_ORDER: BuiltinFeedKey[] = ["following", "friends", "leaders", "recasts", "sent", "miniApps", "media", "custom"];
@@ -54,7 +58,7 @@ export type FeedNames = Record<FeedNameKey, string>;
 export const DEFAULT_FEED_NAMES: FeedNames = { following: "Following", friends: "Friends", leaders: "Leaders", recasts: "Recasts", miniApps: "Mini Apps", media: "Media" };
 
 export const DEFAULT_SAVED_COLLECTIONS = [{ id: "inbox", name: "Reading list" }];
-export const DEFAULT_PREFS: Prefs = { feedNames: DEFAULT_FEED_NAMES, feedOrder: BUILTIN_FEED_ORDER, hiddenFeeds: [], mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], savedCollections: DEFAULT_SAVED_COLLECTIONS, savedCastCollections: [], audioTracks: [], theme: "jackcaster", mode: "auto" };
+export const DEFAULT_PREFS: Prefs = { disabledServices: [], feedNames: DEFAULT_FEED_NAMES, feedOrder: BUILTIN_FEED_ORDER, hiddenFeeds: [], mutes: [], quality: null, showReplies: true, hideMiniApps: false, groupLinks: true, density: "comfortable", showPreviews: true, tabs: null, friends: [], customPeople: [], customName: "Custom", pinnedCastHash: null, savedMiniApps: [], savedCasts: [], savedCollections: DEFAULT_SAVED_COLLECTIONS, savedCastCollections: [], audioTracks: [], theme: "jackcaster", mode: "auto" };
 
 export const MAX_TABS = 20;
 export const MAX_FRIENDS = 50;

@@ -13,6 +13,7 @@ import { FeedNamesForm } from "@/components/FeedNamesForm";
 import { ShareJackcasterButton } from "@/components/ShareJackcasterButton";
 import { CopyIntroLinkButton } from "@/components/CopyIntroLinkButton";
 import { FeedNavigationForm } from "@/components/FeedNavigationForm";
+import { PrivacyOptions } from "@/components/PrivacyOptions";
 
 const SETTINGS = [
   { href: "#appearance", icon: "◐", title: "Appearance", detail: "Themes and light or dark mode" },
@@ -24,6 +25,7 @@ const SETTINGS = [
   { href: "#account", icon: "◉", title: "Account and connection", detail: "Posting access and setup details" },
   { href: "#share", icon: "✦", title: "Share Jackcaster", detail: "Cast a ready-to-edit app intro" },
   { href: "#services", icon: "◇", title: "Optional services", detail: "See which extras are configured" },
+  { href: "#privacy", icon: "◈", title: "Privacy choices", detail: "Turn optional services off on this device" },
   { href: "#donate", icon: "♡", title: "Support the developers", detail: "Donate on Base with your wallet" },
   { href: "#developer", icon: "⌘", title: "Developer tools", detail: "Mini Apps and project tools" },
 ];
@@ -63,6 +65,7 @@ export default async function SettingsPage() {
     <section className="me-section" id="account"><div className="me-section-head"><h2>Account and connection</h2></div><p className="field-hint">{viewer.canWrite ? `Connected as @${me?.username || `FID ${viewer.fid}`} on this device. Posts use this Farcaster account.` : "Read-only. Connect your own Farcaster account to post, like, and reply."} <Link href="/setup" className="linkish">{viewer.canWrite ? "Connection details" : "Connect account"}</Link></p></section>
     <section className="me-section" id="share"><div className="me-section-head"><div><h2>Share Jackcaster</h2><p className="field-hint">Pick a short intro and open a Farcaster cast with the app link already attached.</p></div></div><ShareJackcasterButton full /><CopyIntroLinkButton /></section>
     <section className="me-section" id="services"><div className="me-section-head"><div><h2>Optional services</h2><p className="field-hint">Configuration status only; this does not check provider uptime, quota, or credentials. Secret values never appear here.</p></div><span className="meta">deployment status</span></div><div className="service-status-list">{services.map((service) => <article key={service.name}><span className={`service-status-dot${service.enabled ? " ready" : " off"}`} aria-hidden="true" /><div><strong>{service.name}</strong><small>{service.enabled ? "Configured on this deployment" : service.setup}</small></div><span className={`service-status-label${service.enabled ? " ready" : " off"}`}>{service.enabled ? "Configured" : "Not configured"}</span></article>)}</div></section>
+    <section className="me-section" id="privacy"><div className="me-section-head"><div><h2>Privacy choices</h2><p className="field-hint">Turn off optional providers and features on this device.</p></div><span className="meta">this device</span></div><PrivacyOptions initialDisabled={prefs.disabledServices} /></section>
     <section className="me-section" id="donate"><div className="me-section-head"><div><h2>Support the developers</h2><p className="field-hint">Choose a project and donate USDC or ETH on Base.</p></div><span className="meta">optional</span></div><DonationPanel /></section>
     <section className="me-section" id="developer"><div className="me-section-head"><div><h2>Developer tools</h2><p className="field-hint">Your published Mini Apps and project resources.</p></div><span className="meta">advanced</span></div><Link className="btn ghost sm" href="/dev">Open Developer tools →</Link></section>
   </>;

@@ -47,7 +47,7 @@ function config(): { apiKey: string; authDomain: string; projectId: string; appI
   return apiKey && authDomain && projectId && appId ? { apiKey, authDomain, projectId, appId } : null;
 }
 
-export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number; username: string; displayName: string; pfpUrl: string }) {
+export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled = true }: { fid: number; username: string; displayName: string; pfpUrl: string; sharingEnabled?: boolean }) {
   const [topology, setTopology] = useState<WorldTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
   const [myPin, setMyPin] = useState<PinRow | null>(null);
@@ -69,6 +69,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       if (worldResult.status === "fulfilled") setTopology(worldResult.value);
       if (worldResult.status === "rejected") setError("The local map data could not be loaded. Refresh the page to try again.");
       setGeoReady(worldResult.status === "fulfilled");
+
+      if (!sharingEnabled) { if (active) { setMapConfigured(false); setReady(true); } return; }
 
       const firebaseConfig = config();
       if (!firebaseConfig) { if (active) { setMapConfigured(false); setReady(true); } return; }
@@ -93,11 +95,12 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       }
     })();
     return () => { active = false; stop(); };
-  }, []);
+  }, [sharingEnabled]);
 
   async function savePin(areaId: number) {
     setBusy(true); setError("");
     try {
+      if (!sharingEnabled) throw new Error("Community map is turned off in this device's privacy choices.");
       const firebaseConfig = config();
       if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
@@ -114,6 +117,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   }
 
   function useLocation() {
+    if (!sharingEnabled) { setError("Community map is turned off in this device's privacy choices."); return; }
     if (!config()) { setError("Area sharing is not connected to Firebase on this deployment. Configure its public Firebase Web App settings, enable Anonymous Auth, publish the Jackcaster map rules, and redeploy."); return; }
     if (!window.isSecureContext) { setError("Location access requires a secure HTTPS page. Open Jackcaster using its HTTPS address and try again."); return; }
     if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
@@ -128,13 +132,9 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     };
     const fail = (reason: GeolocationPositionError) => { setBusy(false); setError(locationErrorMessage(reason)); };
     try {
-      // Start with the OS's faster, lower-power location mode. It is sufficient for a 2° area cell.
-      navigator.geolocation.getCurrentPosition(acceptPosition, (reason) => {
-        if (reason.code === reason.PERMISSION_DENIED) { fail(reason); return; }
-        // Some devices only produce a fix from GPS. Retry once with high accuracy after a timeout or unavailable fix.
-        try { navigator.geolocation.getCurrentPosition(acceptPosition, fail, { enableHighAccuracy: true, maximumAge: 60_000, timeout: 45_000 }); }
-        catch { fail(reason); }
-      }, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 });
+      // Request the browser's lower-power location only. Round it to a broad
+      // area immediately; never retry with high-accuracy GPS.
+      navigator.geolocation.getCurrentPosition(acceptPosition, fail, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 });
     } catch {
       setBusy(false);
       setError("This page cannot request location. Open Jackcaster in a secure browser tab and allow location access for this site.");
@@ -144,6 +144,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   async function removePin() {
     setBusy(true); setError("");
     try {
+      if (!sharingEnabled) throw new Error("Community map is turned off in this device's privacy choices.");
       const firebaseConfig = config();
       if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
       await firebaseAnonymousIdToken("jackcaster-map");
@@ -183,9 +184,11 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       <section className="map-privacy-card">
         <div>
           <strong>{mapConfigured === false ? "Community map" : "Share an approximate area"}</strong>
-          <p>Your location is rounded on this device into a broad area about 220 km north-to-south. Exact coordinates are never uploaded. Sharing is optional, and you can remove your pin anytime.</p>
+          <p>With your permission, this device’s location is rounded on-device to a broad area (about 220 km north-to-south). Exact coordinates are never uploaded. The public pin is self-reported, not Farcaster-verified; remove it anytime.</p>
         </div>
-        {mapConfigured === false ? (
+        {!sharingEnabled ? (
+          <p className="map-setup-note" role="status">Community map access is off on this device. Turn it back on in Settings → Privacy choices.</p>
+        ) : mapConfigured === false ? (
           <p className="map-setup-note" role="status">Area sharing is not connected on this deployment. Configure its public Firebase Web App settings, enable Anonymous sign-in, publish the Jackcaster map rules for coarse area pins, then redeploy. The globe is still available to explore.</p>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
@@ -202,7 +205,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
         ) : (
           <div className="map-pin-form">
             <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding and sharing…" : "Share my approximate area"}</button>
-            <small className="map-attribution">Optional · one tap shares a broad area (about 220 km north-to-south). Exact coordinates stay on this device.</small>
+            <small className="map-attribution">Optional · shares only a broad area and public profile details. Exact coordinates stay on this device.</small>
           </div>
         )}
         {error && <p className="map-error" role="status">{error}</p>}

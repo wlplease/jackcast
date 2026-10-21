@@ -10,6 +10,7 @@ import { BRAND } from "@/lib/brand";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MiniAppHostReady } from "@/components/MiniAppHostReady";
 import { UsageAnalytics } from "@/components/UsageAnalytics";
+import { OptionalServicesProvider } from "@/components/OptionalServicesProvider";
 
 export const metadata: Metadata = {
   title: BRAND.name,
@@ -52,12 +53,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style id="sc-theme" nonce={nonce} dangerouslySetInnerHTML={{ __html: themeCss(theme, mode) }} />
       </head>
       <body>
-        <MiniAppHostReady />
-        <UsageAnalytics />
-        <div className="app-frame">
-          <div className="app-content">{children}</div>
-          <SiteFooter />
-        </div>
+        <OptionalServicesProvider disabledServices={prefs.disabledServices}>
+          <MiniAppHostReady />
+          <UsageAnalytics />
+          <div className="app-frame">
+            <div className="app-content">{children}</div>
+            <SiteFooter />
+          </div>
+        </OptionalServicesProvider>
       </body>
     </html>
   );

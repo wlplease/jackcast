@@ -19,7 +19,7 @@ export default function LoginLanding() {
         <aside className="login-deploy" aria-labelledby="login-deploy-title">
           <span className="login-eyebrow">YOUR FARCASTER, YOUR WAY</span>
           <h2 id="login-deploy-title">Your Farcaster, in your own space.</h2>
-          <p className="login-deploy-intro"><span>A calm, chronological client you host and control. Browse your feed, follow conversations, and post when you choose.</span></p>
+          <p className="login-deploy-intro"><span>A personal Farcaster client you run. Read in time order, organize feeds, post, and explore Mini Apps and media.</span></p>
           <a className="login-deploy-button login-deploy-button-top" href={DEPLOY_URL} target="_blank" rel="noreferrer">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 23 21H1L12 2Z" /></svg>
             Quick deploy to Vercel <span aria-hidden="true">↗</span>

@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import { mnemonicToAccount } from "viem/accounts";
 import { SIGNED_KEY_REQUEST_DOMAIN, SIGNED_KEY_REQUEST_TYPES } from "@/lib/signed-key-request";
 import { checkSigner, disconnectDevice, findAccount, registerSigner, startSigner } from "./actions";
+import { PrivacyOptions } from "@/components/PrivacyOptions";
+import type { OptionalService } from "@/lib/prefs-shared";
 
 type Connected = { fid: number; signerUuid: string; username?: string };
 
@@ -39,7 +41,7 @@ function Steps({ at }: { at: number }) {
   );
 }
 
-export function SetupFlow({ connected, hasApiKey }: { connected: Connected | null; hasApiKey: boolean }) {
+export function SetupFlow({ connected, hasApiKey, initialDisabledServices = [] }: { connected: Connected | null; hasApiKey: boolean; initialDisabledServices?: OptionalService[] }) {
   const [step, setStep] = useState<Step>(
     connected
       ? { kind: "done", fid: connected.fid, signerUuid: connected.signerUuid, username: connected.username, fresh: false }
@@ -223,6 +225,7 @@ export function SetupFlow({ connected, hasApiKey }: { connected: Connected | nul
           <div><strong>Farcaster connection</strong><span>Optional posting access. You can connect later from Settings → Account and connection.</span></div>
           <div><strong>GIF search</strong><span>Browse the built-in GIF library with a shared cooldown. You do not need to create or enter a GIPHY account key.</span></div>
         </div>
+        <PrivacyOptions initialDisabled={initialDisabledServices} />
         <div className="setup-security-note" role="note"><strong>Security warning: read this before continuing.</strong> Posting setup asks for the recovery phrase for your Farcaster account&apos;s custody wallet to sign one request in this browser. It is not sent to Jackcaster&apos;s server, but any webpage can be risky, and that phrase may control onchain assets. Continue only on a deployment you control, using a trusted, updated device and browser. A compromised page, browser extension, or device could still expose it. Read-only browsing needs no phrase. If you are unsure what the phrase controls, do not enter it.</div>
         <ol className="how">
           <li>Start a Farcaster signer request for this device.</li>

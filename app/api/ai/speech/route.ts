@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getPrefs } from "@/lib/prefs";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -8,6 +9,9 @@ const MAX_BODY_BYTES = 6_000;
 const MAX_AUDIO_BYTES = 5_000_000;
 
 export async function POST(request: NextRequest) {
+  if ((await getPrefs()).disabledServices.includes("elevenlabs")) {
+    return NextResponse.json({ error: "Read-aloud is turned off in this device's privacy choices." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
   const origin = request.headers.get("origin");
   if (!origin || origin !== new URL(request.url).origin) {
     return NextResponse.json({ error: "Request origin was not accepted." }, { status: 403 });

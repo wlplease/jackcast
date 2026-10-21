@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { BUILTIN_FEED_ORDER, CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, DEFAULT_SAVED_COLLECTIONS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_SAVED_COLLECTIONS, MAX_TABS, normalizeMute, type BuiltinFeedKey, type Prefs } from "./prefs-shared";
+import { BUILTIN_FEED_ORDER, CHANNEL_ID, DEFAULT_FEED_NAMES, DEFAULT_PREFS, DEFAULT_SAVED_COLLECTIONS, MAX_AUDIO_TRACKS, MAX_CUSTOM_PEOPLE, MAX_FRIENDS, MAX_MUTES, MAX_SAVED_CASTS, MAX_SAVED_COLLECTIONS, MAX_TABS, normalizeMute, type BuiltinFeedKey, type OptionalService, type Prefs } from "./prefs-shared";
 import { MODES, THEME_IDS, type Mode, type ThemeId } from "./themes";
 
 export const PREFS_COOKIE = "selfcaster_prefs";
@@ -22,6 +22,10 @@ export function parsePrefs(raw: string | undefined): Prefs {
     const mode = MODES.includes(p.mode as Mode) ? (p.mode as Mode) : DEFAULT_PREFS.mode;
     const density = p.density === "compact" ? "compact" : "comfortable";
     const showPreviews = p.showPreviews !== false;
+    const allowedServices: OptionalService[] = ["gemini", "elevenlabs", "giphy", "dms", "map", "analytics"];
+    const disabledServices = Array.isArray(p.disabledServices)
+      ? [...new Set(p.disabledServices.filter((service): service is OptionalService => allowedServices.includes(service as OptionalService)))]
+      : [];
     const feedNames = Object.fromEntries(Object.entries(DEFAULT_FEED_NAMES).map(([key, fallback]) => {
       const value = p.feedNames && typeof p.feedNames === "object" ? (p.feedNames as Record<string, unknown>)[key] : undefined;
       const clean = typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, 18) : "";
@@ -86,7 +90,7 @@ export function parsePrefs(raw: string | undefined): Prefs {
       ? Array.from(new Map(p.savedCastCollections.filter((entry) => entry && typeof entry.hash === "string" && /^0x[0-9a-f]{40}$/i.test(entry.hash) && typeof entry.collectionId === "string" && entry.collectionId !== "inbox" && collectionIds.has(entry.collectionId) && savedCasts.includes(entry.hash.toLowerCase()))
           .map((entry) => [entry.hash.toLowerCase(), { hash: entry.hash.toLowerCase(), collectionId: entry.collectionId }] as const)).values())
       : [];
-    return { feedNames, feedOrder, hiddenFeeds, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, savedCollections, savedCastCollections, audioTracks, theme, mode };
+    return { disabledServices, feedNames, feedOrder, hiddenFeeds, mutes, quality: q, showReplies: p.showReplies !== false, hideMiniApps: p.hideMiniApps === true, groupLinks: p.groupLinks !== false, density, showPreviews, tabs, friends, customPeople, customName, pinnedCastHash, savedMiniApps, savedCasts, savedCollections, savedCastCollections, audioTracks, theme, mode };
   } catch {
     return DEFAULT_PREFS;
   }

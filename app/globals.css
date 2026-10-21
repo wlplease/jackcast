@@ -486,6 +486,21 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .setup-options > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); }
 .setup-options strong { font-size: 12px; }
 .setup-options span { color: var(--ink-2); font-size: 11px; line-height: 1.4; }
+.privacy-options { min-width: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); }
+.privacy-options > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; cursor: pointer; font-size: 13px; font-weight: 700; list-style: none; }
+.privacy-options > summary::-webkit-details-marker { display: none; }
+.privacy-options > summary::after { content: "+"; color: var(--accent); font-size: 18px; line-height: 1; }
+.privacy-options[open] > summary::after { content: "−"; }
+.privacy-options > summary span { margin-left: auto; color: var(--ink-3); font-size: 10px; font-weight: 500; }
+.privacy-options-intro { padding: 0 12px 10px; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
+.privacy-options-list { display: grid; gap: 1px; border-top: 1px solid var(--rule); }
+.privacy-option { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; background: var(--paper); cursor: pointer; }
+.privacy-option input[type="checkbox"] { width: 16px; height: 16px; flex: none; margin: 1px 0 0; accent-color: var(--brand); }
+.privacy-option > span { display: grid; gap: 2px; min-width: 0; }
+.privacy-option strong { font-size: 11px; }
+.privacy-option small { color: var(--ink-2); font-size: 10px; line-height: 1.35; }
+.privacy-options-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--rule); }
+.privacy-options-footer [role="status"] { color: var(--ink-2); font-size: 10px; }
 .setup-security-note { padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: 10px; color: var(--ink-2); background: var(--card); font-size: 12px; line-height: 1.5; }
 .setup-security-note strong { color: var(--ink); }
 .setup-connection-note { padding: 10px 12px; border-left: 3px solid var(--brand); color: var(--ink-2); background: var(--card); font-size: 12px; line-height: 1.5; }

@@ -50,6 +50,13 @@ export function DmInbox({ viewerFid }: { viewerFid: number }) {
   const [inboxReady, setInboxReady] = useState(false);
   const [pendingPublicProof, setPendingPublicProof] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeSecretsRef = useRef<{ identity: DmIdentity | null; draftIdentity: DmIdentity | null }>({ identity: null, draftIdentity: null });
+  activeSecretsRef.current = { identity, draftIdentity };
+
+  useEffect(() => () => {
+    activeSecretsRef.current.identity?.secretKey.fill(0);
+    activeSecretsRef.current.draftIdentity?.secretKey.fill(0);
+  }, []);
 
   useEffect(() => { setStored(hasStoredDmIdentity()); }, []);
 

@@ -2,15 +2,22 @@
 
 import { neynar } from "@/lib/neynar";
 import { viewerOrThrow } from "@/lib/viewer";
+import { getPrefs } from "@/lib/prefs";
 
 export type DmUser = { fid: number; username: string; displayName: string; pfpUrl: string; custodyAddress: string };
 export type DmKeyProof = { fid: number; publicKey: string; castHash: string };
+const dmDisabledMessage = "Direct messages are turned off in this device's privacy choices.";
+
+async function dmsEnabled() {
+  return !(await getPrefs()).disabledServices.includes("dms");
+}
 
 function dmUser(user: { fid: number; username: string; display_name?: string | null; pfp_url?: string | null; custody_address: string }): DmUser {
   return { fid: user.fid, username: user.username, displayName: user.display_name || user.username, pfpUrl: user.pfp_url || "", custodyAddress: user.custody_address };
 }
 
 export async function getDmSelf(): Promise<{ ok: true; user: DmUser } | { ok: false; error: string }> {
+  if (!(await dmsEnabled())) return { ok: false, error: dmDisabledMessage };
   const viewer = await viewerOrThrow();
   try {
     const { users } = await neynar().fetchBulkUsers({ fids: [viewer.fid], viewerFid: viewer.fid });
@@ -20,6 +27,7 @@ export async function getDmSelf(): Promise<{ ok: true; user: DmUser } | { ok: fa
 }
 
 export async function lookupDmUser(raw: string): Promise<{ ok: true; user: DmUser } | { ok: false; error: string }> {
+  if (!(await dmsEnabled())) return { ok: false, error: dmDisabledMessage };
   const viewer = await viewerOrThrow();
   const value = raw.trim().replace(/^@/, "");
   if (!value || value.length > 64) return { ok: false, error: "Enter a Farcaster username or FID." };
@@ -33,6 +41,7 @@ export async function lookupDmUser(raw: string): Promise<{ ok: true; user: DmUse
 }
 
 export async function getDmUser(fid: number): Promise<{ ok: true; user: DmUser } | { ok: false; error: string }> {
+  if (!(await dmsEnabled())) return { ok: false, error: dmDisabledMessage };
   const viewer = await viewerOrThrow();
   if (!Number.isSafeInteger(fid) || fid < 1) return { ok: false, error: "Invalid Farcaster ID." };
   try {
@@ -44,6 +53,7 @@ export async function getDmUser(fid: number): Promise<{ ok: true; user: DmUser }
 
 /** Find and validate the public Farcaster cast that binds a FID to a DM key. */
 export async function getDmKeyProof(fid: number, publicKey: string): Promise<{ ok: true; proof: DmKeyProof | null } | { ok: false; error: string }> {
+  if (!(await dmsEnabled())) return { ok: false, error: dmDisabledMessage };
   const viewer = await viewerOrThrow();
   if (!Number.isSafeInteger(fid) || fid < 1 || !/^[0-9a-f]{64}$/.test(publicKey)) return { ok: false, error: "Invalid Farcaster DM identity." };
   try {
@@ -55,6 +65,7 @@ export async function getDmKeyProof(fid: number, publicKey: string): Promise<{ o
 }
 
 export async function verifyDmKeyProof(castHash: string, fid: number, publicKey: string): Promise<boolean> {
+  if (!(await dmsEnabled())) return false;
   const viewer = await viewerOrThrow();
   if (!/^0x[0-9a-f]{40,}$/i.test(castHash) || !Number.isSafeInteger(fid) || fid < 1 || !/^[0-9a-f]{64}$/.test(publicKey)) return false;
   try {
@@ -66,6 +77,7 @@ export async function verifyDmKeyProof(castHash: string, fid: number, publicKey:
 
 /** Publish an explicit, user-confirmed public proof using the Farcaster signer already approved at /setup. */
 export async function publishDmKeyProof(publicKey: string): Promise<{ ok: true; hash: string } | { ok: false; error: string }> {
+  if (!(await dmsEnabled())) return { ok: false, error: dmDisabledMessage };
   const viewer = await viewerOrThrow();
   if (!viewer.signerUuid || !viewer.canWrite || viewer.source !== "setup") return { ok: false, error: "Finish the existing Farcaster setup before publishing a public DM key proof. Read-only mode cannot publish." };
   if (!/^[0-9a-f]{64}$/.test(publicKey)) return { ok: false, error: "Invalid DM public key." };

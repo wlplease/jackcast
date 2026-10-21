@@ -13,6 +13,7 @@ import { Avatar } from "./Avatar";
 import { GifMemePicker } from "./GifMemePicker";
 import { EmojiPicker } from "./EmojiPicker";
 import { trackUsage } from "@/components/UsageAnalytics";
+import { useServiceDisabled } from "@/components/OptionalServicesProvider";
 
 const MAX_EMBEDS = 2;
 
@@ -59,6 +60,7 @@ export function Composer({
   autoFocus?: boolean;
 }) {
   const router = useRouter();
+  const giphyDisabled = useServiceDisabled("giphy");
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(initialText);
@@ -349,7 +351,7 @@ export function Composer({
               <path d="M21 16l-5-5-9 9" />
             </svg>
           </button>
-          <GifMemePicker disabled={slotsLeft <= 0} onSelect={selectGif} onMeme={(file) => { void addFiles([file]); }} />
+          {!giphyDisabled && <GifMemePicker disabled={slotsLeft <= 0} onSelect={selectGif} onMeme={(file) => { void addFiles([file]); }} />}
           <EmojiPicker onSelect={insertEmoji} />
           <button
             type="button"

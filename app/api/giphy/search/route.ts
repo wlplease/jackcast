@@ -1,5 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { getPrefs } from "@/lib/prefs";
 
 export const runtime = "nodejs";
 
@@ -132,6 +133,7 @@ function featureError(message: string, status = 503, session?: Session) {
 }
 
 export async function GET(request: Request) {
+  if ((await getPrefs()).disabledServices.includes("giphy")) return featureError("GIF search is turned off in this device's privacy choices.", 403);
   if (!hasAllowedOrigin(request, true)) return featureError("Request origin was not accepted.", 403);
   const session = getSession(request);
   if (!session) return featureError("Shared GIF search needs APP_PASSWORD or GIPHY_RATE_LIMIT_SECRET to sign its browser session.");
@@ -147,6 +149,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if ((await getPrefs()).disabledServices.includes("giphy")) return featureError("GIF search is turned off in this device's privacy choices.", 403);
   if (!hasAllowedOrigin(request)) return featureError("Request origin was not accepted.", 403);
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return featureError("GIF search must use JSON.", 415);
   const session = getSession(request);

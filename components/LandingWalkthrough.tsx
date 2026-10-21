@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 const TOUR = [
   {
     tab: "Following",
-    title: "A feed that follows the timeline",
-    description: "Read the posts from accounts you follow in chronological order, with your conversations and media kept in view.",
+    title: "Read in time order",
+    description: "See the latest posts from people you follow.",
     posts: [
       { avatar: "J", name: "Jordan", handle: "@jordan.builds", text: "Shipped a small update today. The best tools keep the useful parts close and stay out of your way.", meta: "12m · 8 likes · 2 recasts" },
       { avatar: "M", name: "Mina", handle: "@mina.eth", text: "What are you making this week? I’m collecting ideas from the builders here. ✨", meta: "26m · 14 likes · 4 replies" },
@@ -14,8 +14,8 @@ const TOUR = [
   },
   {
     tab: "Friends · Leaders",
-    title: "Keep your circles close",
-    description: "Build a private Friends feed and browse a shared Top Accounts stream of recent Farcaster community posts.",
+    title: "Shape your feeds",
+    description: "Keep close accounts in Friends. Browse active voices in Top Accounts.",
     posts: [
       { avatar: "A", name: "Ari", handle: "@ari.designs", text: "A few people I follow are comparing notes on the new mini app tools.", meta: "5m · Friends feed" },
       { avatar: "K", name: "Kai", handle: "@kai.eth", text: "Today’s builder roundup: three launches, one great open-source contribution, and a lot of good questions.", meta: "18m · Top Accounts" },
@@ -23,8 +23,8 @@ const TOUR = [
   },
   {
     tab: "Mini Apps · Media",
-    title: "Discover what people are sharing",
-    description: "Open Mini Apps in the in-app viewer, or browse image, video, and audio posts in the dedicated Media feed.",
+    title: "Open apps and media",
+    description: "Launch Mini Apps here. Find photo, video, and audio posts in Media.",
     posts: [],
   },
 ];

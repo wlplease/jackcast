@@ -3,6 +3,7 @@
 import { track } from "@vercel/analytics";
 import { Analytics, type BeforeSend } from "@vercel/analytics/next";
 import { usePathname } from "next/navigation";
+import { useServiceDisabled } from "@/components/OptionalServicesProvider";
 
 const PAGE_ROUTES = new Set([
   "/", "/friends", "/top", "/recasts", "/sent", "/mini-apps", "/media", "/circle",
@@ -25,6 +26,8 @@ const anonymizePageView: BeforeSend = (event) => {
   }
 };
 
+let analyticsEnabled = true;
+
 type UsageEvent =
   | { name: "feed_open"; feed: "following" | "friends" | "leaders" | "recasts" | "sent" | "mini_apps" | "media" | "custom" | "channel" }
   | { name: "cast_published"; kind: "cast" | "reply" | "quote" }
@@ -35,6 +38,7 @@ type UsageEvent =
 
 /** A closed event schema prevents future calls from attaching personal content or identifiers. */
 export function trackUsage(event: UsageEvent) {
+  if (!analyticsEnabled) return;
   switch (event.name) {
     case "feed_open": track(event.name, { feed: event.feed }); break;
     case "cast_published": track(event.name, { kind: event.kind }); break;
@@ -47,7 +51,9 @@ export function trackUsage(event: UsageEvent) {
 
 export function UsageAnalytics() {
   const pathname = usePathname();
+  const disabled = useServiceDisabled("analytics");
+  analyticsEnabled = !disabled;
   // Keep third-party analytics off the page where a user may enter a recovery phrase.
-  if (pathname === "/setup" || pathname === "/messages") return null;
+  if (disabled || pathname === "/setup" || pathname === "/messages") return null;
   return <Analytics beforeSend={anonymizePageView} />;
 }
