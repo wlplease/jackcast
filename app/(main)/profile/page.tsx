@@ -51,17 +51,17 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           {saved && <div className="form-ok">Profile updated. It can take a minute to show up everywhere.</div>}
         </section>
 
+        <section className="me-section profile-settings-link">
+          <div className="me-section-head"><h2>Settings</h2></div>
+          <p className="field-hint">Themes, feeds, and filters for your Jackcaster.</p>
+          <Link href="/me" className="btn ghost sm">Open settings</Link>
+        </section>
+
         <ProfileAnalytics casts={casts} followerCount={me.follower_count ?? 0} />
 
         <section className="me-section">
           <div className="me-section-head"><h2>Profile</h2><span className="meta">this Selfcaster</span></div>
           <PinnedCastForm casts={casts.slice(0, 30)} initial={prefs.pinnedCastHash} />
-        </section>
-
-        <section className="me-section">
-          <div className="me-section-head"><h2>Settings</h2></div>
-          <p className="field-hint">Themes, feeds, and filter controls are together in one place.</p>
-          <Link href="/me" className="btn ghost sm">Open settings</Link>
         </section>
 
         <section className="me-section">

@@ -139,6 +139,7 @@ main { flex: 1; width: min(100%, 760px); min-width: 0; margin: 0 auto; }
 .login .wordmark, .setup > .wordmark { display: inline-flex; align-items: center; justify-content: center; gap: .18em; }
 .wordmark em { color: var(--accent); font-style: var(--wordmark-em); }
 .mast-nav { display: flex; flex: none; align-items: center; gap: 5px; font-size: 13.5px; color: var(--ink-2); }
+.mast-nav > a[aria-label="Private messages"] { margin-inline: 3px; }
 .icon-btn { position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px; flex: none; padding: 0; border: 1px solid transparent; border-radius: 12px; color: var(--ink-2); background: transparent; transition: color 140ms ease, background 140ms ease, border-color 140ms ease, transform 140ms ease; }
 .icon-btn svg { display: block; width: 19px; height: 19px; }
 .icon-btn:hover { color: var(--ink); background: var(--card); border-color: var(--rule); }
