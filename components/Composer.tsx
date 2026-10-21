@@ -81,7 +81,7 @@ export function Composer({
   useEffect(() => {
     if (ref.current) grow(ref.current);
     if (autoFocus) ref.current?.focus();
-  }, [autoFocus]);
+  }, [autoFocus, text]);
 
   useEffect(() => {
     if (initialText || initialLink || quote) {

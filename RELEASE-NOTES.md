@@ -9,7 +9,7 @@ This document summarizes the current repository source. It is not a versioned re
 - A Sent feed for casts and replies carrying Jackcaster source attribution, with post-type and date filters across loaded history.
 - Per-device controls to reorder built-in feed tabs and hide feeds from the header; Following remains visible and hidden feeds stay available in **More**.
 - Neynar feed-by-accounts batching at 10 FIDs per request, with bounded scans and cached discovery; details are in [`docs/NEYNAR-USAGE.md`](./docs/NEYNAR-USAGE.md).
-- Composer support for photos, links, replies, quotes, text threads, browser-local drafts, GIPHY search, and a local meme maker. Cast sharing opens a cast composer with the source post embedded.
+- Composer support for photos, links, replies, quotes, threads with per-cast photos, GIFs, and links, browser-local drafts, GIPHY search, and a local meme maker. Cast sharing opens a cast composer with the source post embedded.
 - Inline feed media and a top-bar soundtrack player with eight bundled tracks and up to three personal HTTPS tracks. Playback is user initiated.
 - Mini Apps discovery, search, categories, bookmarks, creator discovery, Farcaster-native launching, and a large browser preview with minimize-to-tray behavior.
 - Profile Posts/Media views, analytics for 7/30/90 days and loaded casts, app-local pinned cast, and optional Farcaster profile cover editing.

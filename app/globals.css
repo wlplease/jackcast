@@ -332,7 +332,7 @@ html[data-previews="off"] .cast .embeds { display: none; }
 
 /* Composer */
 .composer { min-width: 0; padding: 14px 18px; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; }
-.composer textarea { width: 100%; min-width: 0; max-width: 100%; resize: none; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; line-height: 1.5; padding: 8px 0; outline: none; min-height: 44px; }
+.composer textarea { width: 100%; min-width: 0; max-width: 100%; resize: none; overflow-y: hidden; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; line-height: 1.5; padding: 8px 0; outline: none; min-height: 44px; }
 .composer textarea::placeholder { color: var(--ink-3); }
 .composer-bar { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 10px; border-top: 1px dashed var(--rule-strong); padding-top: 8px; }
 .composer-attribution { margin-top: 5px; color: var(--ink-3); font-size: 10px; line-height: 1.4; }
@@ -822,7 +822,16 @@ html[data-previews="off"] .cast .embeds { display: none; }
 .thread-intro p { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; }
 .thread-part { display: grid; gap: 6px; margin: 12px 0; padding-left: 14px; border-left: 2px solid var(--rule-strong); }
 .thread-part-label { font-size: 12px; font-weight: 600; }
-.thread-part textarea { width: 100%; min-height: 94px; resize: vertical; border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 10px 12px; background: var(--card); color: var(--ink); font: inherit; }
+.thread-part textarea { width: 100%; min-height: 94px; overflow-y: hidden; resize: vertical; border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 10px 12px; background: var(--card); color: var(--ink); font: inherit; }
+.thread-part-tools { flex-wrap: wrap; }
+.thread-part-tools .thread-count { margin-left: auto; }
+.thread-link-row { border-top: 0; padding-top: 0; }
+.thread-upload-note { color: var(--ink-3); font-size: 11px; }
+.thread-attachments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 4px 0 8px; }
+.thread-attachment { position: relative; display: grid; min-width: 0; min-height: 74px; place-items: center; overflow: hidden; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--card); }
+.thread-attachment img { display: block; width: 100%; max-height: 280px; object-fit: cover; }
+.thread-attachment a { width: 100%; overflow: hidden; padding: 10px; color: var(--accent); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.thread-attachment .attach-x { z-index: 1; }
 .thread-part textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .thread-count { justify-self: end; color: var(--ink-3); font-family: var(--mono); font-size: 11px; }
 .thread-count.over { color: #b42318; }

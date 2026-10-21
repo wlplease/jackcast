@@ -174,17 +174,24 @@ export type ThreadActionResult =
   | { ok: true; hashes: string[] }
   | { ok: false; posted: number; lastHash: string | null; error: string };
 
-/** Publish a short text-only reply chain, returning enough state to resume after partial success. */
-export async function publishThread(input: { casts: string[]; parentHash?: string }): Promise<ThreadActionResult> {
+/** Publish a short reply chain with per-cast embeds, returning enough state to resume after partial success. */
+export async function publishThread(input: { casts: { text: string; embedUrls?: string[] }[]; parentHash?: string }): Promise<ThreadActionResult> {
   const minimum = input?.parentHash ? 1 : 2;
   if (!Array.isArray(input?.casts) || input.casts.length < minimum || input.casts.length > 5) {
     return { ok: false, posted: 0, lastHash: input?.parentHash ?? null, error: input?.parentHash ? "Add at least one cast to continue this thread." : "A thread needs 2 to 5 casts." };
   }
-  const rawTexts = input.casts.map((text) => typeof text === "string" ? text.trim() : "");
-  if (rawTexts.some((text) => !text)) return { ok: false, posted: 0, lastHash: null, error: "Every cast needs text." };
-  const texts = rawTexts.map(withCastAttribution);
+  const rawCasts = input.casts.map((item) => ({
+    text: typeof item?.text === "string" ? item.text.trim() : "",
+    embedUrls: Array.isArray(item?.embedUrls) && item.embedUrls.length <= 2 && item.embedUrls.every((url) => typeof url === "string") ? item.embedUrls.map((url) => url.trim()).filter(Boolean) : null,
+  }));
+  if (rawCasts.some((item) => item.embedUrls === null)) return { ok: false, posted: 0, lastHash: null, error: "Each cast can have up to two valid attachments." };
+  if (rawCasts.some((item) => !item.text && !item.embedUrls?.length)) return { ok: false, posted: 0, lastHash: null, error: "Every cast needs text or an attachment." };
+  const texts = rawCasts.map((item) => withCastAttribution(item.text));
   if (texts.some((text) => new TextEncoder().encode(text).length > 1024)) {
     return { ok: false, posted: 0, lastHash: null, error: "Each cast must fit Farcaster's 1,024-byte limit after adding the Jackcast source link." };
+  }
+  if (rawCasts.some((item) => item.embedUrls?.some((url) => !/^https?:\/\//i.test(url) || url.length > 256 || /\.private\.blob\.vercel-storage\.com/i.test(url)))) {
+    return { ok: false, posted: 0, lastHash: null, error: "Attachments must be public HTTP or HTTPS links under 256 characters." };
   }
   if (input.parentHash && !/^0x[0-9a-f]{40}$/i.test(input.parentHash)) {
     return { ok: false, posted: 0, lastHash: null, error: "The thread continuation point is invalid." };
@@ -200,6 +207,7 @@ export async function publishThread(input: { casts: string[]; parentHash?: strin
         signerUuid: viewer.signerUuid,
         text: texts[i],
         ...(parent ? { parent, parentAuthorFid: viewer.fid } : {}),
+        ...(rawCasts[i].embedUrls?.length ? { embeds: rawCasts[i].embedUrls.map((url) => ({ url })) as unknown as PostCastReqBodyEmbeds[] } : {}),
       });
       const hash = result.cast?.hash;
       if (!hash || !/^0x[0-9a-f]{40}$/i.test(hash)) {
