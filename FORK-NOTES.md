@@ -27,4 +27,9 @@ Selfcaster remains the original app, repository, product direction, and upstream
 4. Run the appropriate local checks, review the diff, and let the owner decide when to push to GitHub or deploy. This project does not require automatic deployments.
 5. Keep API keys, signer identifiers, recovery phrases, personal data, and `.env.local` out of commits.
 
+The exact copied source snapshot and upstream reference are recorded in
+[`PROVENANCE.md`](./PROVENANCE.md). Review the local Mini App SDK and Core
+patches in [`vendor/miniapp-sdk/JACKCASTER-PATCH.md`](./vendor/miniapp-sdk/JACKCASTER-PATCH.md)
+and [`vendor/miniapp-core/JACKCASTER-PATCH.md`](./vendor/miniapp-core/JACKCASTER-PATCH.md).
+
 For deployment and provider costs, see [`README.md`](./README.md). For recovery-phrase and session details, see [`SECURITY.md`](./SECURITY.md). The current feature summary is in [`RELEASE-NOTES.md`](./RELEASE-NOTES.md).

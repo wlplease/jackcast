@@ -11,10 +11,17 @@ let _client: NeynarAPIClient | null = null;
 
 export function neynar(): NeynarAPIClient {
   if (!_client) {
+    const customBase = process.env.NEYNAR_API_BASE;
+    // The SDK sends the API key to its configured base URL. Keep mock endpoints
+    // available for local development, but never allow a production deployment
+    // to redirect authenticated requests to an arbitrary host.
+    if (customBase && process.env.NODE_ENV === "production") {
+      throw new Error("NEYNAR_API_BASE is only supported outside production.");
+    }
     _client = new NeynarAPIClient(new Configuration({
         apiKey: env("NEYNAR_API_KEY"),
         // Only for local testing against a mock server. Leave unset in production.
-        ...(process.env.NEYNAR_API_BASE ? { basePath: process.env.NEYNAR_API_BASE } : {}),
+        ...(customBase ? { basePath: customBase } : {}),
       }));
   }
   return _client;

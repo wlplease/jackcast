@@ -1,0 +1,20 @@
+{
+  "name": "@farcaster/miniapp-sdk",
+  "version": "0.3.0-jackcast.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/farcasterxyz/miniapps.git",
+    "directory": "packages/miniapp-sdk"
+  },
+  "main": "dist/index.js",
+  "files": ["dist"],
+  "dependencies": {
+    "@farcaster/quick-auth": "^0.0.6",
+    "comlink": "^4.4.2",
+    "eventemitter3": "^5.0.1",
+    "ox": "^0.14.0",
+    "@farcaster/miniapp-core": "file:../miniapp-core"
+  },
+  "scripts": {}
+}

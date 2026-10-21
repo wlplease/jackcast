@@ -82,6 +82,14 @@ export type Page = { casts: CastView[]; cursor: string | null; hidden: number };
 export type MediaKind = "all" | "image" | "video" | "audio";
 const NEYNAR_MAX_FEED_FIDS = 10;
 
+function checkedCursor(cursor?: string): string | undefined {
+  if (cursor === undefined) return undefined;
+  if (cursor.length > 4096 || /[\u0000-\u001f\u007f]/.test(cursor)) {
+    throw new Error("Invalid pagination cursor.");
+  }
+  return cursor;
+}
+
 function groupFeedFids(fids: number[]): number[][] {
   const groups: number[][] = [];
   for (let index = 0; index < fids.length; index += NEYNAR_MAX_FEED_FIDS) groups.push(fids.slice(index, index + NEYNAR_MAX_FEED_FIDS));
@@ -107,6 +115,7 @@ function byTime(casts: CastView[]): CastView[] {
 }
 
 export async function followingFeed(cursor?: string, limit = 30): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const prefs = await getPrefs();
   const friendFids = new Set(prefs.friends.map((person) => person.fid));
@@ -117,6 +126,7 @@ export async function followingFeed(cursor?: string, limit = 30): Promise<Page> 
 
 /** The connected account's own casts carrying Jackcast's explicit source attribution. */
 export async function jackcastFeed(cursor?: string, limit = 30): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const page = await neynar().fetchCastsForUser({ fid, viewerFid: fid, includeReplies: true, limit, cursor });
   return {
@@ -127,6 +137,8 @@ export async function jackcastFeed(cursor?: string, limit = 30): Promise<Page> {
 }
 
 export async function channelFeed(channelId: string, cursor?: string, limit = 30): Promise<Page> {
+  cursor = checkedCursor(cursor);
+  if (!/^[a-z0-9-]{1,32}$/i.test(channelId)) throw new Error("Invalid channel id.");
   const { fid } = await viewerOrThrow();
   const res = await neynar().fetchFeedByChannelIds({
     channelIds: [channelId],
@@ -153,6 +165,7 @@ function parseMultiPeopleCursor(raw: string | undefined, groupKey: string, count
 
 /** Chronological casts from a private people feed. Neynar accepts at most 10 FIDs per feed request. */
 async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30, excludeFids: Set<number> = new Set()): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const fids = [...new Set(people.map((person) => person.fid).filter((personFid) => Number.isSafeInteger(personFid) && personFid > 0))];
   if (!fids.length) return { casts: [], hidden: 0, cursor: null };
@@ -176,6 +189,7 @@ async function peopleFeed(people: { fid: number }[], cursor?: string, limit = 30
 
 /** Recast-only view of the network feed. Neynar supplies casts added by the recast option, not the recaster identity. */
 export async function recastsFeed(cursor?: string, limit = 100): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const state = cursor ? parseRecastCursor(cursor) : null;
   const recastCursor = state?.recasts ?? (state ? undefined : cursor);
@@ -237,6 +251,7 @@ function hasMedia(cast: CastView): boolean {
 }
 
 export async function followingMediaFeed(kind: MediaKind = "all", cursor?: string, limit = 30): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const prefs = await getPrefs();
   const friendFids = new Set(prefs.friends.map((person) => person.fid));
@@ -258,6 +273,7 @@ export async function savedCasts(hashes: string[], viewerFid: number): Promise<C
 }
 
 export async function userCasts(userFid: number, cursor?: string, mediaOnly = false): Promise<Page> {
+  cursor = checkedCursor(cursor);
   const { fid } = await viewerOrThrow();
   const casts: CastView[] = [];
   let nextCursor = cursor;
@@ -334,7 +350,10 @@ const recentFriendSuggestionsCached = unstable_cache(
 );
 
 export async function recentFriendSuggestions(fid: number, refresh = false): Promise<RecentFriendSuggestions> {
-  return recentFriendSuggestionsCached(fid, refresh ? Date.now() : undefined);
+  // Coalesce rapid repeat clicks into one refresh per five-minute window. An
+  // unbounded timestamp argument creates a separate persistent cache entry
+  // (and a fresh 10-request scan) on every click.
+  return recentFriendSuggestionsCached(fid, refresh ? Math.floor(Date.now() / 300_000) : undefined);
 }
 
 export type TopAccountLeader = { fid: number; username: string; displayName: string; pfpUrl: string; role: string };
@@ -438,7 +457,7 @@ const savedFriendsActivityCached = unstable_cache(
 );
 
 export async function savedFriendsActivity(fid: number, people: { fid: number; username: string }[], refresh = false): Promise<SavedFriendsActivity> {
-  return savedFriendsActivityCached(fid, people, refresh ? Date.now() : undefined);
+  return savedFriendsActivityCached(fid, people, refresh ? Math.floor(Date.now() / 300_000) : undefined);
 }
 
 const weeklyMiniAppsCached = unstable_cache(

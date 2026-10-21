@@ -9,7 +9,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const { cursor } = await searchParams;
   const viewer = await getViewer();
   if (!viewer) {
-    return <SetupBanner error={new Error("No Farcaster account is configured for this deployment yet.")} />;
+    return <><FeedWelcome mode="setup" /><SetupBanner error={new Error("No Farcaster account is configured for this deployment yet.")} /></>;
   }
   try {
     const page = await followingFeed(cursor);
@@ -21,7 +21,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             Read-only mode. <a href="/setup" style={{ color: "var(--accent)", fontWeight: 500 }}>Connect your account</a> to cast, like and reply.
           </div>
         )}
-        {canWrite && <FeedWelcome />}
+        <FeedWelcome mode={canWrite ? "connected" : "read-only"} />
         <FeedComposer canWrite={canWrite} cursor={cursor} />
         <Feed page={page} basePath="/" canWrite={canWrite} viewerFid={viewer.fid} live={cursor ? undefined : "following"} emptyTitle="Your feed is empty" emptyBody="Follow some people and they'll show up here, newest first." />
       </>

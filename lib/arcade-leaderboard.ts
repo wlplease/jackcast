@@ -39,7 +39,7 @@ export function useArcadeLeaderboard(week: string) {
         ]);
         const app = getApps().find((entry) => entry.name === "jackcaster-arcade") ?? initializeApp(firebaseConfig, "jackcaster-arcade");
         const auth = getAuth(app);
-        await signInAnonymously(auth);
+        if (!auth.currentUser) await signInAnonymously(auth);
         if (!active) return;
         const db = getFirestore(app);
         const scores = collection(db, "jackcaster_arcade", "weeks", week, "scores");

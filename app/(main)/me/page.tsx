@@ -51,6 +51,7 @@ export default async function SettingsPage() {
     <section className="settings-identity">
       {me && <Avatar user={me} />}
       <div><strong>{me?.display_name || me?.username || `FID ${viewer.fid}`}</strong><span>{viewer.canWrite ? "Connected account" : "Read-only connection"} · FID {viewer.fid}</span></div>
+      <Link href="/welcome" className="btn ghost sm">Getting started</Link>
       <Link href="/profile" className="btn ghost sm">Profile & analytics</Link>
     </section>
     <nav className="settings-shortcuts" aria-label="Settings sections">{SETTINGS.map((section) => <a key={section.href} href={section.href} className="settings-shortcut"><span className="settings-shortcut-icon" aria-hidden="true">{section.icon}</span><span><strong>{section.title}</strong><small>{section.detail}</small></span><span aria-hidden="true">›</span></a>)}</nav>

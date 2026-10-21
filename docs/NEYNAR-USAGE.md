@@ -20,7 +20,7 @@ The current request limits and grouping code live in [`lib/data.ts`](../lib/data
 ## Discovery and activity scans
 
 - **Top Friends suggestions:** scans up to 10 Following-feed pages of 100 casts (1,000 casts maximum), stopping when the 90-day cutoff is reached. Results are cached per viewer for 24 hours.
-- **Saved Friends activity check:** splits up to 50 accounts into 10-FID groups and uses a hard budget of 10 feed requests (up to 1,000 casts total) per check. Results are cached for a week. A manual refresh bypasses only that viewer's cached result; it does not invalidate other viewers' entries.
+- **Saved Friends activity check:** splits up to 50 accounts into 10-FID groups and uses a hard budget of 10 feed requests (up to 1,000 casts total) per check. Results are cached for a week. A manual refresh bypasses only that viewer's cached result and is coalesced to one refresh per five-minute window; it does not invalidate other viewers' entries.
 - **Top Accounts leaders:** the curated usernames are resolved individually and cached for 24 hours. The viewer's active-follow scan reuses the Top Friends suggestions cache.
 - **Mini Apps discovery:** the weekly catalog and viewer-relevant results are cached for a week. Search is on demand. Creator discovery is cached for six hours and combines Neynar search, cached catalogs, and up to 100 recent casts.
 - **Followed account and channel directories:** loaded only when needed and cached per viewer for one hour. The account directory is bounded to 20 pages of 100 follows; the channel directory is bounded to 10 pages of 100 channels.
