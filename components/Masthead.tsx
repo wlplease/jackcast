@@ -22,6 +22,11 @@ const I = {
       <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z" /><path d="M10 20a2.2 2.2 0 0 0 4 0" />
     </svg>
   ),
+  messages: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8 8 0 0 1-3.4-.8L4 20l1.4-4.1a7.5 7.5 0 1 1 14.6-4.4Z" /><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" />
+    </svg>
+  ),
   you: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20c1.3-3.6 4.2-5.4 7.5-5.4s6.2 1.8 7.5 5.4" />
@@ -81,6 +86,7 @@ export function Masthead({ channels, customName, audioTracks = [], feedNames = D
           {icon("/?ai=1#ai-catch-up", "AI catch-up", I.ai)}
           <ListeningDock personalTracks={audioTracks} />
           <NotificationLink icon={I.bell} />
+          {icon("/messages", "Private messages", I.messages)}
           <ProfileQuickMenu />
           {icon("/me", "Settings", I.settings)}
           <button type="button" className="icon-btn" aria-label="Sign out" title="Sign out" onClick={() => setConfirmSignOut(true)}>

@@ -48,6 +48,6 @@ export function trackUsage(event: UsageEvent) {
 export function UsageAnalytics() {
   const pathname = usePathname();
   // Keep third-party analytics off the page where a user may enter a recovery phrase.
-  if (pathname === "/setup") return null;
+  if (pathname === "/setup" || pathname === "/messages") return null;
   return <Analytics beforeSend={anonymizePageView} />;
 }

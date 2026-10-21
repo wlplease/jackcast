@@ -46,6 +46,20 @@ The current feed has a recognizable theme, strong cast hierarchy, and consistent
 
 ## Change log
 
+### 2026-10-21 — Restored reliable approximate-area location sharing
+
+- **Changed:** The map now requests a lower-power location fix first (the prior working settings), accepts a recent cached fix, and retries once with GPS if the device cannot return an initial fix. It validates coordinates, handles synchronous geolocation failures, and gives actionable messages for HTTPS, browser permission, Firebase setup, and Firestore-rule failures. The one-tap flow still reduces coordinates to the existing coarse grid on-device before saving.
+- **Why:** The map had switched to requiring a fresh high-accuracy GPS fix with no cached location, which can fail or time out on devices that previously returned an approximate browser location. The missing-Firebase-config state also looked like a GPS problem.
+- **Verification:** `npm run typecheck`, `npm run build`, and `git diff --check` passed. Live GPS and Firebase saves require browser permission and the deployment's Firebase setup; this checkout has no Firebase Web App settings to exercise a live save.
+- **Limit:** Firebase public Web App settings, Anonymous Auth, and published area-pin Firestore rules must be configured on each deployment. Browser/device location permission and HTTPS are required. No coordinates are available to Jackcaster when the browser blocks the request.
+
+### 2026-10-21 — Added an initial cross-deployment DM client
+
+- **Changed:** Added `/messages` with local Nostr identity generation, 24-word recovery, AES-GCM encrypted local key storage, Farcaster custody-wallet EIP-712 FID binding, signed public identity records, Nostr kind-10050 inbox relay publishing, NIP-17 text message send/receive and replies, contact key-change checks, and local message-request blocking. Added links and documented the trust boundary. Disabled Vercel usage analytics on the DM route.
+- **Why:** Provide Jackcast-only cross-deployment DMs without requiring a Matrix account or putting message bodies in a Jackcast/Firebase database. The Farcaster wallet signature makes the FID-to-DM-key relationship portable and independently verifiable by clients.
+- **Verification:** `npm run typecheck`, `npm run build`, and `git diff --check` passed after implementation. `npm audit --omit=dev` reports six moderate advisories in the existing Farcaster Mini App SDK's transitive Solana dependencies (`stream-json` and `uuid`); npm reports no available fix. No live messages were sent during implementation.
+- **Limit:** NIP-17 is still a draft and does not provide Signal-style forward secrecy. Relays see some metadata and may retain ciphertext. Recovery depends on the user's separate phrase. JavaScript served by a deployment can access the DM key while unlocked. This feature is not independently audited and must not be described as fully secure. DMs do not use Firebase, so no Firebase rules are required.
+
 ### 2026-10-19 — Enforced shorter, random login sessions
 
 - **Changed:** Login now issues a fresh random token with a keyed HMAC and server-checked issuance time. Sessions expire after 30 days; old deterministic session tokens are invalidated.

@@ -246,6 +246,21 @@ For a basic production instance, set `NEYNAR_API_KEY` and a strong `APP_PASSWORD
 
 Keep `NEYNAR_API_KEY`, `APP_PASSWORD`, `GIPHY_APP`, `GOOGLE_AI_API_KEY`, and `ELEVENLABS_API_KEY` in Vercel's server environment or an ignored local `.env.local`. Do not add `NEXT_PUBLIC_` to them. Firebase Web App config is intentionally public and is limited by Firebase Authentication and Firestore rules; it is not an admin credential. Never add a Firebase service account, wallet private key, recovery phrase, or Neynar signer UUID to this project.
 
+### How do Jackcast private messages work, and how do I set them up?
+
+Jackcast uses Nostr as the delivery network. Nostr relays are independent servers that pass along and store message events. Jackcast encrypts the message on your device before sending it; relays receive ciphertext and delivery metadata, not the message text under the normal app code. You do not need a separate Nostr account, Matrix account, or API key.
+
+To start, open **Messages** (`/messages`) on a deployment running the DM feature:
+
+1. Select **Create DM identity**. Jackcast makes a separate 24-word recovery phrase for your DM key. Save it somewhere private and offline, then confirm the requested word. This is not your Farcaster recovery phrase.
+2. Choose a local unlock passphrase of at least 16 characters. It encrypts the key stored in this browser; it is not a recovery method and is not sent to a server.
+3. Review the exact public Farcaster cast linking your FID to the new DM public key, then confirm publication. Jackcast uses your already-approved signer from `/setup`; there is no additional wallet connection. The cast is public and contains only your FID and DM public key, never your private key or messages.
+4. Find another person by Farcaster username or FID. They also need to create a Jackcast DM identity. New conversations arrive as requests; accept a request before replying. Use **Reply** on a message to thread a response.
+
+Jackcast publishes the Farcaster proof cast and a DM-key-signed locator plus inbox relay list to Nostr. Deployments verify the proof cast's Farcaster author and exact key before trusting the identity. The private key and recovery phrase stay on your device. To use the same DM identity on another device, restore with the 24 words and choose a new local unlock passphrase; your existing public proof remains valid for that same key. A rotated key requires a new reviewed public cast. If both the original device key and recovery phrase are lost, the old identity and messages cannot be recovered.
+
+The DM format, NIP-17, is still a draft and does not provide Signal-style forward secrecy. Relays may retain encrypted messages and see delivery metadata; recipients can copy or save plaintext. The feature has not had an independent security audit, and a web deployment can serve code that accesses the key while it is unlocked. Treat this as an early feature and do not use it for high-risk secrets. See [DM design and security limits](./docs/DM-ARCHITECTURE.md) and the [short user announcement draft](./docs/DM-USER-POST.md).
+
 ### How do GIF search and the meme maker work?
 
 The shared GIPHY search uses the server-side `GIPHY_APP` key and an atomic Upstash Redis cooldown: one shared search every 45 seconds globally, plus a five-minute signed-browser-session fairness delay. It does not use Firebase. A user can save a personal GIPHY key in the picker; it stays in that browser and calls GIPHY directly, using that key's quota instead of the shared pool. GIFs are attached as image media in the cast. The photo meme maker runs locally and needs neither GIPHY nor Firebase.
@@ -298,6 +313,10 @@ your browser ── password + account cookie ──> Next.js on Vercel ──> 
 The API key stays on the server. The approved device-specific signer is stored in a signed, HttpOnly cookie; Jackcast does not use one deployment-wide signer for posts. Settings like mutes, favorites and theme are stored per device in a cookie.
 
 For endpoint-by-endpoint request counts, caching windows, account batch limits, and bounded scan budgets, see [Neynar usage and pull budgets](./docs/NEYNAR-USAGE.md).
+
+### Private messages
+
+For setup steps, recovery, and security limits, see [How do Jackcast private messages work?](#how-do-jackcast-private-messages-work-and-how-do-i-set-them-up) and the [DM architecture notes](./docs/DM-ARCHITECTURE.md). DMs use Nostr relays and do not require Firebase rules.
 
 ## Running locally
 

@@ -40,6 +40,14 @@ One route is public on purpose: `/i/...`, which serves photos you've already pos
 
 To cut off access: revoke the app in Farcaster settings (connected apps), and rotate your Neynar key at dev.neynar.com.
 
+## Private messages
+
+The initial `/messages` feature uses a distinct 24-word Nostr DM recovery phrase. It is not the Farcaster recovery phrase or a provider API key. Jackcast encrypts the key in this browser with a local passphrase, and the message client unlocks it only in the browser. It locks after 15 minutes without pointer or keyboard activity and clears decrypted messages and key material when the page is hidden or closed. The user's custody wallet signs a typed statement binding the DM public key to the FID; the public binding is checked against the current Farcaster custody address before messaging. The private key and recovery phrase are not sent to Jackcast servers or Nostr relays.
+
+Messages use the draft NIP-17 format over Nostr relays. The relay receives ciphertext and delivery metadata, including its routing tag; operators can retain or copy events. NIP-17 does not provide Signal-style forward secrecy. A malicious deployment can serve JavaScript that steals a key while it is unlocked, and a compromised device can read plaintext or the recovery phrase. Do not use DMs for high-risk secrets. The feature has not had an independent security audit. The recovery phrase is the only portable recovery path; if it and the device key are lost, Jackcast cannot restore the identity or old messages. No DM data or rules are stored in Firebase.
+
+The `/messages` route does not load Vercel usage analytics. The design and current limitations are tracked in [`docs/DM-ARCHITECTURE.md`](./docs/DM-ARCHITECTURE.md).
+
 Keep `.env*` files and provider secrets out of Git. Configure `APP_PASSWORD`, `NEYNAR_API_KEY`, and optional Google, ElevenLabs, Blob, and GIPHY keys only in the appropriate server environment or browser setting. Baseline response headers allow geolocation only to Jackcaster itself for the opt-in map; the referrer policy sends origins without page paths, and `/setup` uses `no-referrer`. A strict, nonce-based CSP is enforced on `/setup`; a compatible policy for the full app remains separate because it uses dynamic embeds, media, and Mini App integrations. Rerun `npm audit` before each release.
 
 ## Usage analytics
@@ -48,7 +56,7 @@ Vercel Web Analytics is included and can be enabled in the deployment dashboard.
 
 ## Location sharing
 
-The community globe is opt-in and separate from casting. The browser reads location only after you tap **Use GPS** and grant permission. Coordinates are matched to the nearest city in the bundled offline gazetteer, then discarded in the browser. Custom city choices come from the same gazetteer. Nothing is saved until you confirm. Firebase stores the GeoNames city ID, city, country, and public Farcaster profile fields; exact GPS coordinates are not sent to Jackcaster's server or Firebase. Confirmed pins are readable by any Firebase-authenticated client with access to this project, including anonymous sessions, so treat them as public. Remove your pin any time. The local gazetteer match confirms that a city record exists, not that the user is physically there. Browser GPS can be spoofed, Firebase Anonymous Auth does not verify a Farcaster FID, and the Firestore rules cannot verify that a city ID/name pair came from the bundled file. The normal app flow only offers gazetteer choices, but direct clients can write forged claims under the current anonymous-client model.
+The community globe is opt-in and separate from casting. After you tap **Share my approximate area** and allow browser location, the device immediately rounds the coordinates into a 2° grid cell (roughly 220 km north-to-south). Jackcaster stores only that area ID and public Farcaster profile fields in Firebase; exact coordinates and reported accuracy are not sent to a server. The location request starts with the browser's lower-power location mode and retries once with GPS if the device cannot return a fix. Pins are public to users of the Firebase project and removable from the map. Browser location can be spoofed, and Firebase Anonymous Auth does not verify that a submitted FID belongs to the anonymous session. Sharing requires the public Firebase Web App config, Anonymous Auth, and the area-pin rules in [`docs/FIREBASE-SHARED-RULES.md`](./docs/FIREBASE-SHARED-RULES.md). The browser also requires HTTPS and permission for this site; if permission was previously denied, change it in browser and device settings.
 
 ## Reporting a problem
 

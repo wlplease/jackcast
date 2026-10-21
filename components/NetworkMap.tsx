@@ -23,6 +23,23 @@ function areaCenter(areaId: number) {
   return { lat: -90 + (latIndex + 0.5) * AREA_STEP, lon: -180 + (lonIndex + 0.5) * AREA_STEP };
 }
 
+function locationErrorMessage(reason: GeolocationPositionError) {
+  if (!window.isSecureContext) return "Location access requires a secure HTTPS page. Open Jackcaster using its HTTPS address and try again.";
+  if (reason.code === reason.PERMISSION_DENIED) return "Location access was denied or blocked by this browser. Allow location for this site in browser and device settings, then try again.";
+  if (reason.code === reason.POSITION_UNAVAILABLE) return "The device could not determine a location. Turn on Location Services and try again outdoors or near a window.";
+  if (reason.code === reason.TIMEOUT) return "The device did not return a location in time. Check Location Services and try again.";
+  return "Could not read a location. Check this browser's location permission and try again.";
+}
+
+function firebaseMapError(reason: unknown, action: "load" | "save" | "remove") {
+  const code = (reason as { code?: string })?.code;
+  if (code === "permission-denied") return "Firebase blocked this map action. Publish the Jackcaster map Firestore rules for the areaId format, then try again.";
+  if (code === "unavailable" || code === "deadline-exceeded") return "Firebase is temporarily unreachable. Check your connection and try again.";
+  if (code === "failed-precondition") return "Firebase is missing a required map database setup. Check the Jackcaster map setup guide.";
+  if (reason instanceof Error && reason.message) return reason.message;
+  return action === "load" ? "Could not connect to the shared map." : action === "save" ? "Could not save your area pin." : "Could not remove your area pin.";
+}
+
 function config(): { apiKey: string; authDomain: string; projectId: string; appId: string } | null {
   const packed = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
   if (packed) try { const value = JSON.parse(packed); if (value.apiKey && value.authDomain && value.projectId && value.appId) return value; } catch {}
@@ -70,9 +87,9 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
           setPins(rows);
           setMyPin(allRows.find((item) => item.id === uid) ?? null);
           setReady(true);
-        }, () => { if (active) { setError("Could not load shared map pins. Check the Jackcaster map rules in Firebase."); setReady(true); } });
+        }, (reason) => { if (active) { setError(firebaseMapError(reason, "load")); setReady(true); } });
       } catch (reason) {
-        if (active) { setError(reason instanceof Error ? reason.message : "Could not connect to the shared map."); setReady(true); }
+        if (active) { setError(firebaseMapError(reason, "load")); setReady(true); }
       }
     })();
     return () => { active = false; stop(); };
@@ -92,27 +109,36 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId, locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
       await setDoc(doc(db, "jackcaster_map", "pins", "pins", uid), pin);
       setMyPin({ ...pin, id: uid });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your area pin."); }
+    } catch (reason) { setError(firebaseMapError(reason, "save")); }
     finally { setBusy(false); }
   }
 
   function useLocation() {
+    if (!config()) { setError("Area sharing is not connected to Firebase on this deployment. Configure its public Firebase Web App settings, enable Anonymous Auth, publish the Jackcaster map rules, and redeploy."); return; }
+    if (!window.isSecureContext) { setError("Location access requires a secure HTTPS page. Open Jackcaster using its HTTPS address and try again."); return; }
     if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
     setBusy(true); setError("");
-    navigator.geolocation.getCurrentPosition((position) => {
-      // Coordinates are immediately reduced to a broad grid cell and never leave this callback.
-      void savePin(areaIdFor(position.coords.latitude, position.coords.longitude));
-    }, (reason) => {
+    const acceptPosition = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        setBusy(false); setError("The device returned an invalid location. Your pin was not changed."); return;
+      }
+      // Raw coordinates stay in memory only long enough to reduce them to a coarse area cell.
+      void savePin(areaIdFor(latitude, longitude));
+    };
+    const fail = (reason: GeolocationPositionError) => { setBusy(false); setError(locationErrorMessage(reason)); };
+    try {
+      // Start with the OS's faster, lower-power location mode. It is sufficient for a 2° area cell.
+      navigator.geolocation.getCurrentPosition(acceptPosition, (reason) => {
+        if (reason.code === reason.PERMISSION_DENIED) { fail(reason); return; }
+        // Some devices only produce a fix from GPS. Retry once with high accuracy after a timeout or unavailable fix.
+        try { navigator.geolocation.getCurrentPosition(acceptPosition, fail, { enableHighAccuracy: true, maximumAge: 60_000, timeout: 45_000 }); }
+        catch { fail(reason); }
+      }, { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 });
+    } catch {
       setBusy(false);
-      const message = reason.code === reason.PERMISSION_DENIED
-        ? "Location permission was declined. Allow location access for this site in your browser settings, then try again. Your location was not changed."
-        : reason.code === reason.POSITION_UNAVAILABLE
-          ? "Your device could not get a location fix. Check that device location services are on, then try again. Your location was not changed."
-          : reason.code === reason.TIMEOUT
-            ? "Getting a GPS fix took too long. Move near a window or try again outdoors. Your location was not changed."
-            : "Could not read a GPS location. Your location was not changed; try again or leave it unset.";
-      setError(message);
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 60_000 });
+      setError("This page cannot request location. Open Jackcaster in a secure browser tab and allow location access for this site.");
+    }
   }
 
   async function removePin() {
@@ -127,7 +153,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       if (!uid) throw new Error("Could not verify your map session.");
       await deleteDoc(doc(getFirestore(app), "jackcaster_map", "pins", "pins", uid));
       setMyPin(null);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove your area pin."); }
+    } catch (reason) { setError(firebaseMapError(reason, "remove")); }
     finally { setBusy(false); }
   }
 
@@ -160,7 +186,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
           <p>Your location is rounded on this device into a broad area about 220 km north-to-south. Exact coordinates are never uploaded. Sharing is optional, and you can remove your pin anytime.</p>
         </div>
         {mapConfigured === false ? (
-          <p className="map-setup-note" role="status">Location sharing needs Firebase Web App settings, Anonymous sign-in, and the Jackcast map rules. The globe is still available to explore.</p>
+          <p className="map-setup-note" role="status">Area sharing is not connected on this deployment. Configure its public Firebase Web App settings, enable Anonymous sign-in, publish the Jackcaster map rules for coarse area pins, then redeploy. The globe is still available to explore.</p>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
             <span>Older city pin hidden. Replace it with an approximate area or remove it.</span>
