@@ -34,8 +34,6 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
   const [topology, setTopology] = useState<WorldTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
   const [myPin, setMyPin] = useState<PinRow | null>(null);
-  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
-  const [reviewPin, setReviewPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
@@ -80,8 +78,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     return () => { active = false; stop(); };
   }, []);
 
-  async function savePin() {
-    if (selectedAreaId === null) { setError("Check your approximate area before sharing a pin."); return; }
+  async function savePin(areaId: number) {
     setBusy(true); setError("");
     try {
       const firebaseConfig = config();
@@ -92,9 +89,9 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
       const uid = getAuth(app).currentUser?.uid;
       if (!uid) throw new Error("Firebase could not verify this browser session.");
       const db = getFirestore(app);
-      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId: selectedAreaId, locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
+      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId, locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
       await setDoc(doc(db, "jackcaster_map", "pins", "pins", uid), pin);
-      setSelectedAreaId(null); setReviewPin(false); setMyPin({ ...pin, id: uid });
+      setMyPin({ ...pin, id: uid });
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your area pin."); }
     finally { setBusy(false); }
   }
@@ -104,9 +101,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
     setBusy(true); setError("");
     navigator.geolocation.getCurrentPosition((position) => {
       // Coordinates are immediately reduced to a broad grid cell and never leave this callback.
-      setSelectedAreaId(areaIdFor(position.coords.latitude, position.coords.longitude));
-      setReviewPin(true);
-      setBusy(false);
+      void savePin(areaIdFor(position.coords.latitude, position.coords.longitude));
     }, (reason) => {
       setBusy(false);
       const message = reason.code === reason.PERMISSION_DENIED
@@ -165,17 +160,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
           <p>Your location is rounded on this device into a broad area about 220 km north-to-south. Exact coordinates are never uploaded. Sharing is optional, and you can remove your pin anytime.</p>
         </div>
         {mapConfigured === false ? (
-          <p className="map-setup-note" role="status">Area sharing isn’t set up on this site yet. The globe is still available to explore.</p>
-        ) : reviewPin && selectedAreaId !== null ? (
-          <div className="map-pin-review">
-            <strong>Share this broad area?</strong>
-            <p>Broad map area · about 220 km north-to-south</p>
-            <small>Your precise coordinates stay on this device.</small>
-            <div className="map-pin-form">
-              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => { setSelectedAreaId(null); setReviewPin(false); setError(""); }}>Cancel</button>
-              <button type="button" className="btn sm" disabled={busy} onClick={() => void savePin()}>{busy ? "Saving…" : "Share area"}</button>
-            </div>
-          </div>
+          <p className="map-setup-note" role="status">Location sharing needs Firebase Web App settings, Anonymous sign-in, and the Jackcast map rules. The globe is still available to explore.</p>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
             <span>Older city pin hidden. Replace it with an approximate area or remove it.</span>
@@ -190,8 +175,8 @@ export function NetworkMap({ fid, username, displayName, pfpUrl }: { fid: number
           </div>
         ) : (
           <div className="map-pin-form">
-            <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding area…" : "Find my approximate area"}</button>
-            <small className="map-attribution">Optional · nothing is saved until you confirm.</small>
+            <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding and sharing…" : "Share my approximate area"}</button>
+            <small className="map-attribution">Optional · one tap shares a broad area (about 220 km north-to-south). Exact coordinates stay on this device.</small>
           </div>
         )}
         {error && <p className="map-error" role="status">{error}</p>}
