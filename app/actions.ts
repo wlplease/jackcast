@@ -190,7 +190,7 @@ export async function publishThread(input: { casts: { text: string; embedUrls?: 
   if (texts.some((text) => new TextEncoder().encode(text).length > 1024)) {
     return { ok: false, posted: 0, lastHash: null, error: "Each cast must fit Farcaster's 1,024-byte limit after adding the Jackcast source link." };
   }
-  if (rawCasts.some((item) => item.embedUrls?.some((url) => !/^https?:\/\//i.test(url) || url.length > 256 || /\.private\.blob\.vercel-storage\.com/i.test(url)))) {
+  if (rawCasts.some((item) => item.embedUrls !== null && item.embedUrls.some((url) => !/^https?:\/\//i.test(url) || url.length > 256 || /\.private\.blob\.vercel-storage\.com/i.test(url)))) {
     return { ok: false, posted: 0, lastHash: null, error: "Attachments must be public HTTP or HTTPS links under 256 characters." };
   }
   if (input.parentHash && !/^0x[0-9a-f]{40}$/i.test(input.parentHash)) {
@@ -203,11 +203,12 @@ export async function publishThread(input: { casts: { text: string; embedUrls?: 
   const hashes: string[] = [];
   for (let i = 0; i < texts.length; i++) {
     try {
+      const embedUrls = rawCasts[i].embedUrls ?? [];
       const result = await neynar().publishCast({
         signerUuid: viewer.signerUuid,
         text: texts[i],
         ...(parent ? { parent, parentAuthorFid: viewer.fid } : {}),
-        ...(rawCasts[i].embedUrls?.length ? { embeds: rawCasts[i].embedUrls.map((url) => ({ url })) as unknown as PostCastReqBodyEmbeds[] } : {}),
+        ...(embedUrls.length ? { embeds: embedUrls.map((url) => ({ url })) as unknown as PostCastReqBodyEmbeds[] } : {}),
       });
       const hash = result.cast?.hash;
       if (!hash || !/^0x[0-9a-f]{40}$/i.test(hash)) {

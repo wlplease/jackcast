@@ -5,6 +5,7 @@ import { geoContains, geoDistance, geoOrthographic, geoPath, type GeoPermissible
 import type { Feature, FeatureCollection } from "geojson";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
+import usStatesData from "@/lib/us-states-10m.json";
 import { finalizeEvent, generateSecretKey, SimplePool, verifyEvent, type Event, type EventTemplate } from "nostr-tools";
 import { DEFAULT_DM_RELAYS } from "@/lib/dms/protocol";
 
@@ -17,6 +18,7 @@ type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: strin
 type PinRow = Pin & { id: string };
 type WorldTopology = Topology<{ countries: GeometryCollection }>;
 type StatesTopology = Topology<{ states: GeometryCollection }>;
+const US_STATE_FEATURES = feature(usStatesData as unknown as StatesTopology, (usStatesData as unknown as StatesTopology).objects.states) as FeatureCollection;
 
 function areaLabel(areaId: number, countries: FeatureCollection, states: FeatureCollection) {
   const { lat, lon } = areaCenter(areaId);
@@ -111,7 +113,6 @@ function locationErrorMessage(reason: GeolocationPositionError) {
 
 export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled = true }: { fid: number; username: string; displayName: string; pfpUrl: string; sharingEnabled?: boolean }) {
   const [topology, setTopology] = useState<WorldTopology | null>(null);
-  const [statesTopology, setStatesTopology] = useState<StatesTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
   const [myPin, setMyPin] = useState<PinRow | null>(null);
   const [busy, setBusy] = useState(false);
@@ -124,13 +125,11 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [worldResult, statesResult] = await Promise.allSettled([
+      const worldResult = await Promise.allSettled([
         fetch("/data/world-countries-110m.json", { cache: "force-cache" }).then((response) => { if (!response.ok) throw new Error("Could not load the world globe data."); return response.json() as Promise<WorldTopology>; }),
-        fetch("/data/us-states-10m.json", { cache: "force-cache" }).then((response) => { if (!response.ok) throw new Error("Could not load US state boundaries."); return response.json() as Promise<StatesTopology>; }),
-      ]);
+      ]).then((results) => results[0]);
       if (!active) return;
       if (worldResult.status === "fulfilled") setTopology(worldResult.value);
-      if (statesResult.status === "fulfilled") setStatesTopology(statesResult.value);
       if (worldResult.status === "rejected") setError("The local map data could not be loaded. Refresh the page to try again.");
       setGeoReady(worldResult.status === "fulfilled");
 
@@ -209,11 +208,10 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
     return [...groups.values()];
   }, [visiblePins]);
   const locationLabels = useMemo(() => {
-    if (!topology || !statesTopology) return new Map<number, string>();
+    if (!topology) return new Map<number, string>();
     const countries = feature(topology, topology.objects.countries) as FeatureCollection;
-    const states = feature(statesTopology, statesTopology.objects.states) as FeatureCollection;
-    return new Map(visiblePins.map((pin) => [pin.areaId, areaLabel(pin.areaId, countries, states)]));
-  }, [topology, statesTopology, visiblePins]);
+    return new Map(visiblePins.map((pin) => [pin.areaId, areaLabel(pin.areaId, countries, US_STATE_FEATURES)]));
+  }, [topology, visiblePins]);
   const hasLegacyMyPin = Boolean(myPin && !visibleMyPin);
 
   return (
@@ -244,7 +242,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
           </div>
         ) : visibleMyPin ? (
           <div className="map-your-pin">
-            <span>📍 {locationLabels.get(visibleMyPin.areaId) ?? "Approximate area"} shared</span>
+            <span>📍 {locationLabels.get(visibleMyPin.areaId) ?? "Region unavailable"} shared</span>
             <button type="button" className="btn ghost sm" onClick={useLocation} disabled={busy}>{busy ? "Finding area…" : "Update area"}</button>
             <button type="button" className="btn ghost sm" onClick={() => void removePin()} disabled={busy}>Remove my pin</button>
           </div>
@@ -276,7 +274,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
           {visiblePins.map((pin) => (
             <article className="map-pin-row" key={pin.id}>
               <span className="map-avatar">{pin.pfpUrl ? <img src={pin.pfpUrl} alt="" /> : "↟"}</span>
-              <span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · {locationLabels.get(pin.areaId) ?? "Approximate area"}</small></span>
+              <span><strong>{pin.displayName || `@${pin.username}`}</strong><small>@{pin.username} · {locationLabels.get(pin.areaId) ?? "Region unavailable"}</small></span>
               <a href={`/u/${encodeURIComponent(pin.username)}`} aria-label={`Open @${pin.username}'s profile`}>Profile ↗</a>
             </article>
           ))}
