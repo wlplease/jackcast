@@ -44,7 +44,8 @@ export default async function SettingsPage() {
     { name: "Gemini AI catch-up", enabled: Boolean(process.env.GOOGLE_AI_API_KEY), setup: "Add GOOGLE_AI_API_KEY in your deployment settings." },
     { name: "Read aloud", enabled: Boolean((process.env.ELEVENLABS_API_KEY || process.env.ELEVELN_LAB_API_KEY) && process.env.ELEVENLABS_VOICE_ID), setup: "Add an ElevenLabs API key and voice ID in your deployment settings." },
     { name: "Shared GIF search", enabled: Boolean((process.env.GIPHY_APP || process.env.GIPHY_API_KEY) && (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) && (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)), setup: "Configure a GIPHY key and Upstash Redis in your deployment settings." },
-    { name: "Community map and leaderboard", enabled: firebaseConfigured, setup: "Configure the public Firebase Web settings and enable Anonymous Auth." },
+    { name: "Community area map", enabled: true, setup: "Publishes broad, opt-in area pins through Nostr relays. No Firebase setup is needed." },
+    { name: "Arcade leaderboard", enabled: firebaseConfigured, setup: "Configure Firebase Web settings and enable Anonymous Auth." },
   ];
   return <>
     <div className="section-head settings-page-title"><div><h1>Settings</h1><p>Make Jackcaster work the way you do.</p></div></div>

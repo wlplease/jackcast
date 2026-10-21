@@ -4,12 +4,75 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { geoDistance, geoOrthographic, geoPath, type GeoPermissibleObjects } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
-import { firebaseAnonymousIdToken } from "@/lib/firebase-anonymous-client";
+import { finalizeEvent, generateSecretKey, SimplePool, verifyEvent, type Event, type EventTemplate } from "nostr-tools";
+import { DEFAULT_DM_RELAYS } from "@/lib/dms/protocol";
 
 const AREA_STEP = 2;
-type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; areaId: number; locationMethod?: "gps"; updatedAt?: { toDate?: () => Date } };
+const MAP_KIND = 30_078;
+const MAP_TAG = "jackcast-area-pin";
+const MAP_KEY_STORAGE = "jackcast:map-key:v1";
+const MAP_TIME_STORAGE = "jackcast:map-last-updated:v1";
+type Pin = { fid: number; username: string; displayName?: string; pfpUrl?: string; areaId: number; deleted?: boolean; updatedAt: number };
 type PinRow = Pin & { id: string };
 type WorldTopology = Topology<{ countries: GeometryCollection }>;
+
+function bytesToHex(bytes: Uint8Array) { return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join(""); }
+function hexToBytes(hex: string) { return Uint8Array.from(hex.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16)); }
+function nextMapTimestamp(previous = 0) {
+  const stored = Number(localStorage.getItem(MAP_TIME_STORAGE) || 0);
+  const next = Math.max(Math.floor(Date.now() / 1000), previous + 1, stored + 1);
+  localStorage.setItem(MAP_TIME_STORAGE, String(next));
+  return next;
+}
+
+function mapSecretKey(): Uint8Array {
+  const existing = localStorage.getItem(MAP_KEY_STORAGE);
+  if (existing && /^[0-9a-f]{64}$/.test(existing)) return hexToBytes(existing);
+  const secret = generateSecretKey();
+  localStorage.setItem(MAP_KEY_STORAGE, bytesToHex(secret));
+  return secret;
+}
+
+function parseMapEvent(event: Event): Pin | null {
+  if (event.kind !== MAP_KIND || !verifyEvent(event) || !event.tags.some((tag) => tag[0] === "t" && tag[1] === MAP_TAG)) return null;
+  try {
+    const pin = JSON.parse(event.content) as Pin;
+    if (!Number.isSafeInteger(pin.fid) || pin.fid < 1 || typeof pin.username !== "string" || pin.username.length > 32 ||
+      typeof pin.displayName !== "string" || pin.displayName.length > 48 || typeof pin.pfpUrl !== "string" || pin.pfpUrl.length > 256 ||
+      !Number.isInteger(pin.areaId) || pin.areaId < 0 || pin.areaId >= 90000 || typeof pin.deleted !== "boolean" || !Number.isSafeInteger(pin.updatedAt) || pin.updatedAt !== event.created_at) return null;
+    return pin;
+  } catch { return null; }
+}
+
+async function readMapPins(fid: number): Promise<{ pins: PinRow[]; ownPin: PinRow | null }> {
+  const pool = new SimplePool();
+  try {
+    const events = await pool.querySync([...DEFAULT_DM_RELAYS], { kinds: [MAP_KIND], "#t": [MAP_TAG], limit: 1000 }, { maxWait: 10_000 });
+    const latestByFid = new Map<number, PinRow>();
+    let ownPin: PinRow | null = null;
+    for (const event of events.sort((a, b) => b.created_at - a.created_at)) {
+      const pin = parseMapEvent(event);
+      if (!pin) continue;
+      const row = { ...pin, id: event.pubkey };
+      if (pin.fid === fid && (!ownPin || pin.updatedAt > ownPin.updatedAt)) ownPin = row;
+      const previous = latestByFid.get(pin.fid);
+      if (!previous || pin.updatedAt > previous.updatedAt) latestByFid.set(pin.fid, row);
+    }
+    return { pins: [...latestByFid.values()].filter((pin) => !pin.deleted), ownPin: ownPin?.deleted ? null : ownPin };
+  } finally { pool.destroy(); }
+}
+
+async function publishMapPin(pin: Pin): Promise<string> {
+  const secretKey = mapSecretKey();
+  const template: EventTemplate = { kind: MAP_KIND, created_at: pin.updatedAt, tags: [["d", `fid-${pin.fid}`], ["t", MAP_TAG]], content: JSON.stringify(pin) };
+  const event = finalizeEvent(template, secretKey);
+  const pool = new SimplePool();
+  try {
+    const accepted = await Promise.allSettled(pool.publish([...DEFAULT_DM_RELAYS], event));
+    if (!accepted.some((result) => result.status === "fulfilled")) throw new Error("Nostr relays did not accept the area update. Check your connection and retry.");
+    return event.pubkey;
+  } finally { pool.destroy(); }
+}
 
 function areaIdFor(lat: number, lon: number) {
   const latIndex = Math.max(0, Math.min(89, Math.floor((lat + 90) / AREA_STEP)));
@@ -31,29 +94,6 @@ function locationErrorMessage(reason: GeolocationPositionError) {
   return "Could not read a location. Check this browser's location permission and try again.";
 }
 
-function firebaseMapError(reason: unknown, action: "load" | "save" | "remove") {
-  const code = (reason as { code?: string })?.code;
-  if (code === "permission-denied") return "Map sharing isn’t enabled yet. The site owner must publish the map Firestore rule.";
-  if (code === "unavailable" || code === "deadline-exceeded") return "Map service is temporarily unavailable. Try again later.";
-  if (code === "failed-precondition") return "Map setup is incomplete. Ask the site owner to check Firebase.";
-  const message = reason instanceof Error ? reason.message : "";
-  if (/anonymous sign-in is disabled/i.test(message)) return "Map sharing isn’t enabled yet. The site owner must enable Anonymous sign-in in Firebase.";
-  return action === "load" ? "Could not load community areas." : action === "save" ? "Could not save your area." : "Could not remove your area.";
-}
-
-function config(): { apiKey: string; authDomain: string; projectId: string; appId: string } | null {
-  const packed = process.env.NEXT_PUBLIC_FIREBASE_CONFIG;
-  if (packed) try { const value = JSON.parse(packed); if (value.apiKey && value.authDomain && value.projectId && value.appId) return value; } catch {}
-  // Next.js only inlines public env vars when they are referenced directly.
-  // Destructuring process.env here made a correctly configured deployment look
-  // unconfigured in the browser unless the packed JSON variable was also set.
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-  return apiKey && authDomain && projectId && appId ? { apiKey, authDomain, projectId, appId } : null;
-}
-
 export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled = true }: { fid: number; username: string; displayName: string; pfpUrl: string; sharingEnabled?: boolean }) {
   const [topology, setTopology] = useState<WorldTopology | null>(null);
   const [pins, setPins] = useState<PinRow[]>([]);
@@ -62,13 +102,11 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const [geoReady, setGeoReady] = useState(false);
-  const [mapConfigured, setMapConfigured] = useState<boolean | null>(null);
-  const [mapBlocked, setMapBlocked] = useState(false);
+  const [relayReady, setRelayReady] = useState<boolean | null>(null);
   const visiblePins = useMemo(() => pins.filter((pin) => Number.isInteger(pin.areaId) && pin.areaId >= 0 && pin.areaId < 90000), [pins]);
   const visibleMyPin = myPin && Number.isInteger(myPin.areaId) && myPin.areaId >= 0 && myPin.areaId < 90000 ? myPin : null;
   useEffect(() => {
     let active = true;
-    let stop = () => {};
     void (async () => {
       const worldResult = await Promise.allSettled([
         fetch("/data/world-countries-110m.json", { cache: "force-cache" }).then((response) => { if (!response.ok) throw new Error("Could not load the world globe data."); return response.json() as Promise<WorldTopology>; }),
@@ -78,66 +116,33 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
       if (worldResult.status === "rejected") setError("The local map data could not be loaded. Refresh the page to try again.");
       setGeoReady(worldResult.status === "fulfilled");
 
-      if (!sharingEnabled) { if (active) { setMapConfigured(false); setReady(true); } return; }
+      if (!sharingEnabled) { if (active) { setRelayReady(false); setReady(true); } return; }
 
-      const firebaseConfig = config();
-      if (!firebaseConfig) { if (active) { setMapConfigured(false); setReady(true); } return; }
-      if (active) setMapConfigured(true);
       try {
-        await firebaseAnonymousIdToken("jackcaster-map");
-        const [{ initializeApp, getApps }, { getAuth }, { getFirestore, collection, onSnapshot, query, orderBy, limit }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
-        const app = getApps().find((entry) => entry.name === "jackcaster-map") ?? initializeApp(firebaseConfig, "jackcaster-map");
-        const db = getFirestore(app);
-        const uid = getAuth(app).currentUser?.uid ?? "";
-        if (!active) return;
-        stop = onSnapshot(query(collection(db, "jackcaster_map", "pins", "pins"), orderBy("updatedAt", "desc"), limit(300)), (snapshot) => {
-          if (!active) return;
-          const allRows = snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Pin) }));
-          const rows = allRows.filter((item) => item.locationMethod === "gps" && Number.isInteger(item.areaId) && Number.isInteger(item.fid) && Boolean(item.username));
-          setPins(rows);
-          setMyPin(allRows.find((item) => item.id === uid) ?? null);
-          setReady(true);
-        }, (reason) => {
-          if (!active) return;
-          if ((reason as { code?: string })?.code === "permission-denied") {
-            setMapBlocked(true);
-            setPins([]);
-            setMyPin(null);
-            setError("");
-          } else {
-            setError(firebaseMapError(reason, "load"));
-          }
-          setReady(true);
-        });
-      } catch (reason) {
-        if (active) { setError(firebaseMapError(reason, "load")); setReady(true); }
+        const result = await readMapPins(fid);
+        if (active) { setPins(result.pins); setMyPin(result.ownPin); setRelayReady(true); setReady(true); }
+      } catch {
+        if (active) { setError("Could not load public area pins from Nostr relays. Try refreshing."); setRelayReady(false); setReady(true); }
       }
     })();
-    return () => { active = false; stop(); };
+    return () => { active = false; };
   }, [sharingEnabled]);
 
   async function savePin(areaId: number) {
     setBusy(true); setError("");
     try {
-      if (!sharingEnabled || mapBlocked) throw new Error("Map sharing isn’t available right now.");
-      const firebaseConfig = config();
-      if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
-      await firebaseAnonymousIdToken("jackcaster-map");
-      const [{ initializeApp, getApps }, { getAuth }, { getFirestore, doc, setDoc, serverTimestamp }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
-      const app = getApps().find((entry) => entry.name === "jackcaster-map") ?? initializeApp(firebaseConfig, "jackcaster-map");
-      const uid = getAuth(app).currentUser?.uid;
-      if (!uid) throw new Error("Firebase could not verify this browser session.");
-      const db = getFirestore(app);
-      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId, locationMethod: "gps", updatedAt: serverTimestamp() as Pin["updatedAt"] };
-      await setDoc(doc(db, "jackcaster_map", "pins", "pins", uid), pin);
-      setMyPin({ ...pin, id: uid });
-    } catch (reason) { setError(firebaseMapError(reason, "save")); }
+      if (!sharingEnabled) throw new Error("Map sharing is turned off in your privacy settings.");
+      const pin: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId, deleted: false, updatedAt: nextMapTimestamp(myPin?.updatedAt ?? 0) };
+      const id = await publishMapPin(pin);
+      setMyPin({ ...pin, id });
+      const result = await readMapPins(fid);
+      setPins(result.pins); setMyPin(result.ownPin);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not share your approximate area."); }
     finally { setBusy(false); }
   }
 
   function useLocation() {
-    if (!sharingEnabled || mapBlocked) return;
-    if (!config()) { setError("Map sharing isn’t configured on this site yet."); return; }
+    if (!sharingEnabled) { setError("Map sharing is turned off in your privacy settings."); return; }
     if (!window.isSecureContext) { setError("Location access requires a secure HTTPS page. Open Jackcaster using its HTTPS address and try again."); return; }
     if (!navigator.geolocation) { setError("GPS is not available in this browser. Your location was not changed."); return; }
     setBusy(true); setError("");
@@ -163,17 +168,15 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
   async function removePin() {
     setBusy(true); setError("");
     try {
-      if (!sharingEnabled || mapBlocked) throw new Error("Map sharing isn’t available right now.");
-      const firebaseConfig = config();
-      if (!firebaseConfig) throw new Error("Area sharing is not available yet.");
-      await firebaseAnonymousIdToken("jackcaster-map");
-      const [{ initializeApp, getApps }, { getAuth }, { getFirestore, deleteDoc, doc }] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
-      const app = getApps().find((entry) => entry.name === "jackcaster-map") ?? initializeApp(firebaseConfig, "jackcaster-map");
-      const uid = getAuth(app).currentUser?.uid;
-      if (!uid) throw new Error("Could not verify your map session.");
-      await deleteDoc(doc(getFirestore(app), "jackcaster_map", "pins", "pins", uid));
+      if (!sharingEnabled) throw new Error("Map sharing is turned off in your privacy settings.");
+      if (!sharingEnabled) throw new Error("Map sharing is turned off in your privacy settings.");
+      const oldPin = myPin;
+      if (!oldPin) { setError("This browser does not have the signing key for this area's pin."); return; }
+      const tombstone: Pin = { fid, username: username.slice(0, 32), displayName: displayName.slice(0, 48), pfpUrl: pfpUrl.slice(0, 256), areaId: oldPin.areaId, deleted: true, updatedAt: nextMapTimestamp(oldPin.updatedAt) };
+      await publishMapPin(tombstone);
       setMyPin(null);
-    } catch (reason) { setError(firebaseMapError(reason, "remove")); }
+      const result = await readMapPins(fid); setPins(result.pins);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove your area."); }
     finally { setBusy(false); }
   }
 
@@ -202,15 +205,13 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
 
       <section className="map-privacy-card">
         <div>
-          <strong>{mapConfigured === false ? "Community map" : "Share an approximate area"}</strong>
-          <p>Optional: your device rounds location to a broad area before sharing. Exact coordinates are never uploaded. Pins are public and removable.</p>
+          <strong>{relayReady === false ? "Community map" : "Share an approximate area"}</strong>
+          <p>Optional: your device rounds location to a broad area before sharing. Exact coordinates are never uploaded. Pins are public. Update or remove yours from this browser.</p>
         </div>
         {!sharingEnabled ? (
           <p className="map-setup-note" role="status">Map sharing is off in your privacy settings.</p>
-        ) : mapBlocked ? (
-          <p className="map-setup-note" role="status">Map sharing isn’t enabled. The site owner must publish the map rule in Firebase.</p>
-        ) : mapConfigured === false ? (
-          <p className="map-setup-note" role="status">Map sharing isn’t configured on this site. The globe is still available.</p>
+        ) : relayReady === null ? (
+          <p className="map-setup-note" role="status">Connecting to the public Nostr area relays…</p>
         ) : hasLegacyMyPin ? (
           <div className="map-your-pin">
             <span>Older city pin hidden. Replace it with an approximate area or remove it.</span>
@@ -226,7 +227,7 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
         ) : (
           <div className="map-pin-form">
             <button type="button" className="btn sm" disabled={busy || !geoReady} onClick={useLocation}>{busy ? "Finding and sharing…" : "Share my approximate area"}</button>
-            <small className="map-attribution">Optional · shares only a broad area and public profile details. Exact coordinates stay on this device.</small>
+            <small className="map-attribution">Optional · shares only a broad area and public profile details. Exact coordinates stay on this device. A small map key stays in this browser so you can update or remove your pin.</small>
           </div>
         )}
         {error && <p className="map-error" role="status">{error}</p>}
@@ -243,8 +244,6 @@ export function NetworkMap({ fid, username, displayName, pfpUrl, sharingEnabled 
 
       {!ready ? (
         <p className="map-empty">Loading community pins…</p>
-      ) : mapBlocked ? (
-        <p className="map-empty">Community areas will appear when map sharing is enabled.</p>
       ) : visiblePins.length === 0 ? (
         <p className="map-empty">No areas shared yet. Add yours if you’d like to appear on the globe.</p>
       ) : (
