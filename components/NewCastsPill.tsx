@@ -13,13 +13,20 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   const [checkError, setCheckError] = useState("");
   const [showTop, setShowTop] = useState(false);
   const [refreshDismissed, setRefreshDismissed] = useState(false);
+  const [loadedCount, setLoadedCount] = useState(0);
   const [pending, start] = useTransition();
   const [retryAttempt, setRetryAttempt] = useState(0);
   const last = useRef(0);
   const refreshStarted = useRef(false);
+  const readingAnchor = useRef<{ id: string; top: number } | null>(null);
 
   function refreshFeed() {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const firstVisibleCast = [...document.querySelectorAll<HTMLElement>('.cast[id^="cast-"]')]
+      .find((cast) => cast.getBoundingClientRect().bottom > 0);
+    readingAnchor.current = firstVisibleCast
+      ? { id: firstVisibleCast.id, top: firstVisibleCast.getBoundingClientRect().top }
+      : null;
+    setLoadedCount(count);
     refreshStarted.current = true;
     setRefreshDismissed(false);
     start(() => router.refresh());
@@ -28,6 +35,13 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   useEffect(() => {
     if (!pending && refreshStarted.current) {
       refreshStarted.current = false;
+      const anchor = readingAnchor.current;
+      if (anchor) {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const cast = document.getElementById(anchor.id);
+          if (cast) window.scrollBy(0, cast.getBoundingClientRect().top - anchor.top);
+        }));
+      }
       setRefreshDismissed(true);
     }
   }, [pending]);
@@ -95,11 +109,12 @@ export function NewCastsPill({ feed, newest }: { feed: string; newest: string | 
   return (
     <>
     {checkError && <div className="feed-poll-status" role="status">{checkError} <button type="button" onClick={() => setRetryAttempt((attempt) => attempt + 1)}>Retry check</button> {!refreshDismissed && <button type="button" onClick={refreshFeed} disabled={pending}>Refresh feed</button>}</div>}
-    {(!refreshDismissed || showTop) && <div className="pill-wrap feed-quick-actions">
+    {(!refreshDismissed || showTop || loadedCount > 0) && <div className="pill-wrap feed-quick-actions">
       {!refreshDismissed && (count > 0 ? <button className="pill" onClick={refreshFeed} disabled={pending}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
         {pending ? "Loading…" : `${capped ? `${count}+` : count} new ${count === 1 ? "cast" : "casts"}`}
-      </button> : <button className="pill feed-refresh-button" onClick={refreshFeed} disabled={pending} aria-label="Refresh feed and return to the top">{pending ? "Refreshing…" : "↻ Refresh feed"}</button>)}
+      </button> : <button className="pill feed-refresh-button" onClick={refreshFeed} disabled={pending} aria-label="Refresh feed and keep your place">{pending ? "Refreshing…" : "↻ Refresh feed"}</button>)}
+      {loadedCount > 0 && <button className="pill feed-loaded-button" onClick={() => { setLoadedCount(0); window.scrollTo({ top: 0, behavior: "smooth" }); }}>New casts ready · View newest</button>}
       {showTop && <button className="pill feed-top-button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Back to top">↑ Top</button>}
     </div>}
     </>

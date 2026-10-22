@@ -102,9 +102,10 @@ export function Embeds({ embeds }: { embeds: EmbedView[] }) {
         }
         if (isImage(e)) {
           const src = viaProxy(e.url);
-          return (
-            <ImageEmbed key={i} src={src} animated={isAnimatedImage(e.url)} />
-          );
+          const width = e.metadata?.image?.width_px;
+          const height = e.metadata?.image?.height_px;
+          const ratio = width && height ? width / height : undefined;
+          return <ImageEmbed key={i} src={src} animated={isAnimatedImage(e.url)} ratio={ratio} />;
         }
         const og = e.metadata?.html;
         let host = "";

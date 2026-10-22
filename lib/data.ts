@@ -292,6 +292,45 @@ export async function userCasts(userFid: number, cursor?: string, mediaOnly = fa
 export type ChannelChip = { id: string; name?: string; image_url?: string };
 export type FollowedPerson = { fid: number; username: string; displayName: string };
 
+export type RecentNetworkPerson = {
+  fid: number;
+  username: string;
+  displayName: string;
+  pfpUrl: string;
+  latestCast: string;
+};
+
+/** A small, cached discovery list from the newest Following casts. */
+const recentNetworkPeopleCached = unstable_cache(
+  async (fid: number): Promise<RecentNetworkPerson[]> => {
+    const result = await neynar().fetchUserFollowingFeed({ fid, viewerFid: fid, withRecasts: false, limit: 100 });
+    const people = new Map<number, RecentNetworkPerson>();
+    for (const raw of result.casts) {
+      const cast = asCast(raw);
+      const author = cast.author;
+      const username = author.username?.trim().toLowerCase();
+      const timestamp = Date.parse(cast.timestamp);
+      if (author.fid === fid || !username || !/^[a-z0-9_-]{1,32}$/i.test(username) || !Number.isFinite(timestamp)) continue;
+      const previous = people.get(author.fid);
+      if (previous && Date.parse(previous.latestCast) >= timestamp) continue;
+      people.set(author.fid, {
+        fid: author.fid,
+        username,
+        displayName: author.display_name?.trim() || username,
+        pfpUrl: author.pfp_url || "",
+        latestCast: cast.timestamp,
+      });
+    }
+    return [...people.values()].sort((a, b) => Date.parse(b.latestCast) - Date.parse(a.latestCast)).slice(0, 40);
+  },
+  ["recent-network-people-v1"],
+  { revalidate: 900, tags: ["recent-network-people"] },
+);
+
+export async function recentNetworkPeople(fid: number): Promise<RecentNetworkPerson[]> {
+  return recentNetworkPeopleCached(fid);
+}
+
 export type RecentFriendSuggestion = { fid: number; username: string; posts: number; followers: number };
 export type RecentFriendSuggestions = {
   people: RecentFriendSuggestion[];

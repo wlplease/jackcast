@@ -3,8 +3,8 @@ import { Avatar } from "@/components/Avatar";
 import { Feed } from "@/components/Feed";
 import { SetupBanner } from "@/components/SetupBanner";
 import { neynar } from "@/lib/neynar";
-import { clean } from "@/lib/data";
-import { compact } from "@/lib/format";
+import { clean, recentNetworkPeople } from "@/lib/data";
+import { compact, timeAgo } from "@/lib/format";
 import type { Author } from "@/lib/types";
 import { requireViewer } from "@/lib/viewer";
 
@@ -52,13 +52,16 @@ export default async function SearchPage({
         ))}
       </nav>
       <p className="field-hint search-miniapps-link"><Link href="/mini-apps">Looking for Mini Apps? Browse weekly trends and search the catalog →</Link></p>
-      {q ? <Results q={q} kind={kind} cursor={sp.cursor} fid={viewer.fid} canWrite={viewer.canWrite} /> : <Hints />}
+      {q ? <Results q={q} kind={kind} cursor={sp.cursor} fid={viewer.fid} canWrite={viewer.canWrite} /> : <Hints fid={viewer.fid} />}
     </>
   );
 }
 
-function Hints() {
+async function Hints({ fid }: { fid: number }) {
+  let recentPeople = [] as Awaited<ReturnType<typeof recentNetworkPeople>>;
+  try { recentPeople = await recentNetworkPeople(fid); } catch {}
   return (
+    <>
     <section className="search-suggestions" aria-label="Search suggestions">
       <div className="search-suggestions-intro">
         <span className="search-suggestions-mark" aria-hidden="true">⌕</span>
@@ -71,6 +74,19 @@ function Hints() {
       </div>
       <p className="search-suggestion-examples">Try <SuggestionLink type="casts" query="mini apps" label="mini apps" />, <SuggestionLink type="people" query="builders" label="builders" />, or <SuggestionLink type="channels" query="music" label="music" />.</p>
     </section>
+    {recentPeople.length > 0 && <section className="search-recent" aria-labelledby="search-recent-title">
+      <header className="search-recent-head"><div><h2 id="search-recent-title">Recent in your network</h2><p>People from the latest casts in Following</p></div><span>{recentPeople.length}</span></header>
+      <ul className="search-recent-list" aria-label="Recently active people">
+        {recentPeople.map((person) => <li key={person.fid}>
+          <Link href={`/u/${person.username}`} className="search-recent-person">
+            <Avatar user={{ fid: person.fid, username: person.username, display_name: person.displayName, pfp_url: person.pfpUrl }} />
+            <span className="search-recent-identity"><strong>{person.displayName}</strong><span>@{person.username}</span></span>
+            <time dateTime={person.latestCast}>{timeAgo(person.latestCast)}</time>
+          </Link>
+        </li>)}
+      </ul>
+    </section>}
+    </>
   );
 }
 

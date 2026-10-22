@@ -14,6 +14,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const [cursor, setCursor] = useState(initial.cursor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [autoLoadPaused, setAutoLoadPaused] = useState(false);
   const [earlierOpen, setEarlierOpen] = useState(false);
   const [digestLoading, setDigestLoading] = useState(false);
   const [digestLoadError, setDigestLoadError] = useState("");
@@ -22,6 +23,7 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
   const [sentKind, setSentKind] = useState<"all" | "casts" | "replies">("all");
   const [sentRange, setSentRange] = useState<"all" | "7d" | "30d">("all");
   const castsRef = useRef(casts);
+  const initialCastsRef = useRef(initial.casts);
   const cursorRef = useRef(cursor);
   const requestInFlight = useRef(false);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -35,6 +37,19 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
 
   castsRef.current = casts;
   cursorRef.current = cursor;
+
+  useEffect(() => {
+    if (initialCastsRef.current === initial.casts) return;
+    initialCastsRef.current = initial.casts;
+    const refreshedByHash = new Map(initial.casts.map((cast) => [cast.hash, cast]));
+    setCasts((current) => {
+      const currentHashes = new Set(current.map((cast) => cast.hash));
+      const additions = initial.casts.filter((cast) => !currentHashes.has(cast.hash));
+      const next = [...additions, ...current.map((cast) => refreshedByHash.get(cast.hash) ?? cast)];
+      castsRef.current = next;
+      return next;
+    });
+  }, [initial.casts]);
 
   const appendCasts = useCallback((additions: CastView[]) => {
     const hashes = new Set(castsRef.current.map((cast) => cast.hash));
@@ -89,8 +104,9 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
     return () => { cancelled = true; };
   }, [aiOpen, busy, digestLoadAttempt, appendCasts]);
 
-  const loadMore = useCallback(async () => {
+  const loadMore = useCallback(async (manualRetry = false) => {
     if (!cursor || busy || requestInFlight.current) return;
+    if (manualRetry) setAutoLoadPaused(false);
     requestInFlight.current = true;
     setBusy(true);
     setError("");
@@ -102,9 +118,12 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
       let page = await response.json() as Page;
       const extra: CastView[] = [];
       let pages = 0;
+      const seenCursors = new Set([cursor]);
       while (!page.casts.length && page.cursor && pages < 4) {
+        if (seenCursors.has(page.cursor)) throw new Error("The feed returned the same page twice. Refresh and try again.");
+        seenCursors.add(page.cursor);
         const next = await fetch(`/api/feed/${feed}?cursor=${encodeURIComponent(page.cursor)}${mediaQuery}`);
-        if (!next.ok) break;
+        if (!next.ok) throw new Error("Couldn't load more casts. Try again.");
         page = await next.json() as Page;
         extra.push(...page.casts);
         pages++;
@@ -115,18 +134,19 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
       setCursor(page.cursor);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load more casts. Try again.");
+      setAutoLoadPaused(true);
     } finally { requestInFlight.current = false; setBusy(false); }
   }, [appendCasts, busy, cursor, mediaKind, path]);
 
   useEffect(() => {
     const node = sentinel.current;
-    if (!node || !cursor) return;
+    if (!node || !cursor || autoLoadPaused) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) void loadMore();
     }, { rootMargin: "800px 0px" });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [cursor, loadMore]);
+  }, [autoLoadPaused, cursor, loadMore]);
 
   useEffect(() => {
     if (!aiOpen) return;
@@ -166,9 +186,9 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
 
   const sentCutoff = sentRange === "all" ? 0 : Date.now() - (sentRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
   const visibleCasts = path === "/sent" ? casts.filter((cast) => (sentKind === "all" || (sentKind === "replies" ? Boolean(cast.parent_hash) : !cast.parent_hash)) && (sentCutoff === 0 || Date.parse(cast.timestamp) >= sentCutoff)) : casts;
-  const archiveCount = visibleCasts.length > 180 ? visibleCasts.length - 120 : 0;
-  const earlierCasts = visibleCasts.slice(0, archiveCount);
-  const activeCasts = visibleCasts.slice(archiveCount);
+  const activeCount = visibleCasts.length > 180 ? 120 : visibleCasts.length;
+  const activeCasts = visibleCasts.slice(0, activeCount);
+  const earlierCasts = visibleCasts.slice(activeCount);
   const list = groupLinks ? groupRepeatedLinks(activeCasts) : activeCasts.map((cast) => [cast]);
   const earlierList = earlierOpen ? (groupLinks ? groupRepeatedLinks(earlierCasts) : earlierCasts.map((cast) => [cast])) : [];
   return <>
@@ -201,7 +221,11 @@ export function InfiniteFeed({ initial, canWrite, viewerFid, mutes, groupLinks, 
         </div>
       </Fragment>)}
       <div ref={sentinel} className="feed-load-sentinel" aria-hidden="true" />
-      {cursor && <div className="feed-load-more">{error && <p className="form-error" role="status">{error}</p>}<button className="more" type="button" onClick={() => void loadMore()} disabled={busy}>{busy ? "Loading more…" : "Load more casts"}</button></div>}
+      {cursor && <div className="feed-load-more">
+        {busy && <p className="feed-load-status" role="status"><span aria-hidden="true" />Loading more casts…</p>}
+        {error && <p className="feed-load-error" role="alert">{error}</p>}
+        <button className="more" type="button" onClick={() => void loadMore(true)} disabled={busy}>{busy ? "Loading…" : error ? "Retry loading casts" : "Load more casts"}</button>
+      </div>}
       {!cursor && visibleCasts.length > 0 && <p className="feed-end">You’re all caught up.</p>}
     </div>
     </CaughtUpProvider>
